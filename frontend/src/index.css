@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: radial-gradient(circle at top, #fff1f5 0%, #ffffff 40%);
+  color: #1f2937;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease both;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+
+.fade-in-delayed {
+  animation: fadeIn 0.7s ease both;
+}
+
+.page-enter {
+  animation: pageEnter 0.45s ease both;
+}
+
+.hover-float {
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+
+.hover-float:hover {
+  transform: translateY(-4px);
+}
+
+.button-pop {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button-pop:hover {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.button-pop:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.stagger-grid > * {
+  animation: fadeInUp 0.5s ease both;
+}
+
+.stagger-grid > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger-grid > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger-grid > *:nth-child(3) { animation-delay: 0.09s; }
+.stagger-grid > *:nth-child(4) { animation-delay: 0.12s; }
+.stagger-grid > *:nth-child(5) { animation-delay: 0.15s; }
+.stagger-grid > *:nth-child(6) { animation-delay: 0.18s; }
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+button,
+input,
+textarea,
+select {
+  outline: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.25);
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .scroll-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
