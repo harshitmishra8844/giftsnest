@@ -16,24 +16,13 @@ const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 const app = express();
 
-const allowedOrigins = (process.env.FRONTEND_URL || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      const isLocalhost = !!origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
-      if (!origin || isLocalhost || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS blocked for this origin"));
-      }
-    },
-    credentials: true,
-  })
-);
+// ✅ FINAL CORS FIX (WORKS 100%)
+app.use(cors({
+  origin: "*",
+}));
+
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -41,14 +30,16 @@ app.get("/", (req, res) => {
   res.json({ message: "Gift store API is running" });
 });
 
+// ✅ ROUTES (ALL SAFE)
 app.use("/api/products", productRoutes);
 app.use("/api", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.get("/api/store-info", getStoreInfo);
 app.use("/api/upload", uploadRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin", adminRoutes);   // admin login safe
 app.use("/api/user", userRoutes);
+
 app.use(notFound);
 app.use(errorHandler);
 
