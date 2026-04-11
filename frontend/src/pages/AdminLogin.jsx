@@ -1,72 +1,72 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../services/api";
-import { saveAdminAuth } from "../services/adminAuth";
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
+dotenv.config();
 
-const AdminLogin = () => {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+const connectDB = require("./config/db");
+const productRoutes = require("./routes/productRoutes");
+const authRoutes = require("./routes/authRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
+const { getStoreInfo } = require("./controllers/adminController");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+const app = express();
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError("");
-    setLoading(true);
 
-    try {
-      const { data } = await api.post("/admin/login", form);
-      saveAdminAuth(data);
-      navigate("/admin/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.message || "Admin login failed");
-    } finally {
-      setLoading(false);
+// ✅ CORRECT CORS (SAFE + FLEXIBLE)
+const allowedOrigins = [
+  "https://giftsnest.vercel.app",
+  "http://localhost:5173"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS blocked"));
     }
-  };
+  },
+  credentials: true,
+}));
 
-  return (
-    <section className="mx-auto max-w-md rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-      <h2 className="text-2xl font-bold text-gray-900">Admin Login</h2>
-      <p className="mt-1 text-sm text-gray-600">Sign in to manage products and orders.</p>
 
-      <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-        <input
-          name="email"
-          type="email"
-          placeholder="Admin email"
-          value={form.email}
-          onChange={handleChange}
-          required
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-        />
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-        {error ? <p className="text-sm text-red-500">{error}</p> : null}
+app.get("/", (req, res) => {
+  res.json({ message: "Gift store API is running" });
+});
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
-        >
-          {loading ? "Signing in..." : "Login as Admin"}
-        </button>
-      </form>
-    </section>
-  );
+// ✅ ROUTES (ADMIN LOGIN SAFE)
+app.use("/api/products", productRoutes);
+app.use("/api", authRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/payments", paymentRoutes);
+app.get("/api/store-info", getStoreInfo);
+app.use("/api/upload", uploadRoutes);
+app.use("/api/admin", adminRoutes);   // 👈 admin login here
+app.use("/api/user", userRoutes);
+
+app.use(notFound);
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error.message);
+    process.exit(1);
+  }
 };
 
-export default AdminLogin;
+startServer();
