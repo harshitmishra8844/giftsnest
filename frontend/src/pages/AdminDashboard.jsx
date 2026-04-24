@@ -5,7 +5,7 @@ import { clearAdminAuth, getAdminAuth } from "../services/adminAuth";
 
 const orderStatuses = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered", "Cancelled"];
 
-const emptyForm = { name: "", price: "", image: "", description: "", category: "", stock: "10" };
+const emptyForm = { name: "", price: "", image: "", imagesText: "", description: "", category: "", stock: "10" };
 const emptyCouponForm = {
   code: "",
   type: "percent",
@@ -246,8 +246,14 @@ const AdminDashboard = () => {
     event.preventDefault();
     setError("");
     setSuccess("");
-    if (!form.image) {
-      setError("Please upload a product image before saving.");
+    const parsedImages = String(form.imagesText || "")
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const primaryImage = String(form.image || parsedImages[0] || "").trim();
+    const uniqueImages = Array.from(new Set([primaryImage, ...parsedImages].filter(Boolean)));
+    if (!primaryImage) {
+      setError("Please upload at least one product image before saving.");
       return;
     }
     const stockVal = Math.floor(Number(form.stock));
@@ -257,7 +263,14 @@ const AdminDashboard = () => {
     }
     try {
       setSaving(true);
-      const payload = { ...form, price: Number(form.price), stock: stockVal };
+      const payload = {
+        ...form,
+        image: primaryImage,
+        images: uniqueImages,
+        price: Number(form.price),
+        stock: stockVal,
+      };
+      delete payload.imagesText;
       if (editingId) {
         await api.put(`/admin/products/${editingId}`, payload, authHeader);
       } else {
@@ -282,6 +295,7 @@ const AdminDashboard = () => {
       name: product.name,
       price: String(product.price),
       image: product.image || product.images?.[0] || "",
+      imagesText: Array.isArray(product.images) ? product.images.join("\n") : "",
       description: product.description,
       category: product.category,
       stock: String(product.stock ?? 0),
@@ -304,8 +318,19 @@ const AdminDashboard = () => {
       const formData = new FormData();
       formData.append("image", imageFile);
       const { data } = await api.post("/upload", formData);
-      setForm((prev) => ({ ...prev, image: data.imageUrl }));
-      setSuccess("Image uploaded. URL filled automatically.");
+      setForm((prev) => {
+        const existing = String(prev.imagesText || "")
+          .split(/\r?\n|,/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+        const nextImages = Array.from(new Set([prev.image, ...existing, data.imageUrl].filter(Boolean)));
+        return {
+          ...prev,
+          image: prev.image || data.imageUrl,
+          imagesText: nextImages.join("\n"),
+        };
+      });
+      setSuccess("Image uploaded and added to product gallery.");
     } catch (err) {
       setError(err.response?.data?.message || "Image upload failed");
     } finally {
@@ -1883,7 +1908,7 @@ const AdminDashboard = () => {
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />
           <div className="md:col-span-2">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Upload Product Image</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Upload Product Images</p>
             <div className="flex flex-wrap items-center gap-2">
               <input
                 type="file"
@@ -1901,11 +1926,19 @@ const AdminDashboard = () => {
               </button>
             </div>
             {form.image ? (
-              <p className="mt-2 text-xs text-gray-500">Image uploaded successfully.</p>
+              <p className="mt-2 text-xs text-gray-500">Primary image set. You can upload more images.</p>
             ) : (
-              <p className="mt-2 text-xs text-amber-600">Upload an image to continue.</p>
+              <p className="mt-2 text-xs text-amber-600">Upload at least one image to continue.</p>
             )}
           </div>
+          <textarea
+            name="imagesText"
+            value={form.imagesText}
+            onChange={handleFormChange}
+            placeholder="Additional image URLs (one per line or comma separated)"
+            rows={3}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
+          />
           <textarea name="description" value={form.description} onChange={handleFormChange} placeholder="Description" required rows={3} className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2" />
           <div className="flex items-center gap-2 md:col-span-2">
             <button

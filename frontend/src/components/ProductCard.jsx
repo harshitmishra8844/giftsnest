@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const ProductCard = ({ product, onAddToCart }) => {
   const imageUrl = product.image || product.images?.[0] || "https://via.placeholder.com/600x400?text=Gift";
   const stock = product.stock !== undefined && product.stock !== null ? Number(product.stock) : null;
@@ -8,12 +10,14 @@ const ProductCard = ({ product, onAddToCart }) => {
   return (
     <article className="rounded-2xl bg-white p-4 shadow-md ring-1 ring-emerald-100 transition hover:-translate-y-0.5 hover:shadow-lg hover-float">
       <div className="relative">
-        <img
-          src={imageUrl}
-          alt={product.name}
-          className="h-48 w-full rounded-xl object-cover"
-          loading="lazy"
-        />
+        <Link to={`/products/${product.slug || product._id}`} className="block">
+          <img
+            src={imageUrl}
+            alt={product.name}
+            className="h-48 w-full rounded-xl object-cover"
+            loading="lazy"
+          />
+        </Link>
       </div>
 
       <div className="mt-4">
@@ -21,7 +25,9 @@ const ProductCard = ({ product, onAddToCart }) => {
           {product.category}
         </p>
         <h3 className="mt-1 line-clamp-1 text-lg font-semibold text-gray-900">
-          {product.name}
+          <Link to={`/products/${product.slug || product._id}`} className="hover:text-emerald-700">
+            {product.name}
+          </Link>
         </h3>
         <p className="mt-2 line-clamp-2 text-sm text-gray-600">{product.description}</p>
         <div className="mt-4 flex flex-col gap-2">

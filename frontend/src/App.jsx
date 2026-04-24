@@ -3,6 +3,7 @@ import { NavLink, Route, Routes, Link, useLocation, useNavigate, Navigate } from
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Products from "./pages/Products";
+import ProductDetails from "./pages/ProductDetails";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import UserAuth from "./pages/UserAuth";
@@ -277,6 +278,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/:idOrSlug" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route
             path="/checkout"
