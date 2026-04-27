@@ -1,53 +1,88 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const ProductCard = ({ product, onAddToCart }) => {
+  const navigate = useNavigate();
+  const productUrl = `/products/${product.slug || product._id}`;
   const imageUrl = product.image || product.images?.[0] || "https://via.placeholder.com/600x400?text=Gift";
   const stock = product.stock !== undefined && product.stock !== null ? Number(product.stock) : null;
   const hasStockLimit = stock !== null && Number.isFinite(stock);
   const outOfStock = hasStockLimit && stock <= 0;
   const lowStock = hasStockLimit && stock > 0 && stock <= 5;
+  const previewText = String(product.description || "").replace(/\s+/g, " ").trim();
+
+  const openDetails = () => navigate(productUrl);
 
   return (
-    <article className="rounded-2xl bg-white p-4 shadow-md ring-1 ring-emerald-100 transition hover:-translate-y-0.5 hover:shadow-lg hover-float">
-      <div className="relative">
-        <Link to={`/products/${product.slug || product._id}`} className="block">
+    <article className="overflow-hidden rounded-[22px] border border-emerald-100 bg-white shadow-md transition hover:-translate-y-1 hover:shadow-xl">
+      <button type="button" onClick={openDetails} className="block w-full text-left">
+        <div className="relative">
           <img
             src={imageUrl}
             alt={product.name}
-            className="h-48 w-full rounded-xl object-cover"
+            className="h-56 w-full object-cover"
             loading="lazy"
           />
-        </Link>
-      </div>
-
-      <div className="mt-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
-          {product.category}
-        </p>
-        <h3 className="mt-1 line-clamp-1 text-lg font-semibold text-gray-900">
-          <Link to={`/products/${product.slug || product._id}`} className="hover:text-emerald-700">
-            {product.name}
-          </Link>
-        </h3>
-        <p className="mt-2 line-clamp-2 text-sm text-gray-600">{product.description}</p>
-        <div className="mt-4 flex flex-col gap-2">
-          {hasStockLimit ? (
-            <p className={`text-xs font-medium ${outOfStock ? "text-red-600" : lowStock ? "text-amber-700" : "text-gray-500"}`}>
-              {outOfStock ? "Out of stock" : lowStock ? `Only ${stock} left` : `${stock} in stock`}
-            </p>
-          ) : null}
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xl font-bold text-gray-900">INR {product.price}</p>
-            <button
-              type="button"
-              onClick={() => onAddToCart(product)}
-              disabled={outOfStock}
-              className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-emerald-800 button-pop disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {outOfStock ? "Sold out" : "Send Gift"}
-            </button>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent px-4 pb-4 pt-10">
+            <div className="inline-flex rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
+              {product.category}
+            </div>
           </div>
         </div>
+
+        <div className="space-y-4 p-4">
+          <div>
+            <h3 className="line-clamp-1 text-lg font-bold text-gray-900">
+              <Link
+                to={productUrl}
+                onClick={(event) => event.stopPropagation()}
+                className="hover:text-emerald-700"
+              >
+                {product.name}
+              </Link>
+            </h3>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
+              {previewText || "Tap to explore full product details, images and delivery information."}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Starting at</p>
+              <p className="text-2xl font-bold text-gray-900">INR {product.price}</p>
+            </div>
+            {hasStockLimit ? (
+              <div
+                className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                  outOfStock
+                    ? "bg-red-50 text-red-600"
+                    : lowStock
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {outOfStock ? "Sold out" : lowStock ? `${stock} left` : "Ready to ship"}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </button>
+
+      <div className="grid grid-cols-2 gap-2 border-t border-emerald-100 bg-emerald-50/50 p-4">
+        <button
+          type="button"
+          onClick={openDetails}
+          className="rounded-full border border-emerald-600 bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-emerald-700 transition hover:bg-emerald-50"
+        >
+          Explore
+        </button>
+        <button
+          type="button"
+          onClick={() => onAddToCart(product)}
+          disabled={outOfStock}
+          className="rounded-full bg-emerald-700 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {outOfStock ? "Sold out" : "Add to Cart"}
+        </button>
       </div>
     </article>
   );

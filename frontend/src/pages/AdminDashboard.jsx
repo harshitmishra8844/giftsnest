@@ -5,7 +5,23 @@ import { clearAdminAuth, getAdminAuth } from "../services/adminAuth";
 
 const orderStatuses = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered", "Cancelled"];
 
-const emptyForm = { name: "", price: "", image: "", imagesText: "", description: "", category: "", stock: "10" };
+const emptyForm = {
+  name: "",
+  price: "",
+  image: "",
+  imagesText: "",
+  description: "",
+  highlightsText: "",
+  specificationsText: "",
+  deliveryTime: "",
+  material: "",
+  dimensions: "",
+  weight: "",
+  occasion: "",
+  careInstructions: "",
+  category: "",
+  stock: "10",
+};
 const emptyCouponForm = {
   code: "",
   type: "percent",
@@ -95,6 +111,7 @@ const AdminDashboard = () => {
   const [imageFile, setImageFile] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [uploadWarning, setUploadWarning] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [orderViewFilter, setOrderViewFilter] = useState("active");
   const [storeInfo, setStoreInfo] = useState(defaultStoreInfo);
@@ -252,6 +269,36 @@ const AdminDashboard = () => {
       .filter(Boolean);
     const primaryImage = String(form.image || parsedImages[0] || "").trim();
     const uniqueImages = Array.from(new Set([primaryImage, ...parsedImages].filter(Boolean)));
+    const highlights = String(form.highlightsText || "")
+      .split(/\r?\n/)
+      .map((item) => item.replace(/^[\-\u2022]\s*/, "").trim())
+      .filter(Boolean);
+    const specifications = String(form.specificationsText || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const separatorIndex = line.indexOf(":");
+        if (separatorIndex === -1) return null;
+        return {
+          label: line.slice(0, separatorIndex).trim(),
+          value: line.slice(separatorIndex + 1).trim(),
+        };
+      })
+      .filter((item) => item?.label && item?.value);
+    const quickSpecs = [
+      { label: "Delivery Time", value: String(form.deliveryTime || "").trim() },
+      { label: "Material", value: String(form.material || "").trim() },
+      { label: "Dimensions", value: String(form.dimensions || "").trim() },
+      { label: "Weight", value: String(form.weight || "").trim() },
+      { label: "Occasion", value: String(form.occasion || "").trim() },
+      { label: "Care Instructions", value: String(form.careInstructions || "").trim() },
+    ].filter((item) => item.value);
+    const quickSpecLabels = new Set(quickSpecs.map((item) => item.label.toLowerCase()));
+    const mergedSpecifications = [
+      ...quickSpecs,
+      ...specifications.filter((item) => !quickSpecLabels.has(String(item.label || "").toLowerCase())),
+    ];
     if (!primaryImage) {
       setError("Please upload at least one product image before saving.");
       return;
@@ -269,8 +316,18 @@ const AdminDashboard = () => {
         images: uniqueImages,
         price: Number(form.price),
         stock: stockVal,
+        highlights,
+        specifications: mergedSpecifications,
       };
       delete payload.imagesText;
+      delete payload.highlightsText;
+      delete payload.specificationsText;
+      delete payload.deliveryTime;
+      delete payload.material;
+      delete payload.dimensions;
+      delete payload.weight;
+      delete payload.occasion;
+      delete payload.careInstructions;
       if (editingId) {
         await api.put(`/admin/products/${editingId}`, payload, authHeader);
       } else {
@@ -291,12 +348,42 @@ const AdminDashboard = () => {
   };
 
   const startEditProduct = (product) => {
+    const productSpecifications = Array.isArray(product.specifications) ? product.specifications : [];
+    const getSpecValue = (label) =>
+      String(
+        productSpecifications.find(
+          (item) => String(item?.label || "").trim().toLowerCase() === label.toLowerCase()
+        )?.value || ""
+      ).trim();
     setForm({
       name: product.name,
       price: String(product.price),
       image: product.image || product.images?.[0] || "",
       imagesText: Array.isArray(product.images) ? product.images.join("\n") : "",
       description: product.description,
+      highlightsText: Array.isArray(product.highlights) ? product.highlights.join("\n") : "",
+      specificationsText: productSpecifications
+        .filter(
+          (item) =>
+            ![
+              "delivery time",
+              "material",
+              "dimensions",
+              "weight",
+              "occasion",
+              "care instructions",
+            ].includes(
+              String(item?.label || "").trim().toLowerCase()
+            )
+        )
+        .map((item) => `${item.label}: ${item.value}`)
+        .join("\n"),
+      deliveryTime: getSpecValue("Delivery Time"),
+      material: getSpecValue("Material"),
+      dimensions: getSpecValue("Dimensions"),
+      weight: getSpecValue("Weight"),
+      occasion: getSpecValue("Occasion"),
+      careInstructions: getSpecValue("Care Instructions"),
       category: product.category,
       stock: String(product.stock ?? 0),
     });
@@ -314,10 +401,15 @@ const AdminDashboard = () => {
     try {
       setError("");
       setSuccess("");
+      setUploadWarning("");
       setUploadingImage(true);
       const formData = new FormData();
       formData.append("image", imageFile);
-      const { data } = await api.post("/upload", formData);
+      const { data } = await api.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       setForm((prev) => {
         const existing = String(prev.imagesText || "")
           .split(/\r?\n|,/)
@@ -331,8 +423,13 @@ const AdminDashboard = () => {
         };
       });
       setSuccess("Image uploaded and added to product gallery.");
+      if (String(data?.message || "").toLowerCase().includes("development mode")) {
+        setUploadWarning(
+          "Cloudinary is not configured yet. Image was uploaded and saved locally (development mode)."
+        );
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Image upload failed");
+      setError(err.response?.data?.message || err.message || "Image upload failed");
     } finally {
       setUploadingImage(false);
     }
@@ -1106,6 +1203,7 @@ const AdminDashboard = () => {
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
       {success ? <p className="text-sm text-green-600">{success}</p> : null}
+      {uploadWarning ? <p className="text-sm text-amber-700">{uploadWarning}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
@@ -1916,6 +2014,9 @@ const AdminDashboard = () => {
                 onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                 className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
               />
+              {imageFile ? (
+                <p className="text-xs text-gray-600">Selected: {imageFile.name}</p>
+              ) : null}
               <button
                 type="button"
                 onClick={handleImageUpload}
@@ -1939,7 +2040,74 @@ const AdminDashboard = () => {
             rows={3}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
           />
-          <textarea name="description" value={form.description} onChange={handleFormChange} placeholder="Description" required rows={3} className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2" />
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleFormChange}
+            placeholder="Description"
+            required
+            rows={3}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
+          />
+          <textarea
+            name="highlightsText"
+            value={form.highlightsText}
+            onChange={handleFormChange}
+            placeholder={"Highlights (one point per line)\nPremium finish\nSame-day gifting option\nCustom message included"}
+            rows={4}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+          <textarea
+            name="specificationsText"
+            value={form.specificationsText}
+            onChange={handleFormChange}
+            placeholder={"Specifications (one per line: Label: Value)\nBrand: GiftNest\nMaterial: Ceramic\nOccasion: Birthday"}
+            rows={4}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+          <input
+            name="deliveryTime"
+            value={form.deliveryTime}
+            onChange={handleFormChange}
+            placeholder="Delivery time (e.g. 2-4 days)"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+          <input
+            name="material"
+            value={form.material}
+            onChange={handleFormChange}
+            placeholder="Material (e.g. Ceramic, MDF Wood)"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+          <input
+            name="dimensions"
+            value={form.dimensions}
+            onChange={handleFormChange}
+            placeholder="Dimensions (e.g. 10 x 8 x 4 inch)"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+          <input
+            name="weight"
+            value={form.weight}
+            onChange={handleFormChange}
+            placeholder="Weight (e.g. 450g)"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+          <input
+            name="occasion"
+            value={form.occasion}
+            onChange={handleFormChange}
+            placeholder="Occasion (e.g. Birthday, Anniversary)"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+          <textarea
+            name="careInstructions"
+            value={form.careInstructions}
+            onChange={handleFormChange}
+            placeholder="Care instructions (e.g. Keep away from water, wipe with dry cloth)"
+            rows={2}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
+          />
           <div className="flex items-center gap-2 md:col-span-2">
             <button
               type="submit"

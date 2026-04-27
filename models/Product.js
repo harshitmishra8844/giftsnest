@@ -31,6 +31,22 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const productSpecSchema = new mongoose.Schema(
+  {
+    label: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    value: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -61,6 +77,14 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    highlights: {
+      type: [String],
+      default: [],
+    },
+    specifications: {
+      type: [productSpecSchema],
+      default: [],
     },
     category: {
       type: String,

@@ -1,15 +1,41 @@
 const cloudinary = require("../config/cloudinary");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+
+const localUploadsDir = path.join(process.cwd(), "uploads", "products");
+
+const ensureLocalUploadsDir = async () => {
+  await fs.promises.mkdir(localUploadsDir, { recursive: true });
+};
+
+const extensionFromMime = (mimeType) => {
+  const map = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "image/bmp": "bmp",
+    "image/svg+xml": "svg",
+    "image/avif": "avif",
+    "image/heic": "heic",
+    "image/heif": "heif",
+  };
+  return map[String(mimeType || "").toLowerCase()] || "jpg";
+};
 
 const uploadImage = async (req, res) => {
   try {
+    const cloudinaryUrl = String(process.env.CLOUDINARY_URL || "").trim();
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const hasCloudinaryUrl = Boolean(cloudinaryUrl);
+    const hasDiscreteCreds = Boolean(cloudName && apiKey && apiSecret);
 
     const missingConfig =
-      !cloudName ||
-      !apiKey ||
-      !apiSecret ||
+      (!hasCloudinaryUrl && !hasDiscreteCreds) ||
       cloudName === "replace_me" ||
       apiKey === "replace_me" ||
       apiSecret === "replace_me" ||
@@ -17,31 +43,32 @@ const uploadImage = async (req, res) => {
       apiKey === "demo-key" ||
       apiSecret === "demo-secret";
 
-    if (missingConfig) {
-      // Development fallback: return a placeholder URL
-      if (!req.file) {
-        return res.status(400).json({ message: "Image file is required" });
-      }
-
-      // For development, return a placeholder image URL
-      const placeholderUrls = [
-        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&h=400&fit=crop&crop=center",
-        "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop&crop=center",
-        "https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=400&h=400&fit=crop&crop=center",
-        "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=400&fit=crop&crop=center"
-      ];
-
-      const randomUrl = placeholderUrls[Math.floor(Math.random() * placeholderUrls.length)];
-
-      return res.status(201).json({
-        message: "Development mode: Using placeholder image",
-        imageUrl: randomUrl,
-        publicId: `dev-${Date.now()}`,
-      });
-    }
-
     if (!req.file) {
       return res.status(400).json({ message: "Image file is required" });
+    }
+
+    if (missingConfig) {
+      const isProduction = process.env.NODE_ENV === "production";
+      if (isProduction) {
+        return res.status(503).json({
+          message:
+            "Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in server .env, then restart backend.",
+        });
+      }
+
+      await ensureLocalUploadsDir();
+      const fileExt = extensionFromMime(req.file.mimetype);
+      const fileName = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${fileExt}`;
+      const absolutePath = path.join(localUploadsDir, fileName);
+      await fs.promises.writeFile(absolutePath, req.file.buffer);
+      const imageUrl = `${req.protocol}://${req.get("host")}/uploads/products/${fileName}`;
+
+      return res.status(201).json({
+        message:
+          "Cloudinary is not configured. Uploaded image is stored locally in development mode.",
+        imageUrl,
+        publicId: null,
+      });
     }
 
     const result = await new Promise((resolve, reject) => {

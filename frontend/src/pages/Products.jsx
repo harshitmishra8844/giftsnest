@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import ProductCard from "../components/ProductCard";
 import { useCart } from "../context/CartContext";
@@ -11,28 +10,11 @@ const Products = () => {
   const [error, setError] = useState("");
   const [refreshSeed, setRefreshSeed] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [searchParams] = useSearchParams();
-  const query = (searchParams.get("q") || "").trim().toLowerCase();
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     const previousTitle = document.title;
-    const setMeta = (name, content, attr = "name") => {
-      let element = document.head.querySelector(`meta[${attr}="${name}"]`);
-      if (!element) {
-        element = document.createElement("meta");
-        element.setAttribute(attr, name);
-        document.head.appendChild(element);
-      }
-      element.setAttribute("content", content);
-    };
-
     document.title = "Shop Gifts | GiftNest Products";
-    setMeta("description", "Browse GiftNest products including flowers, cakes and personalized gifts for every occasion.");
-    setMeta("keywords", "buy gifts online, flowers and cakes, personalized gifts, gift categories");
-    setMeta("og:title", "Shop Gifts | GiftNest Products", "property");
-    setMeta("og:description", "Explore premium gifting collections and order online with smooth checkout.", "property");
-    setMeta("og:type", "website", "property");
-
     return () => {
       document.title = previousTitle;
     };
@@ -44,7 +26,7 @@ const Products = () => {
         setLoading(true);
         setError("");
         const { data } = await api.get("/products");
-        setProducts(data);
+        setProducts(Array.isArray(data) ? data : []);
       } catch {
         setError("Unable to load products right now.");
       } finally {
@@ -55,14 +37,41 @@ const Products = () => {
     fetchProducts();
   }, [refreshSeed]);
 
+  const categoryChips = useMemo(
+    () => [
+      "All",
+      ...Array.from(
+        new Set(
+          products
+            .map((product) => String(product.category || "").trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    ],
+    [products]
+  );
+
+  const visibleProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesCategory =
+        selectedCategory === "All" ||
+        String(product.category || "").toLowerCase() === selectedCategory.toLowerCase();
+      const haystack = `${product.name || ""} ${product.category || ""} ${product.description || ""}`.toLowerCase();
+      const matchesSearch = !searchText.trim() || haystack.includes(searchText.trim().toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [products, searchText, selectedCategory]);
+
   if (loading) {
     return (
-      <section>
-        <h2 className="mb-2 text-2xl font-bold text-emerald-900 md:text-3xl">Shop by Occasion</h2>
-        <p className="mb-6 text-sm text-gray-600">Curated gifting picks inspired by FNP-style categories.</p>
+      <section className="space-y-6">
+        <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-emerald-100">
+          <div className="h-8 w-56 animate-pulse rounded-xl bg-emerald-100" />
+          <div className="mt-3 h-4 w-80 animate-pulse rounded-xl bg-emerald-50" />
+        </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {[...Array(6)].map((_, idx) => (
-            <div key={idx} className="h-80 animate-pulse rounded-2xl bg-white shadow-sm ring-1 ring-gray-100" />
+          {[...Array(8)].map((_, idx) => (
+            <div key={idx} className="h-[380px] animate-pulse rounded-[22px] bg-white shadow-sm ring-1 ring-emerald-100" />
           ))}
         </div>
       </section>
@@ -83,90 +92,59 @@ const Products = () => {
     );
   }
 
-  const filteredProducts =
-    selectedCategory === "All"
-      ? products
-      : products.filter((product) => {
-          const category = String(product.category || "").toLowerCase();
-          return category === selectedCategory.toLowerCase();
-        });
-  const fullyFilteredProducts = filteredProducts.filter((product) => {
-    if (!query) return true;
-    return String(product.name || "").toLowerCase().includes(query);
-  });
-
-  const categoryChips = [
-    "All",
-    ...Array.from(
-      new Set(
-        products
-          .map((product) => String(product.category || "").trim())
-          .filter(Boolean)
-      )
-    ).sort((a, b) => a.localeCompare(b)),
-  ];
-
   return (
-    <section className="fade-in-up scroll-reveal">
-      <h2 className="mb-2 text-2xl font-bold text-emerald-900 md:text-3xl">Shop by Occasion</h2>
-      <p className="mb-6 text-sm text-gray-600">
-        Curated gifting picks inspired by FNP-style categories.
-        {query ? ` Search results for "${query}".` : ""}
-      </p>
-      <div className="sticky top-[74px] z-[5] mb-6 rounded-2xl border border-emerald-100 bg-white/95 p-3 shadow-sm backdrop-blur">
-        <div className="flex flex-wrap gap-2">
+    <section className="space-y-8">
+      <div className="overflow-hidden rounded-[30px] border border-emerald-100 bg-white shadow-sm">
+        <div className="grid gap-6 px-6 py-7 md:grid-cols-[1.3fr_0.7fr] md:px-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Gift Storefront</p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
+              Pick a gift, open the detail page, and shop without the fuss
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-600 md:text-base">
+              A simpler catalog layout with direct product actions, clearer navigation and a calmer browsing flow.
+            </p>
+          </div>
+          <div className="grid gap-3 rounded-[24px] bg-emerald-50 p-4">
+            <input
+              type="text"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Search by product, category, or detail"
+              className="w-full rounded-full border border-emerald-200 bg-white px-4 py-3 text-sm text-gray-700"
+            />
+            <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+              {visibleProducts.length} product{visibleProducts.length === 1 ? "" : "s"} showing
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
         {categoryChips.map((chip) => (
           <button
             key={chip}
             type="button"
             onClick={() => setSelectedCategory(chip)}
-            className={`rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
               selectedCategory === chip
-                ? "border-emerald-700 bg-emerald-700 text-white"
-                : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                ? "bg-emerald-700 text-white"
+                : "border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50"
             }`}
           >
             {chip}
           </button>
         ))}
-        </div>
       </div>
 
-      {/* Personalized Mug Feature */}
-      <div className="mb-8 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white p-6 shadow-sm">
-        <div className="flex flex-col items-center gap-4 text-center md:flex-row md:items-center md:justify-between md:text-left">
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-emerald-900 md:text-2xl">Create Your Personalized Mug</h3>
-            <p className="mt-2 text-sm text-gray-600 md:text-base">
-              Upload your favorite photo and add custom text to create a unique ceramic mug.
-              Perfect for gifts or personal keepsakes.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
-              <span className="rounded-full bg-emerald-100 px-3 py-1">Upload Photo</span>
-              <span className="rounded-full bg-emerald-100 px-3 py-1">Add Custom Text</span>
-              <span className="rounded-full bg-emerald-100 px-3 py-1">Live Preview</span>
-              <span className="rounded-full bg-emerald-100 px-3 py-1">₹499</span>
-            </div>
-          </div>
-          <div className="flex-shrink-0">
-            <Link
-              to="/personalized-mug"
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Design Your Mug
-            </Link>
-          </div>
+      {visibleProducts.length === 0 ? (
+        <div className="rounded-[24px] border border-emerald-100 bg-white p-10 text-center shadow-sm">
+          <p className="text-lg font-semibold text-gray-900">No products found</p>
+          <p className="mt-2 text-sm text-gray-600">Try another search or switch to a different category.</p>
         </div>
-      </div>
-
-      {fullyFilteredProducts.length === 0 ? (
-        <p className="text-gray-600">No products found.</p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 stagger-grid">
-          {fullyFilteredProducts.map((product) => (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {visibleProducts.map((product) => (
             <ProductCard key={product._id} product={product} onAddToCart={addToCart} />
           ))}
         </div>

@@ -197,6 +197,7 @@ const Checkout = () => {
   const subtotal = Number(totalPrice.toFixed(2));
   const discountAmount = couponData?.discountAmount || 0;
   const finalTotal = couponData?.finalTotal ?? subtotal;
+  const hasSavedAddresses = savedAddresses.length > 0;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -213,15 +214,22 @@ const Checkout = () => {
       return;
     }
 
-    // Validate address - always use saved address
-    if (savedAddresses.length === 0) {
-      setError("Please add a delivery address in your profile before checkout.");
+    if (!hasSavedAddresses) {
+      setError("Please add a delivery address in My Addresses before completing your order.");
+      navigate("/profile", {
+        state: { activeTab: "addresses", openAddressForm: true, returnTo: "/checkout" },
+      });
       return;
     }
 
-    const selectedAddr = savedAddresses.find(addr => addr._id === selectedAddressId) || savedAddresses.find(addr => addr.isDefault) || savedAddresses[0];
+    const selectedAddr = savedAddresses.find((addr) => addr._id === selectedAddressId)
+      || savedAddresses.find((addr) => addr.isDefault)
+      || savedAddresses[0];
     if (!selectedAddr) {
       setError("No valid delivery address found.");
+      navigate("/profile", {
+        state: { activeTab: "addresses", openAddressForm: true, returnTo: "/checkout" },
+      });
       return;
     }
 
@@ -369,15 +377,9 @@ const Checkout = () => {
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-900">Delivery Address</h3>
 
-          {savedAddresses.length > 0 ? (
-            <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="text-sm font-medium text-gray-700">Shipping to</span>
-              </div>
+          {hasSavedAddresses ? (
+            <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4">
+              <p className="mb-3 text-sm font-medium text-gray-700">Shipping to</p>
 
               {(() => {
                 const selectedAddr = savedAddresses.find(addr => addr._id === selectedAddressId) || savedAddresses.find(addr => addr.isDefault) || savedAddresses[0];
@@ -404,7 +406,7 @@ const Checkout = () => {
 
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <p className="text-xs text-gray-500">
-                  💡 To change address, visit your{" "}
+                  To change address, visit your{" "}
                   <Link to="/profile" className="text-emerald-600 hover:text-emerald-700 font-medium">
                     profile settings
                   </Link>
@@ -412,24 +414,17 @@ const Checkout = () => {
               </div>
             </div>
           ) : (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <span className="text-sm font-medium text-amber-800">No delivery address found</span>
-              </div>
-              <p className="text-sm text-amber-700 mb-3">
-                Please add a delivery address in your profile to proceed with checkout.
+            <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4">
+              <p className="mb-3 text-sm font-medium text-gray-800">Add delivery address</p>
+              <p className="text-sm text-gray-600 mb-3">
+                No saved address found. Please add your address in profile, then return to complete order.
               </p>
               <Link
-                to="/profile"
-                className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-700"
+                to="/my-profile"
+                state={{ activeTab: "addresses", openAddressForm: true, returnTo: "/checkout" }}
+                className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Address
+                Go to My Addresses
               </Link>
             </div>
           )}

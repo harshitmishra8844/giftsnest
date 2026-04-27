@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 
@@ -7,6 +8,25 @@ const slugify = (text) =>
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+
+const sanitizeHighlights = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .slice(0, 12);
+};
+
+const sanitizeSpecifications = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => ({
+      label: String(item?.label || "").trim(),
+      value: String(item?.value || "").trim(),
+    }))
+    .filter((item) => item.label && item.value)
+    .slice(0, 20);
+};
 
 const getProducts = async (req, res) => {
   try {
@@ -37,9 +57,11 @@ const recalculateReviewStats = (product) => {
 const getProductByIdOrSlug = async (req, res) => {
   try {
     const { idOrSlug } = req.params;
-    const product =
-      (await Product.findById(idOrSlug)) ||
-      (await Product.findOne({ slug: String(idOrSlug || "").toLowerCase() }));
+    const normalizedValue = String(idOrSlug || "").trim();
+    const product = mongoose.Types.ObjectId.isValid(normalizedValue)
+      ? (await Product.findById(normalizedValue)) ||
+        (await Product.findOne({ slug: normalizedValue.toLowerCase() }))
+      : await Product.findOne({ slug: normalizedValue.toLowerCase() });
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -175,7 +197,7 @@ const getReviewEligibility = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
-    const { name, price, image, images, description, category, stock } = req.body;
+    const { name, price, image, images, description, category, stock, highlights, specifications } = req.body;
     const normalizedImages = Array.isArray(images)
       ? images.map((item) => String(item || "").trim()).filter(Boolean)
       : [];
@@ -201,6 +223,8 @@ const createProduct = async (req, res) => {
       image: primaryImage,
       images: [primaryImage, ...normalizedImages.filter((item) => item !== primaryImage)],
       description,
+      highlights: sanitizeHighlights(highlights),
+      specifications: sanitizeSpecifications(specifications),
       category,
       stock: stockNum,
       customisable: true,
@@ -240,6 +264,12 @@ const updateProduct = async (req, res) => {
         return res.status(400).json({ message: "Stock must be zero or a positive whole number" });
       }
       updates.stock = s;
+    }
+    if (updates.highlights !== undefined) {
+      updates.highlights = sanitizeHighlights(updates.highlights);
+    }
+    if (updates.specifications !== undefined) {
+      updates.specifications = sanitizeSpecifications(updates.specifications);
     }
     const product = await Product.findByIdAndUpdate(id, updates, {
       new: true,

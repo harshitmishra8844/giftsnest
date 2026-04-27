@@ -68,6 +68,8 @@ RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxx
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
+# Optional alternative:
+# CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
 ADMIN_EMAIL=admin@giftnest.com
 ADMIN_PASSWORD=Admin@123
 FRONTEND_URL=http://localhost:5173
