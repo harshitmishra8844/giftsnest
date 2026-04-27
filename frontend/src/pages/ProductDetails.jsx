@@ -19,6 +19,7 @@ const ProductDetails = () => {
   const [needsPurchaseHint, setNeedsPurchaseHint] = useState(false);
   const [canReview, setCanReview] = useState(false);
   const [checkingReviewEligibility, setCheckingReviewEligibility] = useState(false);
+  const [openSection, setOpenSection] = useState("description");
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -179,6 +180,10 @@ const ProductDetails = () => {
   }, [myReview?._id]);
 
   const selectedRating = Number(reviewForm.rating || 5);
+  const deliveryEstimate = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+  });
 
   const renderStar = (value) => (
     <button
@@ -193,78 +198,117 @@ const ProductDetails = () => {
     </button>
   );
 
+  const toggleSection = (sectionKey) => {
+    setOpenSection((prev) => (prev === sectionKey ? "" : sectionKey));
+  };
+
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 pb-24 md:pb-0">
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 md:p-8">
-      <div className="mb-4 text-sm text-gray-500">
-        <Link to="/products" className="hover:text-emerald-700">Products</Link> / {product.name}
-      </div>
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div>
-          <img
-            src={activeImage || "https://via.placeholder.com/900x700?text=GiftNest"}
-            alt={product.name}
-            className="h-[360px] w-full rounded-xl object-cover md:h-[460px]"
-          />
-          {galleryImages.length > 1 ? (
-            <div className="mt-3 grid grid-cols-4 gap-2">
-              {galleryImages.map((imageUrl) => (
-                <button
-                  key={imageUrl}
-                  type="button"
-                  onClick={() => setActiveImage(imageUrl)}
-                  className={`overflow-hidden rounded-lg border ${activeImage === imageUrl ? "border-emerald-600" : "border-gray-200"}`}
-                >
-                  <img src={imageUrl} alt={product.name} className="h-20 w-full object-cover" />
-                </button>
-              ))}
+        <div className="mb-5 text-sm text-gray-500">
+          <Link to="/products" className="hover:text-emerald-700">Products</Link> / <span className="text-gray-700">{product.category}</span> / {product.name}
+        </div>
+        <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
+          <div>
+            <div className="group overflow-hidden rounded-2xl">
+              <img
+                src={activeImage || "https://via.placeholder.com/900x700?text=GiftNest"}
+                alt={product.name}
+                className="h-[360px] w-full rounded-2xl object-cover transition duration-300 group-hover:scale-105 md:h-[560px]"
+              />
             </div>
-          ) : null}
+            {galleryImages.length > 1 ? (
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {galleryImages.map((imageUrl) => (
+                  <button
+                    key={imageUrl}
+                    type="button"
+                    onClick={() => setActiveImage(imageUrl)}
+                    className={`overflow-hidden rounded-lg border-2 transition ${activeImage === imageUrl ? "border-emerald-600" : "border-transparent hover:border-emerald-200"}`}
+                  >
+                    <img src={imageUrl} alt={product.name} className="h-20 w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-4 xl:sticky xl:top-24 xl:h-fit">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{product.category}</p>
+              <h1 className="mt-1 text-3xl font-bold leading-tight text-gray-900">{product.name}</h1>
+              <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                <span className="font-semibold text-amber-600">{rating.toFixed(1)} ★</span>
+                <span className="underline underline-offset-2">({numReviews} reviews)</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-4">
+              <p className="text-3xl font-bold text-gray-900">INR {product.price}</p>
+              <p className={`mt-1 text-sm font-medium ${outOfStock ? "text-red-600" : "text-emerald-700"}`}>
+                {outOfStock ? "Currently unavailable" : `${stock} available for quick dispatch`}
+              </p>
+              <div className="mt-3 grid gap-2 text-xs text-gray-600">
+                <p className="rounded-lg bg-emerald-50 px-2.5 py-2">Estimated delivery by <span className="font-semibold text-gray-900">{deliveryEstimate}</span></p>
+                <p className="rounded-lg bg-emerald-50 px-2.5 py-2">Free secure packaging on every gift order</p>
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={outOfStock}
+                  onClick={() => addToCart(product)}
+                  className="rounded-full bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {outOfStock ? "Sold out" : "Add to Cart"}
+                </button>
+                <button
+                  type="button"
+                  disabled={outOfStock}
+                  onClick={() => {
+                    addToCart(product);
+                    navigate("/checkout");
+                  }}
+                  className="rounded-full border border-emerald-600 px-5 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Buy now
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="rounded-xl border border-gray-200 bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => toggleSection("description")}
+                  className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-gray-900"
+                >
+                  Product Description
+                  <span>{openSection === "description" ? "−" : "+"}</span>
+                </button>
+                {openSection === "description" ? (
+                  <p className="border-t border-gray-200 px-4 py-3 text-sm leading-6 text-gray-700">{product.description}</p>
+                ) : null}
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => toggleSection("delivery")}
+                  className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-gray-900"
+                >
+                  Delivery & Returns
+                  <span>{openSection === "delivery" ? "−" : "+"}</span>
+                </button>
+                {openSection === "delivery" ? (
+                  <ul className="space-y-1 border-t border-gray-200 px-4 py-3 text-sm text-gray-700">
+                    <li>Standard delivery in 2-5 business days.</li>
+                    <li>Same-day delivery available in selected cities.</li>
+                    <li>Easy return/replacement for damaged items.</li>
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{product.category}</p>
-          <h1 className="mt-2 text-3xl font-bold text-gray-900">{product.name}</h1>
-          <p className="mt-3 text-2xl font-bold text-gray-900">INR {product.price}</p>
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-            <span className="font-semibold text-amber-600">{rating.toFixed(1)} ★</span>
-            <span>({numReviews} reviews)</span>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-gray-600">{product.description}</p>
-
-          <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-sm text-gray-700">
-            <p className="font-semibold text-emerald-900">Why buy from GiftNest?</p>
-            <ul className="mt-2 space-y-1">
-              <li>Premium handpicked products from trusted brands.</li>
-              <li>Safe packaging and support for personalized gifting.</li>
-              <li>Fast response customer care for your orders.</li>
-            </ul>
-          </div>
-
-          <div className="mt-5 flex items-center gap-3">
-            <button
-              type="button"
-              disabled={outOfStock}
-              onClick={() => addToCart(product)}
-              className="rounded-full bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {outOfStock ? "Sold out" : "Add to Cart"}
-            </button>
-            <span className={`text-sm font-medium ${outOfStock ? "text-red-600" : "text-gray-600"}`}>
-              {outOfStock ? "Out of stock" : `${stock} in stock`}
-            </span>
-          </div>
-
-          <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-            <p className="font-semibold text-gray-900">Delivery & Returns</p>
-            <ul className="mt-2 space-y-1">
-              <li>Standard delivery in 2-5 business days.</li>
-              <li>Same-day delivery available in selected cities.</li>
-              <li>Easy return/replacement for damaged items.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
       </div>
 
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
@@ -374,6 +418,38 @@ const ProductDetails = () => {
           </div>
         </div>
       ) : null}
+
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-emerald-100 bg-white p-3 shadow-[0_-6px_16px_rgba(0,0,0,0.08)] md:hidden">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">INR {product.price}</p>
+            <p className={`text-xs ${outOfStock ? "text-red-600" : "text-gray-600"}`}>
+              {outOfStock ? "Out of stock" : `${stock} in stock`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={outOfStock}
+              onClick={() => addToCart(product)}
+              className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+            >
+              Add to Cart
+            </button>
+            <button
+              type="button"
+              disabled={outOfStock}
+              onClick={() => {
+                addToCart(product);
+                navigate("/checkout");
+              }}
+              className="rounded-full border border-emerald-600 px-4 py-2 text-xs font-semibold text-emerald-700 disabled:opacity-60"
+            >
+              Buy Now
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
   );
 };
