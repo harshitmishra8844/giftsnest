@@ -14,6 +14,7 @@ const {
   deleteOrder,
   archiveOrder,
   unarchiveOrder,
+  reviewOrderCancellation,
 } = require("../controllers/orderController");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const {
@@ -40,6 +41,7 @@ router.get("/orders", protect, adminOnly, getOrders);
 router.get("/orders/archived", protect, adminOnly, getArchivedOrders);
 router.put("/orders/:id/status", protect, adminOnly, updateOrderStatus);
 router.put("/orders/:id/tracking", protect, adminOnly, updateTrackingId);
+router.put("/orders/:id/cancellation-request", protect, adminOnly, reviewOrderCancellation);
 router.put("/orders/:id/archive", protect, adminOnly, archiveOrder);
 router.put("/orders/:id/unarchive", protect, adminOnly, unarchiveOrder);
 router.delete("/orders/:id", protect, adminOnly, deleteOrder);

@@ -70,6 +70,7 @@ const defaultStoreInfo = {
   storeName: "Gift Store",
   storePhone: "+91-90000-00000",
   storeAddress: "123 Commerce Street, Mumbai, Maharashtra 400001, India",
+  storeLogoUrl: "",
   specialOffer: {
     title: "Festive Mega Sale",
     subtitle: "Celebrate the season with curated gifts and limited-time savings.",
@@ -112,14 +113,30 @@ const AdminDashboard = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [uploadWarning, setUploadWarning] = useState("");
+
+  const getUploadErrorMessage = (err) => {
+    const status = err?.response?.status;
+    const apiMessage = String(err?.response?.data?.message || "").trim();
+    if (status === 503) {
+      return (
+        "Image upload failed: Cloudinary is not configured on the deployed server. " +
+        "Add CLOUDINARY_URL (or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) and redeploy backend."
+      );
+    }
+    return apiMessage || err.message || "Image upload failed";
+  };
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [orderViewFilter, setOrderViewFilter] = useState("active");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [storeInfo, setStoreInfo] = useState(defaultStoreInfo);
   const [savingStoreInfo, setSavingStoreInfo] = useState(false);
+  const [uploadingStoreLogo, setUploadingStoreLogo] = useState(false);
   const [trackingInputs, setTrackingInputs] = useState({});
   const [trackingCarriersByOrder, setTrackingCarriersByOrder] = useState({});
   const [stockDrafts, setStockDrafts] = useState({});
   const [savingStockId, setSavingStockId] = useState("");
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [labelPrintFilter, setLabelPrintFilter] = useState("all");
 
   const authHeader = useMemo(
     () => ({
@@ -188,6 +205,71 @@ const AdminDashboard = () => {
     return archivedOrders.map((order) => ({ ...order, __isArchived: true }));
   }, [orderViewFilter, orders, archivedOrders]);
 
+  const ordersForViewFiltered = useMemo(() => {
+    if (orderStatusFilter === "all") return ordersForView;
+    const normalizedFilter = String(orderStatusFilter || "").trim().toLowerCase();
+    return ordersForView.filter(
+      (order) => String(order?.status || "").trim().toLowerCase() === normalizedFilter
+    );
+  }, [ordersForView, orderStatusFilter]);
+
+  const visibleOrderIds = useMemo(() => ordersForViewFiltered.map((order) => order._id), [ordersForViewFiltered]);
+
+  const isReadyToShipStatus = (status) => {
+    const normalized = String(status || "")
+      .trim()
+      .toLowerCase();
+    return normalized === "shipped" || normalized === "delivered";
+  };
+
+  const matchesLabelPrintFilter = (order, filter) => {
+    const normalized = String(order?.status || "")
+      .trim()
+      .toLowerCase();
+    if (filter === "shipped") return normalized === "shipped";
+    if (filter === "delivered") return normalized === "delivered";
+    if (filter === "ready") return isReadyToShipStatus(normalized);
+    return true;
+  };
+
+  const selectableVisibleOrderIds = useMemo(
+    () =>
+      ordersForViewFiltered
+        .filter((order) => matchesLabelPrintFilter(order, labelPrintFilter))
+        .map((order) => order._id),
+    [ordersForViewFiltered, labelPrintFilter]
+  );
+
+  const selectedOrdersForPrint = useMemo(() => {
+    const selected = ordersForViewFiltered.filter((order) => selectedOrderIds.includes(order._id));
+    return selected.filter((order) => matchesLabelPrintFilter(order, labelPrintFilter));
+  }, [ordersForViewFiltered, selectedOrderIds, labelPrintFilter]);
+
+  const allVisibleOrdersSelected = useMemo(
+    () =>
+      selectableVisibleOrderIds.length > 0 &&
+      selectableVisibleOrderIds.every((orderId) => selectedOrderIds.includes(orderId)),
+    [selectableVisibleOrderIds, selectedOrderIds]
+  );
+
+  const selectAllButtonLabel = useMemo(() => {
+    if (allVisibleOrdersSelected) {
+      if (labelPrintFilter === "ready") return "Clear shipped/delivered";
+      if (labelPrintFilter === "shipped") return "Clear shipped";
+      if (labelPrintFilter === "delivered") return "Clear delivered";
+      return "Clear all visible";
+    }
+    if (labelPrintFilter === "ready") return "Select shipped/delivered";
+    if (labelPrintFilter === "shipped") return "Select shipped";
+    if (labelPrintFilter === "delivered") return "Select delivered";
+    return "Select all visible";
+  }, [allVisibleOrdersSelected, labelPrintFilter]);
+
+  useEffect(() => {
+    const visibleSet = new Set(visibleOrderIds);
+    setSelectedOrderIds((prev) => prev.filter((orderId) => visibleSet.has(orderId)));
+  }, [visibleOrderIds]);
+
   const findOrderCustomImage = (order) =>
     order.products?.find((product) => product.customization?.uploadedImage)?.customization?.uploadedImage || "";
 
@@ -225,6 +307,7 @@ const AdminDashboard = () => {
             storeName: storeInfoRes.value.data?.storeName || defaultStoreInfo.storeName,
             storePhone: storeInfoRes.value.data?.storePhone || defaultStoreInfo.storePhone,
             storeAddress: storeInfoRes.value.data?.storeAddress || defaultStoreInfo.storeAddress,
+            storeLogoUrl: storeInfoRes.value.data?.storeLogoUrl || defaultStoreInfo.storeLogoUrl,
             specialOffer: storeInfoRes.value.data?.specialOffer || defaultStoreInfo.specialOffer,
             offers: Array.isArray(storeInfoRes.value.data?.offers) ? storeInfoRes.value.data.offers : defaultStoreInfo.offers,
           });
@@ -429,7 +512,7 @@ const AdminDashboard = () => {
         );
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Image upload failed");
+      setError(getUploadErrorMessage(err));
     } finally {
       setUploadingImage(false);
     }
@@ -630,6 +713,7 @@ const AdminDashboard = () => {
         storeName: storeInfo.storeName.trim(),
         storePhone: storeInfo.storePhone.trim(),
         storeAddress: storeInfo.storeAddress.trim(),
+        storeLogoUrl: String(storeInfo.storeLogoUrl || "").trim(),
         specialOffer: {
           title: String(storeInfo.specialOffer?.title || "").trim(),
           subtitle: String(storeInfo.specialOffer?.subtitle || "").trim(),
@@ -655,6 +739,7 @@ const AdminDashboard = () => {
         storeName: data.storeInfo?.storeName || payload.storeName,
         storePhone: data.storeInfo?.storePhone || payload.storePhone,
         storeAddress: data.storeInfo?.storeAddress || payload.storeAddress,
+        storeLogoUrl: data.storeInfo?.storeLogoUrl || payload.storeLogoUrl,
         specialOffer: data.storeInfo?.specialOffer || payload.specialOffer,
         offers: Array.isArray(data.storeInfo?.offers) ? data.storeInfo.offers : payload.offers,
       });
@@ -666,6 +751,31 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleStoreLogoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      setError("");
+      setSuccess("");
+      setUploadingStoreLogo(true);
+      const formData = new FormData();
+      formData.append("image", file);
+      const { data } = await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (!data?.imageUrl) {
+        throw new Error("Upload failed");
+      }
+      setStoreInfo((prev) => ({ ...prev, storeLogoUrl: data.imageUrl }));
+      setSuccess("Logo uploaded. Click 'Save Store Settings' to persist it.");
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to upload logo");
+    } finally {
+      setUploadingStoreLogo(false);
+      event.target.value = "";
+    }
+  };
+
   const getAddressLines = (address = {}) => {
     const lineOne = [address.line1, address.city].filter(Boolean).join(", ");
     const lineTwo = [address.state, address.postalCode, address.country].filter(Boolean).join(", ");
@@ -674,81 +784,152 @@ const AdminDashboard = () => {
 
   const getOrderDisplayId = (order) => order?.orderCode || order?._id || "N/A";
 
-  const handlePrintShippingLabel = (order) => {
-    const address = order?.address || {};
-    const addressLines = getAddressLines(address);
-    const items = Array.isArray(order?.products) ? order.products : [];
-    const itemList = items
-      .map((item) => `${item.name || "Item"} x${Number(item.quantity || 0)}`)
-      .join("<br/>");
+  const getPaymentStampText = (order) => {
+    const methodText = String(order?.paymentMethod || order?.paymentType || "").toLowerCase();
+    const isCodMethod = methodText.includes("cod") || methodText.includes("cash");
+    const isPaid =
+      Boolean(order?.isPaid) ||
+      String(order?.paymentStatus || "").toLowerCase() === "paid" ||
+      String(order?.status || "").toLowerCase() === "delivered";
+    return isPaid && !isCodMethod ? "PAID" : "COD";
+  };
 
-    const qrValue = encodeURIComponent(order._id || "");
+  const buildShippingLabelSheetMarkup = (order) => {
+    const safeOrder = order || {};
+    const address = safeOrder.address || {};
+    const addressLines = getAddressLines(address);
+    const items = Array.isArray(safeOrder.products) ? safeOrder.products : [];
+    const itemList = items.map((item) => `${item.name || "Item"} x${Number(item.quantity || 0)}`).join("<br/>");
+    const qrValue = encodeURIComponent(safeOrder._id || "");
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${qrValue}`;
+    const paymentStamp = getPaymentStampText(safeOrder);
+    const logoHtml = storeInfo.storeLogoUrl
+      ? `<img src="${storeInfo.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
+      : `<div class="logo-dot">G</div>`;
+
+    return `
+      <div class="sheet">
+        <div class="top-banner">
+          <div class="brand">
+            ${logoHtml}
+            <div>
+              <p class="brand-name">${storeInfo.storeName || "Gift Store"}</p>
+              <p class="muted">Shipping Operations Copy</p>
+            </div>
+          </div>
+          <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
+        </div>
+        <h1>Shipping Label</h1>
+        <div class="meta">
+          <p><strong>Order ID:</strong> ${getOrderDisplayId(safeOrder)}</p>
+          <p><strong>Status:</strong> ${safeOrder.status || "Pending"} | <strong>Amount:</strong> INR ${Number(safeOrder.totalPrice || 0).toFixed(2)}</p>
+          <p><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString()}</p>
+        </div>
+        <div class="row">
+          <div class="col">
+            <h2>From (Sender)</h2>
+            <div class="box">
+              <p><strong>${storeInfo.storeName}</strong></p>
+              <p>Support: ${storeInfo.storePhone}</p>
+              <p>${storeInfo.storeAddress}</p>
+            </div>
+          </div>
+          <div class="col">
+            <h2>To (Receiver)</h2>
+            <div class="box">
+              <p><strong>${address.fullName || "N/A"}</strong></p>
+              <p>${address.phone || "-"}</p>
+              ${addressLines.map((line) => `<p>${line}</p>`).join("")}
+            </div>
+          </div>
+          <div class="qr">
+            <img src="${qrUrl}" alt="Order QR" />
+            <p class="muted">Scan for Order ID</p>
+            <p class="barcode">*${getOrderDisplayId(safeOrder)}*</p>
+          </div>
+        </div>
+        <div class="items">
+          <h2>Package Items</h2>
+          <p>${itemList || "N/A"}</p>
+        </div>
+        <p class="muted">Generated from Admin Dashboard</p>
+      </div>
+    `;
+  };
+
+  const handlePrintShippingLabelsBatch = (ordersToPrint) => {
+    const printableOrders = Array.isArray(ordersToPrint) ? ordersToPrint.filter(Boolean) : [];
+    if (!printableOrders.length) {
+      setError("Select at least one order to print shipping labels.");
+      return;
+    }
+
     const printWindow = window.open("", "_blank", "width=900,height=1100");
     if (!printWindow) {
       setError("Popup blocked. Please allow popups to print shipping label.");
       return;
     }
 
+    const labelsHtml = printableOrders
+      .map((order) => `<div class="sheet-wrap">${buildShippingLabelSheetMarkup(order)}</div>`)
+      .reduce((pages, sheetHtml, idx) => {
+        if (idx % 2 === 0) {
+          pages.push([sheetHtml]);
+        } else {
+          pages[pages.length - 1].push(sheetHtml);
+        }
+        return pages;
+      }, [])
+      .map((pageSheets, pageIdx) => {
+        const first = pageSheets[0] || `<div class="sheet-wrap"></div>`;
+        const second = pageSheets[1] || `<div class="sheet-wrap placeholder"></div>`;
+        return `
+          <div class="${pageIdx > 0 ? "page-break" : ""}">
+            <div class="two-up">
+              ${first}
+              ${second}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
     printWindow.document.write(`
       <html>
         <head>
-          <title>Shipping Label - ${getOrderDisplayId(order)}</title>
+          <title>Shipping Labels (${printableOrders.length})</title>
           <style>
-            @page { size: A4 portrait; margin: 12mm; }
+            @page { size: A4 portrait; margin: 8mm; }
             body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #fff; }
-            .sheet { width: 100%; max-width: 190mm; margin: 0 auto; border: 2px solid #111827; padding: 10mm; box-sizing: border-box; }
+            .two-up { display: grid; grid-template-rows: 1fr 1fr; gap: 8mm; }
+            .sheet-wrap { height: 136.5mm; overflow: hidden; }
+            .sheet-wrap.placeholder { border: 1px dashed #d1d5db; border-radius: 10px; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 2px solid #111827; padding: 6mm; box-sizing: border-box; }
+            .page-break { page-break-before: always; break-before: page; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+            .brand { display: flex; align-items: center; gap: 8px; }
+            .logo-dot { width: 30px; height: 30px; border-radius: 999px; background: #047857; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+            .store-logo { width: 34px; height: 34px; object-fit: contain; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 14px; font-weight: 700; }
+            .pay-stamp { border: 2px solid; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; }
+            .pay-stamp.paid { color: #047857; border-color: #047857; background: #ecfdf5; }
+            .pay-stamp.cod { color: #9a3412; border-color: #9a3412; background: #fff7ed; }
             .row { display: flex; gap: 10mm; align-items: flex-start; }
             .col { flex: 1; }
-            h1 { margin: 0 0 8px; font-size: 24px; letter-spacing: 0.5px; }
-            h2 { margin: 0 0 6px; font-size: 14px; text-transform: uppercase; color: #374151; }
-            p { margin: 4px 0; font-size: 13px; line-height: 1.35; }
+            h1 { margin: 0 0 6px; font-size: 18px; letter-spacing: 0.4px; }
+            h2 { margin: 0 0 5px; font-size: 12px; text-transform: uppercase; color: #374151; }
+            p { margin: 3px 0; font-size: 11px; line-height: 1.32; }
             .box { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; min-height: 92px; }
             .meta { margin: 8px 0 10px; border-top: 1px dashed #6b7280; border-bottom: 1px dashed #6b7280; padding: 8px 0; }
             .items { margin-top: 10px; }
             .qr { text-align: center; min-width: 150px; }
-            .qr img { width: 140px; height: 140px; border: 1px solid #d1d5db; padding: 4px; border-radius: 6px; }
-            .barcode { margin-top: 8px; font-family: "Courier New", monospace; letter-spacing: 2px; font-size: 14px; }
-            .muted { color: #6b7280; font-size: 12px; }
+            .qr img { width: 110px; height: 110px; border: 1px solid #d1d5db; padding: 4px; border-radius: 6px; }
+            .barcode { margin-top: 6px; font-family: "Courier New", monospace; letter-spacing: 1.6px; font-size: 12px; }
+            .muted { color: #6b7280; font-size: 10px; }
           </style>
         </head>
         <body>
-          <div class="sheet">
-            <h1>Shipping Label</h1>
-            <div class="meta">
-              <p><strong>Order ID:</strong> ${getOrderDisplayId(order)}</p>
-              <p><strong>Status:</strong> ${order.status || "Pending"} | <strong>Amount:</strong> INR ${Number(order.totalPrice || 0).toFixed(2)}</p>
-              <p><strong>Date:</strong> ${new Date(order.createdAt || Date.now()).toLocaleString()}</p>
-            </div>
-            <div class="row">
-              <div class="col">
-                <h2>From (Sender)</h2>
-                <div class="box">
-                  <p><strong>${storeInfo.storeName}</strong></p>
-                  <p>Support: ${storeInfo.storePhone}</p>
-                  <p>${storeInfo.storeAddress}</p>
-                </div>
-              </div>
-              <div class="col">
-                <h2>To (Receiver)</h2>
-                <div class="box">
-                  <p><strong>${address.fullName || "N/A"}</strong></p>
-                  <p>${address.phone || "-"}</p>
-                  ${addressLines.map((line) => `<p>${line}</p>`).join("")}
-                </div>
-              </div>
-              <div class="qr">
-                <img src="${qrUrl}" alt="Order QR" />
-                <p class="muted">Scan for Order ID</p>
-                <p class="barcode">*${getOrderDisplayId(order)}*</p>
-              </div>
-            </div>
-            <div class="items">
-              <h2>Package Items</h2>
-              <p>${itemList || "N/A"}</p>
-            </div>
-            <p class="muted">Generated from Admin Dashboard</p>
-          </div>
+          ${labelsHtml}
           <script>
             window.onload = function() { window.print(); };
           </script>
@@ -758,12 +939,187 @@ const AdminDashboard = () => {
     printWindow.document.close();
   };
 
+  const buildInvoiceSheetMarkup = (order) => {
+    const safeOrder = order || {};
+    const address = safeOrder?.address || {};
+    const items = Array.isArray(safeOrder?.products) ? safeOrder.products : [];
+    const subtotal = Number(safeOrder?.subtotal || 0);
+    const discount = Number(safeOrder?.discountAmount || 0);
+    const total = Number(safeOrder?.totalPrice || 0);
+    const paymentStamp = getPaymentStampText(safeOrder);
+    const logoHtml = storeInfo.storeLogoUrl
+      ? `<img src="${storeInfo.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
+      : `<div class="logo-dot">G</div>`;
+
+    const invoiceItems = items.slice(0, 8);
+    const remainingCount = Math.max(0, items.length - invoiceItems.length);
+
+    return `
+      <div class="sheet">
+        <div class="top-banner">
+          <div class="brand">
+            ${logoHtml}
+            <div>
+              <p class="brand-name">${storeInfo.storeName || "Gift Store"}</p>
+              <p class="muted">Invoice</p>
+            </div>
+          </div>
+          <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
+        </div>
+        <h1>Tax Invoice</h1>
+        <p class="muted"><strong>Order:</strong> ${getOrderDisplayId(safeOrder)} • <strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString()}</p>
+        <div class="row">
+          <div class="col">
+            <h2>Bill To</h2>
+            <div class="box">
+              <p><strong>${address.fullName || "N/A"}</strong></p>
+              <p>${address.phone || "-"}</p>
+              <p>${address.line1 || "-"}</p>
+              <p>${[address.city, address.state, address.postalCode].filter(Boolean).join(", ") || "-"}</p>
+              <p>${address.country || "-"}</p>
+            </div>
+          </div>
+          <div class="col">
+            <h2>Seller</h2>
+            <div class="box">
+              <p><strong>${storeInfo.storeName}</strong></p>
+              <p>${storeInfo.storeAddress}</p>
+              <p>Phone: ${storeInfo.storePhone}</p>
+              <p><strong>Coupon:</strong> ${safeOrder.couponCode || "-"}</p>
+            </div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Qty</th><th>Price</th><th>Line</th></tr>
+          </thead>
+          <tbody>
+            ${invoiceItems.map((item) => {
+              const qty = Number(item.quantity || 0);
+              const price = Number(item.price || 0);
+              const lineTotal = (qty * price).toFixed(2);
+              return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+            }).join("")}
+            ${remainingCount > 0 ? `<tr><td colspan="4" class="muted">+ ${remainingCount} more item(s) not shown</td></tr>` : ""}
+          </tbody>
+        </table>
+        <div class="totals">
+          <p><span>Subtotal</span><span>INR ${subtotal.toFixed(2)}</span></p>
+          <p><span>Discount</span><span>- INR ${discount.toFixed(2)}</span></p>
+          <p class="grand"><span>Total</span><span>INR ${total.toFixed(2)}</span></p>
+        </div>
+      </div>
+    `;
+  };
+
+  const handlePrintInvoicesBatch = (ordersToPrint) => {
+    const printableOrders = Array.isArray(ordersToPrint) ? ordersToPrint.filter(Boolean) : [];
+    if (!printableOrders.length) {
+      setError("Select at least one order to print invoices.");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=900,height=1100");
+    if (!printWindow) {
+      setError("Popup blocked. Please allow popups to print invoice.");
+      return;
+    }
+
+    const invoicesHtml = printableOrders
+      .map((order) => `<div class="sheet-wrap">${buildInvoiceSheetMarkup(order)}</div>`)
+      .reduce((pages, sheetHtml, idx) => {
+        if (idx % 2 === 0) pages.push([sheetHtml]);
+        else pages[pages.length - 1].push(sheetHtml);
+        return pages;
+      }, [])
+      .map((pageSheets, pageIdx) => {
+        const first = pageSheets[0] || `<div class="sheet-wrap"></div>`;
+        const second = pageSheets[1] || `<div class="sheet-wrap placeholder"></div>`;
+        return `
+          <div class="${pageIdx > 0 ? "page-break" : ""}">
+            <div class="two-up">
+              ${first}
+              ${second}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoices (${printableOrders.length})</title>
+          <style>
+            @page { size: A4 portrait; margin: 8mm; }
+            body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #fff; }
+            .two-up { display: grid; grid-template-rows: 1fr 1fr; gap: 8mm; }
+            .sheet-wrap { height: 136.5mm; overflow: hidden; }
+            .sheet-wrap.placeholder { border: 1px dashed #d1d5db; border-radius: 10px; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 1.5px solid #d1d5db; padding: 6mm; box-sizing: border-box; }
+            .page-break { page-break-before: always; break-before: page; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+            .brand { display: flex; align-items: center; gap: 8px; }
+            .logo-dot { width: 28px; height: 28px; border-radius: 999px; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+            .store-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 12px; font-weight: 700; }
+            .pay-stamp { border: 2px solid; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+            .pay-stamp.paid { color: #047857; border-color: #047857; background: #ecfdf5; }
+            .pay-stamp.cod { color: #9a3412; border-color: #9a3412; background: #fff7ed; }
+            .row { display: flex; gap: 8mm; align-items: flex-start; }
+            .col { flex: 1; }
+            h1 { margin: 0 0 6px; font-size: 18px; letter-spacing: 0.4px; }
+            h2 { margin: 0 0 5px; font-size: 12px; text-transform: uppercase; color: #374151; }
+            p { margin: 3px 0; font-size: 11px; line-height: 1.32; }
+            .box { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px; min-height: 56px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+            th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 6px 3px; font-size: 11px; }
+            th { color: #4b5563; font-weight: 600; }
+            .totals { margin-top: 6px; margin-left: auto; width: 220px; }
+            .totals p { display: flex; justify-content: space-between; }
+            .grand { font-weight: 700; border-top: 1px solid #111827; padding-top: 4px; }
+            .muted { color: #6b7280; font-size: 10px; }
+          </style>
+        </head>
+        <body>
+          ${invoicesHtml}
+          <script>window.onload = function() { window.print(); };</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handlePrintShippingLabel = (order) => {
+    handlePrintShippingLabelsBatch([order]);
+  };
+
+  const toggleOrderSelection = (orderId) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]
+    );
+  };
+
+  const toggleSelectAllVisibleOrders = () => {
+    if (allVisibleOrdersSelected) {
+      const selectableSet = new Set(selectableVisibleOrderIds);
+      setSelectedOrderIds((prev) => prev.filter((orderId) => !selectableSet.has(orderId)));
+      return;
+    }
+    setSelectedOrderIds((prev) => Array.from(new Set([...prev, ...selectableVisibleOrderIds])));
+  };
+
   const handlePrintInvoice = (order) => {
-    const address = order?.address || {};
-    const items = Array.isArray(order?.products) ? order.products : [];
-    const subtotal = Number(order?.subtotal || 0);
-    const discount = Number(order?.discountAmount || 0);
-    const total = Number(order?.totalPrice || 0);
+    const safeOrder = order || {};
+    const address = safeOrder?.address || {};
+    const items = Array.isArray(safeOrder?.products) ? safeOrder.products : [];
+    const subtotal = Number(safeOrder?.subtotal || 0);
+    const discount = Number(safeOrder?.discountAmount || 0);
+    const total = Number(safeOrder?.totalPrice || 0);
+    const paymentStamp = getPaymentStampText(safeOrder);
+    const logoHtml = storeInfo.storeLogoUrl
+      ? `<img src="${storeInfo.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
+      : `<div class="logo-dot">G</div>`;
 
     const printWindow = window.open("", "_blank", "width=900,height=1100");
     if (!printWindow) {
@@ -774,11 +1130,19 @@ const AdminDashboard = () => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Invoice - ${getOrderDisplayId(order)}</title>
+          <title>Invoice - ${getOrderDisplayId(safeOrder)}</title>
           <style>
-            @page { size: A4 portrait; margin: 12mm; }
+            @page { size: A4 portrait; margin: 8mm; }
             body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #fff; }
-            .sheet { width: 100%; max-width: 190mm; margin: 0 auto; border: 1px solid #d1d5db; padding: 10mm; box-sizing: border-box; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 1.5px solid #d1d5db; padding: 9mm; box-sizing: border-box; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+            .brand { display: flex; align-items: center; gap: 8px; }
+            .logo-dot { width: 30px; height: 30px; border-radius: 999px; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+            .store-logo { width: 34px; height: 34px; object-fit: contain; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 14px; font-weight: 700; }
+            .pay-stamp { border: 2px solid; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; }
+            .pay-stamp.paid { color: #047857; border-color: #047857; background: #ecfdf5; }
+            .pay-stamp.cod { color: #9a3412; border-color: #9a3412; background: #fff7ed; }
             h1 { margin: 0; font-size: 24px; }
             h2 { margin: 0 0 6px; font-size: 14px; color: #374151; text-transform: uppercase; }
             p { margin: 4px 0; font-size: 13px; line-height: 1.4; }
@@ -795,6 +1159,16 @@ const AdminDashboard = () => {
         </head>
         <body>
           <div class="sheet">
+            <div class="top-banner">
+              <div class="brand">
+                ${logoHtml}
+                <div>
+                  <p class="brand-name">${storeInfo.storeName || "Gift Store"}</p>
+                  <p class="muted">Accounts Copy</p>
+                </div>
+              </div>
+              <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
+            </div>
             <div class="top">
               <div class="box">
                 <h1>Tax Invoice</h1>
@@ -804,10 +1178,10 @@ const AdminDashboard = () => {
               </div>
               <div class="box">
                 <h2>Invoice Details</h2>
-                <p><strong>Order ID:</strong> ${getOrderDisplayId(order)}</p>
-                <p><strong>Date:</strong> ${new Date(order.createdAt || Date.now()).toLocaleString()}</p>
-                <p><strong>Status:</strong> ${order.status || "Pending"}</p>
-                <p><strong>Coupon:</strong> ${order.couponCode || "-"}</p>
+                <p><strong>Order ID:</strong> ${getOrderDisplayId(safeOrder)}</p>
+                <p><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString()}</p>
+                <p><strong>Status:</strong> ${safeOrder.status || "Pending"}</p>
+                <p><strong>Coupon:</strong> ${safeOrder.couponCode || "-"}</p>
               </div>
             </div>
             <div class="box">
@@ -820,29 +1194,15 @@ const AdminDashboard = () => {
             </div>
             <table>
               <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Qty</th>
-                  <th>Price</th>
-                  <th>Line Total</th>
-                </tr>
+                <tr><th>Item</th><th>Qty</th><th>Price</th><th>Line Total</th></tr>
               </thead>
               <tbody>
-                ${items
-                  .map((item) => {
-                    const qty = Number(item.quantity || 0);
-                    const price = Number(item.price || 0);
-                    const lineTotal = (qty * price).toFixed(2);
-                    return `
-                      <tr>
-                        <td>${item.name || "Item"}</td>
-                        <td>${qty}</td>
-                        <td>INR ${price.toFixed(2)}</td>
-                        <td>INR ${lineTotal}</td>
-                      </tr>
-                    `;
-                  })
-                  .join("")}
+                ${items.map((item) => {
+                  const qty = Number(item.quantity || 0);
+                  const price = Number(item.price || 0);
+                  const lineTotal = (qty * price).toFixed(2);
+                  return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+                }).join("")}
               </tbody>
             </table>
             <div class="totals">
@@ -852,27 +1212,124 @@ const AdminDashboard = () => {
             </div>
             <p class="muted">This is a computer-generated invoice from Admin Dashboard.</p>
           </div>
-          <script>
-            window.onload = function() { window.print(); };
-          </script>
+          <script>window.onload = function() { window.print(); };</script>
         </body>
       </html>
     `);
     printWindow.document.close();
   };
 
-  const handlePrintCombinedA4 = (order) => {
-    const address = order?.address || {};
+  const buildCombinedA4Markup = (order) => {
+    const safeOrder = order || {};
+    const address = safeOrder.address || {};
     const addressLines = getAddressLines(address);
-    const items = Array.isArray(order?.products) ? order.products : [];
-    const itemList = items
-      .map((item) => `${item.name || "Item"} x${Number(item.quantity || 0)}`)
-      .join("<br/>");
-    const subtotal = Number(order?.subtotal || 0);
-    const discount = Number(order?.discountAmount || 0);
-    const total = Number(order?.totalPrice || 0);
-    const qrValue = encodeURIComponent(order._id || "");
+    const items = Array.isArray(safeOrder?.products) ? safeOrder.products : [];
+    const itemList = items.map((item) => `${item.name || "Item"} x${Number(item.quantity || 0)}`).join("<br/>");
+    const subtotal = Number(safeOrder?.subtotal || 0);
+    const discount = Number(safeOrder?.discountAmount || 0);
+    const total = Number(safeOrder?.totalPrice || 0);
+    const qrValue = encodeURIComponent(safeOrder._id || "");
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrValue}`;
+    const paymentStamp = getPaymentStampText(safeOrder);
+    const logoHtml = storeInfo.storeLogoUrl
+      ? `<img src="${storeInfo.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
+      : `<div class="logo-dot">G</div>`;
+
+    const invoiceItems = items.slice(0, 8);
+    const remainingCount = Math.max(0, items.length - invoiceItems.length);
+
+    return `
+      <div class="sheet">
+        <div class="combined">
+          <div class="top-banner">
+            <div class="brand">
+              ${logoHtml}
+              <div>
+                <p class="brand-name">${storeInfo.storeName || "Gift Store"}</p>
+                <p class="muted">Label + Invoice (single A4)</p>
+              </div>
+            </div>
+            <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
+          </div>
+
+          <div class="panel label-panel">
+            <div class="panel-head">
+              <h1>Shipping Label</h1>
+              <p class="panel-meta"><strong>Order:</strong> ${getOrderDisplayId(safeOrder)} • <strong>Status:</strong> ${safeOrder.status || "Pending"} • <strong>Amount:</strong> INR ${Number(safeOrder.totalPrice || 0).toFixed(2)}</p>
+            </div>
+            <div class="label-grid">
+              <div class="label-col">
+                <h2>From</h2>
+                <div class="box">
+                  <p><strong>${storeInfo.storeName}</strong></p>
+                  <p>${storeInfo.storeAddress}</p>
+                  <p>Phone: ${storeInfo.storePhone}</p>
+                </div>
+              </div>
+              <div class="label-col">
+                <h2>To</h2>
+                <div class="box">
+                  <p><strong>${address.fullName || "N/A"}</strong></p>
+                  <p>${address.phone || "-"}</p>
+                  ${addressLines.map((line) => `<p>${line}</p>`).join("")}
+                </div>
+              </div>
+              <div class="label-qr">
+                <img src="${qrUrl}" alt="Order QR" />
+                <p class="muted">Scan for Order</p>
+                <p class="barcode">*${getOrderDisplayId(safeOrder)}*</p>
+              </div>
+            </div>
+            <p class="muted"><strong>Items:</strong> ${itemList || "N/A"}</p>
+          </div>
+
+          <div class="cutline">
+            <span>Cut / Tear here</span>
+          </div>
+
+          <div class="panel invoice-panel">
+            <div class="panel-head">
+              <h1>Tax Invoice</h1>
+              <p class="panel-meta"><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString()} • <strong>Coupon:</strong> ${safeOrder.couponCode || "-"}</p>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Item</th><th>Qty</th><th>Price</th><th>Line</th></tr>
+              </thead>
+              <tbody>
+                ${invoiceItems
+                  .map((item) => {
+                    const qty = Number(item.quantity || 0);
+                    const price = Number(item.price || 0);
+                    const lineTotal = (qty * price).toFixed(2);
+                    return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+                  })
+                  .join("")}
+                ${
+                  remainingCount > 0
+                    ? `<tr><td colspan="4" class="muted">+ ${remainingCount} more item(s) not shown</td></tr>`
+                    : ""
+                }
+              </tbody>
+            </table>
+            <div class="totals">
+              <p><span>Subtotal</span><span>INR ${subtotal.toFixed(2)}</span></p>
+              <p><span>Discount</span><span>- INR ${discount.toFixed(2)}</span></p>
+              <p class="grand"><span>Total</span><span>INR ${total.toFixed(2)}</span></p>
+            </div>
+            <p class="muted">Generated from Admin Dashboard</p>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const handlePrintCombinedA4Batch = (ordersToPrint) => {
+    const printableOrders = Array.isArray(ordersToPrint) ? ordersToPrint.filter(Boolean) : [];
+    if (!printableOrders.length) {
+      setError("Select at least one order to print combined Shipping + Invoice.");
+      return;
+    }
 
     const printWindow = window.open("", "_blank", "width=900,height=1100");
     if (!printWindow) {
@@ -880,23 +1337,51 @@ const AdminDashboard = () => {
       return;
     }
 
+    const combinedHtml = printableOrders
+      .map(
+        (order, index) => `
+          <div class="${index > 0 ? "page-break" : ""}">
+            ${buildCombinedA4Markup(order)}
+          </div>
+        `
+      )
+      .join("");
+
     printWindow.document.write(`
       <html>
         <head>
-          <title>Order Print - ${getOrderDisplayId(order)}</title>
+          <title>Shipping + Invoice (${printableOrders.length})</title>
           <style>
-            @page { size: A4 portrait; margin: 10mm; }
+            @page { size: A4 portrait; margin: 8mm; }
             body { font-family: Arial, sans-serif; margin: 0; color: #111827; }
-            .sheet { width: 100%; max-width: 190mm; margin: 0 auto; box-sizing: border-box; }
-            .section { border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
-            .split { display: flex; gap: 8px; align-items: flex-start; }
-            .col { flex: 1; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; box-sizing: border-box; border: 1.5px solid #d1d5db; padding: 8mm; }
+            .page-break { page-break-before: always; break-before: page; }
+            .combined { display: block; }
+            .panel { border: 1px solid #d1d5db; border-radius: 10px; padding: 8px; background: #fff; }
+            .label-panel { }
+            .invoice-panel { }
+            .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 6px; }
+            .panel-meta { margin: 0; color: #374151; font-size: 10px; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+            .brand { display: flex; align-items: center; gap: 8px; }
+            .logo-dot { width: 28px; height: 28px; border-radius: 999px; background: #0f766e; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+            .store-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 12px; font-weight: 700; }
+            .pay-stamp { border: 2px solid; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+            .pay-stamp.paid { color: #047857; border-color: #047857; background: #ecfdf5; }
+            .pay-stamp.cod { color: #9a3412; border-color: #9a3412; background: #fff7ed; }
+            .label-grid { display: grid; grid-template-columns: 1fr 1fr 150px; gap: 8px; align-items: start; }
+            .label-col { min-width: 0; }
+            .label-qr { text-align: center; }
+            .cutline { position: relative; text-align: center; color: #6b7280; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+            .cutline:before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed #9ca3af; }
+            .cutline span { position: relative; background: #fff; padding: 0 10px; }
             h1 { margin: 0 0 6px; font-size: 18px; }
             h2 { margin: 0 0 4px; font-size: 12px; color: #374151; text-transform: uppercase; }
             p { margin: 3px 0; font-size: 11px; line-height: 1.35; }
             .box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px; min-height: 70px; }
-            .qr { text-align: center; min-width: 130px; }
-            .qr img { width: 110px; height: 110px; border: 1px solid #d1d5db; padding: 3px; border-radius: 6px; }
+            .label-qr img { width: 110px; height: 110px; border: 1px solid #d1d5db; padding: 3px; border-radius: 6px; }
+            .barcode { margin-top: 6px; font-family: "Courier New", monospace; letter-spacing: 1.6px; font-size: 12px; }
             table { width: 100%; border-collapse: collapse; margin-top: 6px; }
             th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 6px 3px; font-size: 11px; }
             th { color: #4b5563; font-weight: 600; }
@@ -907,83 +1392,7 @@ const AdminDashboard = () => {
           </style>
         </head>
         <body>
-          <div class="sheet">
-            <div class="section">
-              <h1>Shipping Label</h1>
-              <p><strong>Order ID:</strong> ${getOrderDisplayId(order)} | <strong>Status:</strong> ${order.status || "Pending"}</p>
-              <div class="split">
-                <div class="col">
-                  <h2>From</h2>
-                  <div class="box">
-                    <p><strong>${storeInfo.storeName}</strong></p>
-                    <p>${storeInfo.storeAddress}</p>
-                    <p>Phone: ${storeInfo.storePhone}</p>
-                  </div>
-                </div>
-                <div class="col">
-                  <h2>To</h2>
-                  <div class="box">
-                    <p><strong>${address.fullName || "N/A"}</strong></p>
-                    <p>${address.phone || "-"}</p>
-                    ${addressLines.map((line) => `<p>${line}</p>`).join("")}
-                  </div>
-                </div>
-                <div class="qr">
-                  <img src="${qrUrl}" alt="Order QR" />
-                  <p class="muted">Order QR</p>
-                </div>
-              </div>
-              <p><strong>Items:</strong> ${itemList || "N/A"}</p>
-            </div>
-
-            <div class="section">
-              <h1>Tax Invoice</h1>
-              <div class="split">
-                <div class="col">
-                  <p><strong>${storeInfo.storeName}</strong></p>
-                  <p>${storeInfo.storeAddress}</p>
-                  <p>Phone: ${storeInfo.storePhone}</p>
-                </div>
-                <div class="col">
-                  <p><strong>Invoice Date:</strong> ${new Date(order.createdAt || Date.now()).toLocaleString()}</p>
-                  <p><strong>Coupon:</strong> ${order.couponCode || "-"}</p>
-                </div>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th>Line Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${items
-                    .map((item) => {
-                      const qty = Number(item.quantity || 0);
-                      const price = Number(item.price || 0);
-                      const lineTotal = (qty * price).toFixed(2);
-                      return `
-                        <tr>
-                          <td>${item.name || "Item"}</td>
-                          <td>${qty}</td>
-                          <td>INR ${price.toFixed(2)}</td>
-                          <td>INR ${lineTotal}</td>
-                        </tr>
-                      `;
-                    })
-                    .join("")}
-                </tbody>
-              </table>
-              <div class="totals">
-                <p><span>Subtotal</span><span>INR ${subtotal.toFixed(2)}</span></p>
-                <p><span>Discount</span><span>- INR ${discount.toFixed(2)}</span></p>
-                <p class="grand"><span>Total</span><span>INR ${total.toFixed(2)}</span></p>
-              </div>
-              <p class="muted">Generated from Admin Dashboard</p>
-            </div>
-          </div>
+          ${combinedHtml}
           <script>
             window.onload = function() { window.print(); };
           </script>
@@ -991,6 +1400,33 @@ const AdminDashboard = () => {
       </html>
     `);
     printWindow.document.close();
+  };
+
+  const handlePrintCombinedA4 = (order) => {
+    handlePrintCombinedA4Batch([order]);
+  };
+
+  const handleReviewCancellation = async (order, action) => {
+    if (!order?._id) return;
+    try {
+      setError("");
+      setSuccess("");
+      const adminNote =
+        action === "reject"
+          ? window.prompt("Reject note (optional):", "") || ""
+          : window.prompt("Approval note (optional):", "") || "";
+      const { data } = await api.put(
+        `/admin/orders/${order._id}/cancellation-request`,
+        { action, adminNote },
+        authHeader
+      );
+      const updated = data.order;
+      setOrders((prev) => prev.map((o) => (o._id === updated._id ? updated : o)));
+      setArchivedOrders((prev) => prev.map((o) => (o._id === updated._id ? updated : o)));
+      setSuccess(data.message || "Cancellation updated.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to review cancellation request");
+    }
   };
 
   const saveCoupon = async (event) => {
@@ -1387,6 +1823,37 @@ const AdminDashboard = () => {
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
             required
           />
+          <div className="md:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+            <p className="text-sm font-semibold text-emerald-900">Store Logo</p>
+            <p className="mb-3 text-xs text-emerald-700">Used on shipping labels and invoices.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              {storeInfo.storeLogoUrl ? (
+                <img
+                  src={storeInfo.storeLogoUrl}
+                  alt="Store logo preview"
+                  className="h-14 w-14 rounded-lg border border-emerald-200 bg-white object-contain p-1"
+                />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-emerald-200 bg-white text-sm font-semibold text-emerald-700">
+                  G
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleStoreLogoUpload}
+                disabled={uploadingStoreLogo}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+              <input
+                name="storeLogoUrl"
+                value={storeInfo.storeLogoUrl}
+                onChange={handleStoreInfoChange}
+                placeholder="Or paste logo URL"
+                className="min-w-[280px] flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
           <div className="md:col-span-2 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
             <p className="text-sm font-semibold text-teal-900">Top Special Offer Banner</p>
             <p className="mb-3 text-xs text-teal-700">Shown at top of home page for festivals/events.</p>
@@ -2200,7 +2667,7 @@ const AdminDashboard = () => {
 
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
         <h3 className="text-lg font-semibold text-gray-900">Manage Orders</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {["all", "active", "archived"].map((view) => (
             <button
               key={view}
@@ -2219,12 +2686,89 @@ const AdminDashboard = () => {
                   : `Archived (${archivedOrders.length})`}
             </button>
           ))}
+          <select
+            value={orderStatusFilter}
+            onChange={(e) => setOrderStatusFilter(e.target.value)}
+            className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800"
+            aria-label="Filter orders by status"
+            title="Filter orders by status"
+          >
+            <option value="all">All statuses</option>
+            {orderStatuses.map((status) => (
+              <option key={status} value={status.toLowerCase()}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+            {selectedOrderIds.length} selected ({selectedOrdersForPrint.length} print-ready)
+          </p>
+          <select
+            value={labelPrintFilter}
+            onChange={(event) => setLabelPrintFilter(event.target.value)}
+            className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800"
+            aria-label="Filter selected orders for label printing"
+          >
+            <option value="all">All selected</option>
+            <option value="ready">Shipped/Delivered only</option>
+            <option value="shipped">Shipped only</option>
+            <option value="delivered">Delivered only</option>
+          </select>
+          <button
+            type="button"
+            onClick={toggleSelectAllVisibleOrders}
+            className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+          >
+            {selectAllButtonLabel}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedOrderIds([])}
+            disabled={selectedOrderIds.length === 0}
+            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear selection
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePrintShippingLabelsBatch(selectedOrdersForPrint)}
+            disabled={selectedOrdersForPrint.length === 0}
+            className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Print Selected Labels ({selectedOrdersForPrint.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePrintInvoicesBatch(selectedOrdersForPrint)}
+            disabled={selectedOrdersForPrint.length === 0}
+            className="rounded-full bg-sky-700 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Print Selected Invoices ({selectedOrdersForPrint.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePrintCombinedA4Batch(selectedOrdersForPrint)}
+            disabled={selectedOrdersForPrint.length === 0}
+            className="rounded-full bg-indigo-700 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Print Shipping + Invoice ({selectedOrdersForPrint.length})
+          </button>
         </div>
         <div className="mt-3 space-y-3 md:hidden">
-          {ordersForView.map((order) => (
+          {ordersForViewFiltered.map((order) => (
             <article key={order._id} className="rounded-xl border border-gray-200 p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-gray-900">{getOrderDisplayId(order)}</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrderIds.includes(order._id)}
+                    onChange={() => toggleOrderSelection(order._id)}
+                    aria-label={`Select order ${getOrderDisplayId(order)}`}
+                  />
+                  <p className="text-sm font-semibold text-gray-900">{getOrderDisplayId(order)}</p>
+                </div>
                 <span
                   className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${
                     order.__isArchived ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
@@ -2296,9 +2840,17 @@ const AdminDashboard = () => {
           {ordersForView.length === 0 ? <p className="text-sm text-gray-500">No orders found for this filter.</p> : null}
         </div>
         <div className="mt-3 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[1400px] text-left text-sm">
+          <table className="w-full min-w-[1480px] text-left text-sm">
             <thead className="text-gray-500">
               <tr>
+                <th className="py-2">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleOrdersSelected}
+                    onChange={toggleSelectAllVisibleOrders}
+                    aria-label="Select all visible orders"
+                  />
+                </th>
                 <th className="py-2">Order ID</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Custom Image</th>
@@ -2307,6 +2859,7 @@ const AdminDashboard = () => {
                 <th className="py-2">Total</th>
                 <th className="py-2">Update Status</th>
                 <th className="py-2">Tracking ID</th>
+                <th className="py-2">Cancellation</th>
                 <th className="py-2">Shipping Label</th>
                 <th className="py-2">Invoice</th>
                 <th className="py-2">A4 Combined</th>
@@ -2315,8 +2868,16 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {ordersForView.map((order) => (
+              {ordersForViewFiltered.map((order) => (
                 <tr key={order._id} className="border-t border-gray-100">
+                  <td className="py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrderIds.includes(order._id)}
+                      onChange={() => toggleOrderSelection(order._id)}
+                      aria-label={`Select order ${getOrderDisplayId(order)}`}
+                    />
+                  </td>
                   <td className="py-2">{getOrderDisplayId(order)}</td>
                   <td className="py-2">
                     <span
@@ -2424,6 +2985,39 @@ const AdminDashboard = () => {
                     </div>
                   </td>
                   <td className="py-2">
+                    {order.cancellationRequest?.status === "Pending" ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-amber-700">Pending</p>
+                        <p className="max-w-[220px] text-xs text-gray-600">{order.cancellationRequest.reason}</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleReviewCancellation(order, "approve")}
+                            className="rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReviewCancellation(order, "reject")}
+                            className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ) : order.cancellationRequest?.status && order.cancellationRequest.status !== "None" ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-gray-800">{order.cancellationRequest.status}</p>
+                        {order.cancellationRequest.reason ? (
+                          <p className="max-w-[220px] text-xs text-gray-600">{order.cancellationRequest.reason}</p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="py-2">
                     <button
                       onClick={() => handlePrintShippingLabel(order)}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
@@ -2480,9 +3074,9 @@ const AdminDashboard = () => {
                   </td>
                 </tr>
               ))}
-              {ordersForView.length === 0 ? (
+              {ordersForViewFiltered.length === 0 ? (
                 <tr>
-                  <td className="py-4 text-gray-500" colSpan={13}>
+                  <td className="py-4 text-gray-500" colSpan={15}>
                     No orders found for this filter.
                   </td>
                 </tr>

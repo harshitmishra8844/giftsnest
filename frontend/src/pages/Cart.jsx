@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import QuantityStepper from "../components/QuantityStepper";
 
 const Cart = () => {
   const { state } = useLocation();
@@ -61,12 +62,12 @@ const Cart = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) => updateQuantity(item._id, Number(e.target.value))}
-                  className="w-20 rounded-lg border border-gray-200 px-2 py-1.5 text-sm"
+                <QuantityStepper
+                  quantity={item.quantity}
+                  onDecrease={() => updateQuantity(item._id, item.quantity - 1)}
+                  onIncrease={() => updateQuantity(item._id, item.quantity + 1)}
+                  decreaseAriaLabel={`Decrease ${item.name} quantity`}
+                  increaseAriaLabel={`Increase ${item.name} quantity`}
                 />
                 <button
                   onClick={() => removeFromCart(item._id)}

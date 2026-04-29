@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import ProductCard from "../components/ProductCard";
 import { useCart } from "../context/CartContext";
+import CartToast from "../components/CartToast";
 
 const Products = () => {
-  const { addToCart } = useCart();
+  const { cartItems, addToCart, updateQuantity } = useCart();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshSeed, setRefreshSeed] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchText, setSearchText] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -61,6 +63,20 @@ const Products = () => {
       return matchesCategory && matchesSearch;
     });
   }, [products, searchText, selectedCategory]);
+
+  const cartQuantityById = useMemo(
+    () =>
+      // Fast lookup for per-card quantity controls.
+      cartItems.reduce((acc, item) => {
+        acc[item._id] = item.quantity;
+        return acc;
+      }, {}),
+    [cartItems]
+  );
+
+  const showAddToast = (productName) => {
+    setToastMessage(`${productName} added to cart`);
+  };
 
   if (loading) {
     return (
@@ -145,10 +161,28 @@ const Products = () => {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visibleProducts.map((product) => (
-            <ProductCard key={product._id} product={product} onAddToCart={addToCart} />
+            <ProductCard
+              key={product._id}
+              product={product}
+              quantity={cartQuantityById[product._id] || 0}
+              onAdd={() => {
+                addToCart(product);
+                showAddToast(product.name);
+              }}
+              onIncrease={() => {
+                addToCart(product);
+                showAddToast(product.name);
+              }}
+              onDecrease={() => {
+                const current = cartQuantityById[product._id] || 0;
+                if (current <= 0) return;
+                updateQuantity(product._id, current - 1);
+              }}
+            />
           ))}
         </div>
       )}
+      <CartToast message={toastMessage} onClose={() => setToastMessage("")} />
     </section>
   );
 };

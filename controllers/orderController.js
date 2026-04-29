@@ -342,6 +342,92 @@ const updateTrackingId = async (req, res) => {
   }
 };
 
+const requestOrderCancellation = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { id } = req.params;
+    const reason = String(req.body?.reason || "").trim();
+    const details = String(req.body?.details || "").trim();
+
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!reason) return res.status(400).json({ message: "Cancellation reason is required" });
+
+    const order = await Order.findOne({ _id: id, userId });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (["Shipped", "Delivered"].includes(order.status)) {
+      return res.status(400).json({ message: "Order cannot be cancelled after it is shipped." });
+    }
+    if (order.status === "Cancelled") {
+      return res.status(400).json({ message: "Order is already cancelled." });
+    }
+    if (order.cancellationRequest?.status === "Pending") {
+      return res.status(400).json({ message: "Cancellation request already submitted. Please wait for approval." });
+    }
+    if (order.cancellationRequest?.status === "Approved") {
+      return res.status(400).json({ message: "Cancellation request already approved." });
+    }
+
+    order.cancellationRequest = {
+      status: "Pending",
+      reason,
+      details,
+      requestedAt: new Date(),
+      reviewedAt: null,
+      adminNote: "",
+    };
+    await order.save();
+
+    return res.status(200).json({ message: "Cancellation request submitted.", order });
+  } catch (error) {
+    console.error("Request cancellation error:", error.message);
+    return res.status(500).json({ message: "Failed to submit cancellation request" });
+  }
+};
+
+const reviewOrderCancellation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const action = String(req.body?.action || "").trim().toLowerCase();
+    const adminNote = String(req.body?.adminNote || "").trim();
+
+    if (!["approve", "reject"].includes(action)) {
+      return res.status(400).json({ message: "action must be approve or reject" });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.status === "Cancelled") {
+      return res.status(400).json({ message: "Order is already cancelled." });
+    }
+
+    if (order.cancellationRequest?.status !== "Pending") {
+      return res.status(400).json({ message: "No pending cancellation request for this order." });
+    }
+
+    const reviewedAt = new Date();
+
+    if (action === "approve") {
+      order.status = "Cancelled";
+      order.cancellationRequest.status = "Approved";
+      order.cancellationRequest.reviewedAt = reviewedAt;
+      order.cancellationRequest.adminNote = adminNote;
+      await order.save();
+      return res.status(200).json({ message: "Cancellation approved and order cancelled.", order });
+    }
+
+    order.cancellationRequest.status = "Rejected";
+    order.cancellationRequest.reviewedAt = reviewedAt;
+    order.cancellationRequest.adminNote = adminNote;
+    await order.save();
+    return res.status(200).json({ message: "Cancellation request rejected.", order });
+  } catch (error) {
+    console.error("Review cancellation error:", error.message);
+    return res.status(500).json({ message: "Failed to review cancellation request" });
+  }
+};
+
 const deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -454,6 +540,8 @@ module.exports = {
   getArchivedOrders,
   updateOrderStatus,
   updateTrackingId,
+  requestOrderCancellation,
+  reviewOrderCancellation,
   deleteOrder,
   archiveOrder,
   unarchiveOrder,

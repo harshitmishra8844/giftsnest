@@ -110,6 +110,39 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    cancellationRequest: {
+      status: {
+        type: String,
+        enum: ["None", "Pending", "Approved", "Rejected"],
+        default: "None",
+      },
+      reason: {
+        type: String,
+        default: "",
+        trim: true,
+        maxlength: 400,
+      },
+      details: {
+        type: String,
+        default: "",
+        trim: true,
+        maxlength: 1000,
+      },
+      requestedAt: {
+        type: Date,
+        default: null,
+      },
+      reviewedAt: {
+        type: Date,
+        default: null,
+      },
+      adminNote: {
+        type: String,
+        default: "",
+        trim: true,
+        maxlength: 800,
+      },
+    },
   },
   { timestamps: true }
 );

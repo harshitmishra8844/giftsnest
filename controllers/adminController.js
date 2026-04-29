@@ -121,6 +121,7 @@ const getStoreInfo = async (req, res) => {
       storeName: dbStoreInfo?.storeName || process.env.STORE_NAME || "Gift Store",
       storePhone: dbStoreInfo?.storePhone || process.env.STORE_PHONE || "+91-90000-00000",
       storeAddress: dbStoreInfo?.storeAddress || process.env.STORE_ADDRESS || "123 Commerce Street, Mumbai, Maharashtra 400001, India",
+      storeLogoUrl: dbStoreInfo?.storeLogoUrl || "",
       specialOffer: sanitizeSpecialOffer(dbStoreInfo?.specialOffer),
       offers: sanitizeOffers(dbStoreInfo?.offers),
     });
@@ -132,7 +133,7 @@ const getStoreInfo = async (req, res) => {
 
 const updateStoreInfo = async (req, res) => {
   try {
-    const { storeName, storePhone, storeAddress, specialOffer, offers } = req.body;
+    const { storeName, storePhone, storeAddress, storeLogoUrl, specialOffer, offers } = req.body;
     if (!storeName || !storePhone || !storeAddress) {
       return res.status(400).json({ message: "storeName, storePhone and storeAddress are required" });
     }
@@ -144,6 +145,7 @@ const updateStoreInfo = async (req, res) => {
         storeName: String(storeName).trim(),
         storePhone: String(storePhone).trim(),
         storeAddress: String(storeAddress).trim(),
+        storeLogoUrl: String(storeLogoUrl || "").trim(),
         specialOffer: sanitizeSpecialOffer(specialOffer),
         offers: sanitizeOffers(offers),
       },
@@ -156,6 +158,7 @@ const updateStoreInfo = async (req, res) => {
         storeName: storeInfo.storeName,
         storePhone: storeInfo.storePhone,
         storeAddress: storeInfo.storeAddress,
+        storeLogoUrl: storeInfo.storeLogoUrl || "",
         specialOffer: sanitizeSpecialOffer(storeInfo.specialOffer),
         offers: sanitizeOffers(storeInfo.offers),
       },

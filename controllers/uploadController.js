@@ -25,34 +25,48 @@ const extensionFromMime = (mimeType) => {
   return map[String(mimeType || "").toLowerCase()] || "jpg";
 };
 
+const isPlaceholder = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return (
+    !normalized ||
+    normalized === "replace_me" ||
+    normalized === "demo-cloud" ||
+    normalized === "demo-key" ||
+    normalized === "demo-secret"
+  );
+};
+
+const isLocalRequest = (req) => {
+  const host = String(req.get("host") || "").toLowerCase();
+  const hostname = String(req.hostname || "").toLowerCase();
+  return (
+    host.includes("localhost") ||
+    host.includes("127.0.0.1") ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1"
+  );
+};
+
 const uploadImage = async (req, res) => {
   try {
     const cloudinaryUrl = String(process.env.CLOUDINARY_URL || "").trim();
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const cloudName = String(process.env.CLOUDINARY_CLOUD_NAME || "").trim();
+    const apiKey = String(process.env.CLOUDINARY_API_KEY || "").trim();
+    const apiSecret = String(process.env.CLOUDINARY_API_SECRET || "").trim();
     const hasCloudinaryUrl = Boolean(cloudinaryUrl);
-    const hasDiscreteCreds = Boolean(cloudName && apiKey && apiSecret);
-
-    const missingConfig =
-      (!hasCloudinaryUrl && !hasDiscreteCreds) ||
-      cloudName === "replace_me" ||
-      apiKey === "replace_me" ||
-      apiSecret === "replace_me" ||
-      cloudName === "demo-cloud" ||
-      apiKey === "demo-key" ||
-      apiSecret === "demo-secret";
+    const hasValidDiscreteCreds = !isPlaceholder(cloudName) && !isPlaceholder(apiKey) && !isPlaceholder(apiSecret);
+    const canUploadToCloudinary = hasCloudinaryUrl || hasValidDiscreteCreds;
 
     if (!req.file) {
       return res.status(400).json({ message: "Image file is required" });
     }
 
-    if (missingConfig) {
-      const isProduction = process.env.NODE_ENV === "production";
-      if (isProduction) {
+    if (!canUploadToCloudinary) {
+      // Allow local disk fallback only for true local development requests.
+      if (!isLocalRequest(req)) {
         return res.status(503).json({
           message:
-            "Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in server .env, then restart backend.",
+            "Cloudinary is not configured on server. Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET and restart backend.",
         });
       }
 

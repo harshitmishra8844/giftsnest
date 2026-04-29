@@ -3,11 +3,13 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
 import { getUserAuth } from "../services/userAuth";
+import QuantityStepper from "../components/QuantityStepper";
+import CartToast from "../components/CartToast";
 
 const ProductDetails = () => {
   const { idOrSlug } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { cartItems, addToCart, updateQuantity } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,6 +26,8 @@ const ProductDetails = () => {
   const [recentlyViewedIds, setRecentlyViewedIds] = useState([]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [userInteractedWithGallery, setUserInteractedWithGallery] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [recentlyAdded, setRecentlyAdded] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -101,6 +105,12 @@ const ProductDetails = () => {
   }, [galleryImages, userInteractedWithGallery]);
 
   useEffect(() => {
+    if (!recentlyAdded) return undefined;
+    const timeoutId = setTimeout(() => setRecentlyAdded(false), 1200);
+    return () => clearTimeout(timeoutId);
+  }, [recentlyAdded]);
+
+  useEffect(() => {
     if (!lightboxOpen) return undefined;
     const onKeyDown = (event) => {
       if (event.key === "Escape") setLightboxOpen(false);
@@ -141,6 +151,15 @@ const ProductDetails = () => {
     const mapById = new Map(allProducts.map((item) => [String(item._id), item]));
     return recentlyViewedIds.map((id) => mapById.get(String(id))).filter(Boolean).slice(0, 6);
   }, [allProducts, recentlyViewedIds]);
+
+  const cartQuantityById = useMemo(
+    () =>
+      cartItems.reduce((acc, item) => {
+        acc[item._id] = item.quantity;
+        return acc;
+      }, {}),
+    [cartItems]
+  );
 
   const highlights = useMemo(() => {
     if (Array.isArray(product?.highlights) && product.highlights.length > 0) {
@@ -200,6 +219,8 @@ const ProductDetails = () => {
 
   const stock = Number(product.stock ?? 0);
   const outOfStock = Number.isFinite(stock) && stock <= 0;
+  const cartQuantity = cartItems.find((item) => item._id === product._id)?.quantity || 0;
+  const reachedMaxStock = Number.isFinite(stock) && cartQuantity >= stock;
   const rating = Math.max(0, Math.min(5, Number(product.rating || 0)));
   const numReviews = Math.max(0, Number(product.numReviews || 0));
 
@@ -259,6 +280,27 @@ const ProductDetails = () => {
   const buyToReview = () => {
     addToCart(product);
     navigate("/cart");
+  };
+
+  const handleAddToCart = () => {
+    addToCart(product);
+    setToastMessage(`${product.name} added to cart`);
+    setRecentlyAdded(true);
+  };
+
+  const handleDecreaseQty = () => {
+    if (cartQuantity <= 0) return;
+    updateQuantity(product._id, cartQuantity - 1);
+  };
+
+  const handleIncreaseQty = () => {
+    addToCart(product);
+    setToastMessage(`${product.name} added to cart`);
+  };
+
+  const handleCardAdd = (item) => {
+    addToCart(item);
+    setToastMessage(`${item.name} added to cart`);
   };
 
   const selectedRating = Number(reviewForm.rating || 5);
@@ -391,19 +433,31 @@ const ProductDetails = () => {
               </div>
             ) : null}
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                disabled={outOfStock}
-                onClick={() => addToCart(product)}
-                className="rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {outOfStock ? "Sold out" : "Add to Cart"}
-              </button>
+              {cartQuantity > 0 ? (
+                <QuantityStepper
+                  quantity={cartQuantity}
+                  onDecrease={handleDecreaseQty}
+                  onIncrease={handleIncreaseQty}
+                  increaseDisabled={outOfStock || reachedMaxStock}
+                  decreaseAriaLabel={`Decrease ${product.name} quantity`}
+                  increaseAriaLabel={`Increase ${product.name} quantity`}
+                  className="rounded-xl"
+                />
+              ) : (
+                <button
+                  type="button"
+                  disabled={outOfStock}
+                  onClick={handleAddToCart}
+                  className="rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {outOfStock ? "Sold out" : recentlyAdded ? "Added ✓" : "Add to Cart"}
+                </button>
+              )}
               <button
                 type="button"
                 disabled={outOfStock}
                 onClick={() => {
-                  addToCart(product);
+                  handleAddToCart();
                   navigate("/checkout");
                 }}
                 className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -494,19 +548,33 @@ const ProductDetails = () => {
                 {outOfStock ? "Out of stock right now" : `Only ${stock} left, order soon`}
               </p>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled={outOfStock}
-                  onClick={() => addToCart(product)}
-                  className="rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Add to Cart
-                </button>
+                {cartQuantity > 0 ? (
+                  <QuantityStepper
+                    quantity={cartQuantity}
+                    onDecrease={handleDecreaseQty}
+                    onIncrease={handleIncreaseQty}
+                    increaseDisabled={outOfStock || reachedMaxStock}
+                    decreaseAriaLabel={`Decrease ${product.name} quantity`}
+                    increaseAriaLabel={`Increase ${product.name} quantity`}
+                    className="rounded-xl"
+                    buttonClassName="h-7 w-7"
+                    valueClassName="text-xs"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    disabled={outOfStock}
+                    onClick={handleAddToCart}
+                    className="rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {recentlyAdded ? "Added ✓" : "Add to Cart"}
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={outOfStock}
                   onClick={() => {
-                    addToCart(product);
+                    handleAddToCart();
                     navigate("/checkout");
                   }}
                   className="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -655,6 +723,31 @@ const ProductDetails = () => {
                   <p className="mt-2 line-clamp-1 text-sm font-semibold text-gray-900">{item.name}</p>
                   <p className="mt-1 text-xs text-gray-500">{item.category}</p>
                   <p className="mt-2 text-sm font-bold text-gray-900">INR {item.price}</p>
+                  <div className="mt-3">
+                    {(cartQuantityById[item._id] || 0) > 0 ? (
+                      <QuantityStepper
+                        quantity={cartQuantityById[item._id] || 0}
+                        onDecrease={() => updateQuantity(item._id, (cartQuantityById[item._id] || 0) - 1)}
+                        onIncrease={() => handleCardAdd(item)}
+                        increaseDisabled={
+                          Number.isFinite(Number(item.stock)) && (cartQuantityById[item._id] || 0) >= Number(item.stock)
+                        }
+                        decreaseAriaLabel={`Decrease ${item.name} quantity`}
+                        increaseAriaLabel={`Increase ${item.name} quantity`}
+                        buttonClassName="h-7 w-7"
+                        valueClassName="text-xs"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleCardAdd(item)}
+                        disabled={Number.isFinite(Number(item.stock)) && Number(item.stock) <= 0}
+                        className="w-full rounded-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {Number.isFinite(Number(item.stock)) && Number(item.stock) <= 0 ? "Sold out" : "Add to Cart"}
+                      </button>
+                    )}
+                  </div>
                 </article>
               );
             })}
@@ -681,6 +774,31 @@ const ProductDetails = () => {
                   </Link>
                   <p className="mt-1 text-xs text-gray-500">{item.category}</p>
                   <p className="mt-2 text-sm font-bold text-gray-900">INR {item.price}</p>
+                  <div className="mt-3">
+                    {(cartQuantityById[item._id] || 0) > 0 ? (
+                      <QuantityStepper
+                        quantity={cartQuantityById[item._id] || 0}
+                        onDecrease={() => updateQuantity(item._id, (cartQuantityById[item._id] || 0) - 1)}
+                        onIncrease={() => handleCardAdd(item)}
+                        increaseDisabled={
+                          Number.isFinite(Number(item.stock)) && (cartQuantityById[item._id] || 0) >= Number(item.stock)
+                        }
+                        decreaseAriaLabel={`Decrease ${item.name} quantity`}
+                        increaseAriaLabel={`Increase ${item.name} quantity`}
+                        buttonClassName="h-7 w-7"
+                        valueClassName="text-xs"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleCardAdd(item)}
+                        disabled={Number.isFinite(Number(item.stock)) && Number(item.stock) <= 0}
+                        className="w-full rounded-full bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {Number.isFinite(Number(item.stock)) && Number(item.stock) <= 0 ? "Sold out" : "Add to Cart"}
+                      </button>
+                    )}
+                  </div>
                 </article>
               );
             })}
@@ -749,19 +867,32 @@ const ProductDetails = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={outOfStock}
-              onClick={() => addToCart(product)}
-              className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
-            >
-              Add to Cart
-            </button>
+            {cartQuantity > 0 ? (
+              <QuantityStepper
+                quantity={cartQuantity}
+                onDecrease={handleDecreaseQty}
+                onIncrease={handleIncreaseQty}
+                increaseDisabled={outOfStock || reachedMaxStock}
+                decreaseAriaLabel={`Decrease ${product.name} quantity`}
+                increaseAriaLabel={`Increase ${product.name} quantity`}
+                buttonClassName="h-7 w-7"
+                valueClassName="text-xs"
+              />
+            ) : (
+              <button
+                type="button"
+                disabled={outOfStock}
+                onClick={handleAddToCart}
+                className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+              >
+                {recentlyAdded ? "Added ✓" : "Add to Cart"}
+              </button>
+            )}
             <button
               type="button"
               disabled={outOfStock}
               onClick={() => {
-                addToCart(product);
+                handleAddToCart();
                 navigate("/checkout");
               }}
               className="rounded-full border border-emerald-600 px-4 py-2 text-xs font-semibold text-emerald-700 disabled:opacity-60"
@@ -771,6 +902,7 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
+      <CartToast message={toastMessage} onClose={() => setToastMessage("")} />
     </section>
   );
 };

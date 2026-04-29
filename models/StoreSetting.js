@@ -23,6 +23,11 @@ const storeSettingSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    storeLogoUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     specialOffer: {
       title: { type: String, trim: true, maxlength: 90 },
       subtitle: { type: String, trim: true, maxlength: 180 },

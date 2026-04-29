@@ -25,6 +25,18 @@ const AddProduct = () => {
   const [error, setError] = useState("");
   const [devUploadWarning, setDevUploadWarning] = useState("");
 
+  const getUploadErrorMessage = (err) => {
+    const status = err?.response?.status;
+    const apiMessage = String(err?.response?.data?.message || "").trim();
+    if (status === 503) {
+      return (
+        "Image upload failed: Cloudinary is not configured on the deployed server. " +
+        "Add CLOUDINARY_URL (or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) and redeploy backend."
+      );
+    }
+    return apiMessage || err.message || "Failed to add product.";
+  };
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -122,7 +134,7 @@ const AddProduct = () => {
       setUploadedImages([]);
       event.target.reset();
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to add product.");
+      setError(getUploadErrorMessage(err));
     } finally {
       setLoading(false);
     }

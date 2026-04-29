@@ -67,10 +67,64 @@ const MyProfile = () => {
   const [activeTab, setActiveTab] = useState("orders");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState(initialAddressForm);
   const [savingAddress, setSavingAddress] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelTargetOrder, setCancelTargetOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelDetails, setCancelDetails] = useState("");
+  const [cancelConfirmed, setCancelConfirmed] = useState(false);
+  const [submittingCancel, setSubmittingCancel] = useState(false);
+
+  const canRequestCancellation = (order) => {
+    if (!order) return false;
+    if (["Shipped", "Delivered", "Cancelled"].includes(order.status)) return false;
+    if (order.cancellationRequest?.status === "Pending") return false;
+    return true;
+  };
+
+  const openCancelModal = (order) => {
+    setCancelTargetOrder(order);
+    setCancelReason("");
+    setCancelDetails("");
+    setCancelConfirmed(false);
+    setCancelModalOpen(true);
+  };
+
+  const submitCancellationRequest = async () => {
+    if (!cancelTargetOrder?._id) return;
+    if (!cancelReason.trim()) {
+      setError("Please select a cancellation reason.");
+      return;
+    }
+    if (!cancelConfirmed) {
+      setError("Please confirm you want to request cancellation.");
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccessMessage("");
+      setSubmittingCancel(true);
+      const { data } = await api.post(`/orders/${cancelTargetOrder._id}/cancellation-request`, {
+        reason: cancelReason.trim(),
+        details: cancelDetails.trim(),
+      });
+      if (data?.order?._id) {
+        setOrders((prev) => prev.map((o) => (o._id === data.order._id ? data.order : o)));
+      }
+      setCancelModalOpen(false);
+      setCancelTargetOrder(null);
+      setSuccessMessage("Cancellation request submitted. Waiting for approval.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to submit cancellation request");
+    } finally {
+      setSubmittingCancel(false);
+    }
+  };
 
   useEffect(() => {
     const state = location.state || {};
@@ -93,6 +147,8 @@ const MyProfile = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError("");
+        setSuccessMessage("");
         const [ordersRes, addressesRes] = await Promise.all([
           api.get("/orders/my"),
           api.get("/user/addresses")
@@ -231,6 +287,7 @@ const MyProfile = () => {
 
       {loading ? <p className="text-sm text-gray-600">Loading your profile data...</p> : null}
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
+      {successMessage ? <p className="text-sm text-green-600">{successMessage}</p> : null}
 
       {activeTab === "orders" ? (
         <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
@@ -244,6 +301,19 @@ const MyProfile = () => {
                 </div>
                 <p className="mt-2 text-sm text-gray-600">Items: {order.products?.length || 0}</p>
                 <p className="text-sm font-semibold text-gray-900">Total: INR {order.totalPrice}</p>
+                {order.cancellationRequest?.status && order.cancellationRequest.status !== "None" ? (
+                  <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                    <p className="text-xs font-semibold text-amber-900">
+                      Cancellation: {order.cancellationRequest.status}
+                    </p>
+                    {order.cancellationRequest.reason ? (
+                      <p className="text-xs text-amber-800">Reason: {order.cancellationRequest.reason}</p>
+                    ) : null}
+                    {order.cancellationRequest.adminNote ? (
+                      <p className="text-xs text-amber-800">Admin note: {order.cancellationRequest.adminNote}</p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {order.trackingId ? (
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <p className="text-xs text-emerald-700">Tracking ID: {order.trackingId}</p>
@@ -258,9 +328,100 @@ const MyProfile = () => {
                   </div>
                 ) : null}
                 <p className="text-xs text-gray-500">Placed on {new Date(order.createdAt).toLocaleString()}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {canRequestCancellation(order) ? (
+                    <button
+                      type="button"
+                      onClick={() => openCancelModal(order)}
+                      className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      Request Cancellation
+                    </button>
+                  ) : null}
+                </div>
               </article>
             ))}
             {!orders.length ? <p className="text-sm text-gray-600">No orders found yet. Start shopping now.</p> : null}
+          </div>
+        </div>
+      ) : null}
+
+      {cancelModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cancellation request</p>
+                <h3 className="mt-1 text-lg font-bold text-gray-900">
+                  Order #{getOrderDisplayId(cancelTargetOrder)}
+                </h3>
+                <p className="mt-1 text-sm text-gray-600">
+                  Your request will be reviewed. If approved, your order will be cancelled.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCancelModalOpen(false)}
+                className="rounded-full border border-gray-200 px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-sm font-semibold text-gray-800">Reason</label>
+                <select
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                >
+                  <option value="">Select a reason</option>
+                  <option value="Ordered by mistake">Ordered by mistake</option>
+                  <option value="Found a better price">Found a better price</option>
+                  <option value="Need to change address/phone">Need to change address/phone</option>
+                  <option value="Delivery taking too long">Delivery taking too long</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-800">Details (optional)</label>
+                <textarea
+                  value={cancelDetails}
+                  onChange={(e) => setCancelDetails(e.target.value)}
+                  rows={3}
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="Add more details to help us process faster..."
+                />
+              </div>
+              <label className="flex items-start gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={cancelConfirmed}
+                  onChange={(e) => setCancelConfirmed(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>I understand this is a request and cancellation will be confirmed after approval.</span>
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={submitCancellationRequest}
+                disabled={submittingCancel}
+                className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submittingCancel ? "Submitting..." : "Submit cancellation request"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCancelModalOpen(false)}
+                className="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Back
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

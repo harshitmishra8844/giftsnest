@@ -145,7 +145,10 @@ function App() {
                     </svg>
                   </span>
                   {itemCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-4 text-emerald-700">
+                    <span
+                      key={`cart-count-mobile-${itemCount}`}
+                      className="cart-badge-bump absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-4 text-emerald-700"
+                    >
                       {itemCount > 99 ? "99+" : itemCount}
                     </span>
                   ) : null}
@@ -192,7 +195,10 @@ function App() {
                   </svg>
                 </span>
                 {itemCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-4 text-emerald-700">
+                  <span
+                    key={`cart-count-desktop-${itemCount}`}
+                    className="cart-badge-bump absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-4 text-emerald-700"
+                  >
                     {itemCount > 99 ? "99+" : itemCount}
                   </span>
                 ) : null}
