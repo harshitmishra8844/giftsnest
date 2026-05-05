@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import SearchBar from "../components/search/SearchBar";
+import { mockGiftProducts, trendingSearches } from "../data/mockGiftProducts";
 
 const quickCategories = [
   { name: "Birthday", image: "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center" },
@@ -39,9 +41,11 @@ const aboutHighlights = [
 ];
 
 const Home = () => {
+  const navigate = useNavigate();
   const [offers, setOffers] = useState([]);
   const [specialOffer, setSpecialOffer] = useState(null);
   const [countdownText, setCountdownText] = useState("");
+  const [searchProducts, setSearchProducts] = useState(mockGiftProducts);
 
   const isSpecialOfferLive = (offer) => {
     if (!offer?.active) return false;
@@ -112,6 +116,14 @@ const Home = () => {
     };
   }, []);
 
+  const handleSearch = (query) => {
+    if (!query) {
+      navigate("/products");
+      return;
+    }
+    navigate(`/products?q=${encodeURIComponent(query)}`);
+  };
+
   useEffect(() => {
     if (!specialOffer?.endDate) {
       setCountdownText("");
@@ -147,6 +159,28 @@ const Home = () => {
       }
     };
     fetchOffers();
+  }, []);
+
+  useEffect(() => {
+    const fetchSearchProducts = async () => {
+      try {
+        const { data } = await api.get("/products");
+        const products = Array.isArray(data) ? data : [];
+        setSearchProducts(
+          products.map((item) => ({
+            id: item._id || item.id || item.slug || item.name,
+            name: item.name || "",
+            category: item.category || "",
+            price: Number(item.price || 0),
+            image: item.image || "",
+          }))
+        );
+      } catch {
+        // Keep mock fallback if API is unavailable.
+        setSearchProducts(mockGiftProducts);
+      }
+    };
+    fetchSearchProducts();
   }, []);
 
   return (
@@ -193,10 +227,10 @@ const Home = () => {
       <section className="fade-in-up scroll-reveal rounded-3xl bg-gradient-to-r from-emerald-900 to-teal-800 p-6 text-white shadow-xl md:p-10">
         <div className="grid items-center gap-8 md:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">GiftNest Signature Collection</p>
-            <h1 className="mt-3 text-3xl font-bold leading-tight md:text-5xl">
+            <h2 className="text-lg font-semibold tracking-wide text-emerald-50 md:text-xl">Gift Storefront</h2>
+            <h3 className="mt-3 text-3xl font-bold leading-tight md:text-5xl">
               Celebrate every moment with curated premium gifts
-            </h1>
+            </h3>
             <p className="mt-4 max-w-xl text-sm text-emerald-50 md:text-base">
               Flowers, cakes and personalized surprises crafted with elegance, delivered with care, and remembered forever.
             </p>
@@ -210,6 +244,25 @@ const Home = () => {
             </div>
           </div>
           <div className="grid gap-3">
+            <form
+              onSubmit={(event) => event.preventDefault()}
+              className="group relative z-30 rounded-2xl border border-white/25 bg-gradient-to-br from-white/20 via-white/10 to-emerald-200/10 p-4 shadow-lg backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:shadow-emerald-300/30 hover:shadow-2xl"
+            >
+              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-emerald-300/25 blur-2xl transition duration-500 group-hover:bg-emerald-300/40" />
+              <div className="absolute -left-8 bottom-0 h-16 w-16 animate-pulse rounded-full bg-teal-300/20 blur-2xl" />
+              <label htmlFor="home-product-search" className="relative text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100">
+                Find The Perfect Gift
+              </label>
+              <p className="relative mt-1 text-xs text-emerald-50/90">Search by product name, category, or details</p>
+              <div className="relative z-40 mt-3">
+                <SearchBar
+                  inputId="home-product-search"
+                  products={searchProducts}
+                  trendingSearches={trendingSearches}
+                  onSearch={handleSearch}
+                />
+              </div>
+            </form>
             {aboutHighlights.map((item) => (
               <article key={item.title} className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur">
                 <h3 className="text-sm font-bold">{item.title}</h3>

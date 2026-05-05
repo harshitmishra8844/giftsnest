@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import api from "../services/api";
 import ProductCard from "../components/ProductCard";
 import { useCart } from "../context/CartContext";
 import CartToast from "../components/CartToast";
 
 const Products = () => {
+  const location = useLocation();
   const { cartItems, addToCart, updateQuantity } = useCart();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,11 @@ const Products = () => {
       document.title = previousTitle;
     };
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchText(params.get("q") || "");
+  }, [location.search]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -54,12 +61,17 @@ const Products = () => {
   );
 
   const visibleProducts = useMemo(() => {
+    const normalizedSearch = searchText.trim().toLowerCase();
+    const searchTokens = normalizedSearch.split(/\s+/).filter(Boolean);
+
     return products.filter((product) => {
       const matchesCategory =
         selectedCategory === "All" ||
         String(product.category || "").toLowerCase() === selectedCategory.toLowerCase();
-      const haystack = `${product.name || ""} ${product.category || ""} ${product.description || ""}`.toLowerCase();
-      const matchesSearch = !searchText.trim() || haystack.includes(searchText.trim().toLowerCase());
+      const tags = Array.isArray(product.tags) ? product.tags.join(" ") : "";
+      const haystack = `${product.name || ""} ${product.category || ""} ${product.description || ""} ${product.slug || ""} ${tags}`.toLowerCase();
+      const matchesSearch =
+        !searchTokens.length || searchTokens.every((token) => haystack.includes(token));
       return matchesCategory && matchesSearch;
     });
   }, [products, searchText, selectedCategory]);

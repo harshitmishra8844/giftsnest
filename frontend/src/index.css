@@ -140,6 +140,32 @@ body {
   }
 }
 
+.search-dropdown {
+  transform-origin: top center;
+  animation: searchDropdownIn 180ms ease-out both;
+}
+
+.search-loader {
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes searchDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 button,
 input,
 textarea,
@@ -152,7 +178,7 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 a:focus-visible {
-  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.25);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
   border-radius: 10px;
 }
 

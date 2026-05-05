@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Route, Routes, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { NavLink, Route, Routes, Link, useLocation, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Products from "./pages/Products";
@@ -16,7 +16,6 @@ import ShippingPolicy from "./pages/ShippingPolicy";
 import ReturnsRefunds from "./pages/ReturnsRefunds";
 import PersonalizedMug from "./pages/PersonalizedMug";
 import { useCart } from "./context/CartContext";
-import api from "./services/api";
 import { getUserAuth } from "./services/userAuth";
 
 const UserProtectedRoute = ({ children }) => {
@@ -33,10 +32,6 @@ const UserProtectedRoute = ({ children }) => {
 function App() {
   const { itemCount } = useCart();
   const location = useLocation();
-  const navigate = useNavigate();
-  const [searchText, setSearchText] = useState("");
-  const [allProductNames, setAllProductNames] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinkClass = ({ isActive }) =>
@@ -68,54 +63,12 @@ function App() {
   }, [location.pathname]);
 
   useEffect(() => {
-    const fetchProductNames = async () => {
-      try {
-        const { data } = await api.get("/products");
-        const names = Array.from(
-          new Set(
-            (Array.isArray(data) ? data : [])
-              .map((item) => String(item?.name || "").trim())
-              .filter(Boolean)
-          )
-        );
-        setAllProductNames(names);
-      } catch {
-        setAllProductNames([]);
-      }
-    };
-    fetchProductNames();
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    setSearchText(params.get("q") || "");
-    setShowSuggestions(false);
-    setMobileMenuOpen(false);
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname, location.search]);
 
-  const handleSearchSubmit = (event) => {
-    event.preventDefault();
-    const query = searchText.trim();
-    if (!query) {
-      navigate("/products");
-      setShowSuggestions(false);
-      return;
-    }
-    navigate(`/products?q=${encodeURIComponent(query)}`);
-    setShowSuggestions(false);
-  };
-
-  const suggestions = searchText.trim()
-    ? allProductNames
-        .filter((name) => name.toLowerCase().includes(searchText.trim().toLowerCase()))
-        .slice(0, 6)
-    : [];
-
-  const chooseSuggestion = (value) => {
-    setSearchText(value);
-    navigate(`/products?q=${encodeURIComponent(value)}`);
-    setShowSuggestions(false);
-  };
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname, location.search]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50/80 to-white">
@@ -214,68 +167,8 @@ function App() {
                 <NavLink to="/about" className={navLinkClass}>About</NavLink>
                 <NavLink to="/my-profile" className={navLinkClass}>Profile</NavLink>
               </div>
-              <form onSubmit={handleSearchSubmit} className="relative">
-                <input
-                  type="text"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                  placeholder="Search gifts..."
-                  className="w-full rounded-full border border-emerald-200 bg-white px-4 py-2.5 pr-10 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <button type="submit" className="absolute right-2 top-2 rounded-full p-1 text-emerald-600 hover:bg-emerald-50" aria-label="Search products">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </button>
-                {showSuggestions && suggestions.length > 0 ? (
-                  <div className="absolute left-0 right-0 top-12 z-30 rounded-xl border border-emerald-100 bg-white p-1 shadow-lg">
-                    {suggestions.map((name) => (
-                      <button
-                        key={name}
-                        type="button"
-                        onClick={() => chooseSuggestion(name)}
-                        className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-emerald-50"
-                      >
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </form>
             </div>
           ) : null}
-          <form onSubmit={handleSearchSubmit} className="relative mt-3 hidden lg:block">
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-              placeholder="Search gifts..."
-              className="w-full rounded-full border border-emerald-200 bg-white px-4 py-2.5 pr-10 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-            <button type="submit" className="absolute right-2 top-2 rounded-full p-1 text-emerald-600 hover:bg-emerald-50" aria-label="Search products">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-            {showSuggestions && suggestions.length > 0 ? (
-              <div className="absolute left-0 right-0 top-12 z-30 rounded-xl border border-emerald-100 bg-white p-1 shadow-lg">
-                {suggestions.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => chooseSuggestion(name)}
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-emerald-50"
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </form>
         </div>
       </header>
 
