@@ -36,17 +36,6 @@ const isPlaceholder = (value) => {
   );
 };
 
-const isLocalRequest = (req) => {
-  const host = String(req.get("host") || "").toLowerCase();
-  const hostname = String(req.hostname || "").toLowerCase();
-  return (
-    host.includes("localhost") ||
-    host.includes("127.0.0.1") ||
-    hostname === "localhost" ||
-    hostname === "127.0.0.1"
-  );
-};
-
 const uploadImage = async (req, res) => {
   try {
     const cloudinaryUrl = String(process.env.CLOUDINARY_URL || "").trim();
@@ -62,14 +51,7 @@ const uploadImage = async (req, res) => {
     }
 
     if (!canUploadToCloudinary) {
-      // Allow local disk fallback only for true local development requests.
-      if (!isLocalRequest(req)) {
-        return res.status(503).json({
-          message:
-            "Cloudinary is not configured on server. Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET and restart backend.",
-        });
-      }
-
+      // Fallback to local disk when Cloudinary credentials are unavailable.
       await ensureLocalUploadsDir();
       const fileExt = extensionFromMime(req.file.mimetype);
       const fileName = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${fileExt}`;
