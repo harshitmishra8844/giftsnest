@@ -276,7 +276,7 @@ const Checkout = () => {
         key: paymentConfig.key,
         amount: paymentConfig.amount,
         currency: paymentConfig.currency,
-        name: "GiftNest",
+        name: "Niyora Gifts",
         description: "Personalized Gift Order Payment",
         order_id: paymentConfig.razorpayOrderId,
         handler: async (response) => {

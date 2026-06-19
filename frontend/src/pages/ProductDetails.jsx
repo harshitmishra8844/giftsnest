@@ -380,7 +380,7 @@ const ProductDetails = () => {
               onTouchEnd={handleImageTouchEnd}
             >
               <img
-                src={activeImage || "https://via.placeholder.com/900x700?text=GiftNest"}
+                src={activeImage || "https://via.placeholder.com/900x700?text=Niyora+Gifts"}
                 alt={product.name}
                 className="h-[360px] w-full cursor-zoom-in rounded-2xl object-cover transition-all duration-500 ease-out group-hover:scale-[1.22] md:h-[560px]"
                 style={{ transformOrigin: zoomOrigin }}
@@ -715,7 +715,7 @@ const ProductDetails = () => {
           <h2 className="text-lg font-semibold text-gray-900">Related Products</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {relatedProducts.map((item) => {
-              const cardImage = item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=GiftNest";
+              const cardImage = item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=Niyora+Gifts";
               return (
                 <article key={item._id} className="rounded-xl border border-gray-200 p-3">
                   <Link to={`/products/${item.slug || item._id}`} className="block">
@@ -761,7 +761,7 @@ const ProductDetails = () => {
           <h2 className="text-lg font-semibold text-gray-900">Recently Viewed</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {recentlyViewedProducts.map((item) => {
-              const cardImage = item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=GiftNest";
+              const cardImage = item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=Niyora+Gifts";
               return (
                 <article key={item._id} className="rounded-xl border border-gray-200 p-3">
                   <Link to={`/products/${item.slug || item._id}`} className="block">
@@ -827,7 +827,7 @@ const ProductDetails = () => {
               {"<"}
             </button>
             <img
-              src={activeImage || "https://via.placeholder.com/900x700?text=GiftNest"}
+              src={activeImage || "https://via.placeholder.com/900x700?text=Niyora+Gifts"}
               alt={product.name}
               className="max-h-[85vh] w-auto max-w-full rounded-xl object-contain shadow-2xl animate-[popIn_.22s_ease-out]"
             />

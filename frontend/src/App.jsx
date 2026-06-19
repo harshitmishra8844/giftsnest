@@ -134,9 +134,9 @@ function App() {
             <div className="flex items-center justify-between min-w-[150px] shrink-0">
               <NavLink to="/" className="group inline-flex items-center gap-2">
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-r from-emerald-600 to-teal-700 text-sm font-bold text-white shadow-sm transition group-hover:scale-105">
-                  G
+                  N
                 </span>
-                <span className="text-xl font-bold tracking-tight text-emerald-900">GiftNest</span>
+                <span className="text-xl font-bold tracking-tight text-emerald-900">Niyora Gifts</span>
               </NavLink>
               <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700 md:hidden">
                 curated gifting
@@ -275,7 +275,7 @@ function App() {
         <div className="mx-auto w-full max-w-7xl px-4 py-10 md:px-8">
           <div className="grid gap-8 md:grid-cols-12">
             <div className="md:col-span-4 scroll-reveal">
-              <h3 className="text-2xl font-bold tracking-tight text-emerald-900">GiftNest</h3>
+              <h3 className="text-2xl font-bold tracking-tight text-emerald-900">Niyora Gifts</h3>
               <p className="mt-3 max-w-sm text-sm leading-6 text-gray-600">
                 Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful memory.
               </p>
@@ -317,7 +317,7 @@ function App() {
                 <li><Link to="/track-order" className="hover:text-emerald-700">Track Order</Link></li>
                 <li><Link to="/shipping-policy" className="hover:text-emerald-700">Shipping Policy</Link></li>
                 <li><Link to="/returns-refunds" className="hover:text-emerald-700">Returns & Refunds</Link></li>
-                <li><a href="mailto:care@giftnest.com" className="hover:text-emerald-700">care@giftnest.com</a></li>
+                <li><a href="mailto:niyoragifts@gmail.com" className="hover:text-emerald-700">niyoragifts@gmail.com</a></li>
                 <li>+91 90000 00000</li>
               </ul>
             </div>
@@ -375,7 +375,7 @@ function App() {
           </div>
 
           <div className="mt-8 flex flex-col gap-2 border-t border-emerald-100 pt-4 text-xs text-gray-500 md:flex-row md:items-center md:justify-between">
-            <p>© {new Date().getFullYear()} GiftNest. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Niyora Gifts. All rights reserved.</p>
             <div className="flex items-center gap-4">
               <Link to="/products" className="hover:text-emerald-700">Privacy Policy</Link>
               <Link to="/products" className="hover:text-emerald-700">Terms of Service</Link>

@@ -80,7 +80,7 @@ const adminLogin = async (req, res) => {
 
     let admin = await User.findOne({ email: email.toLowerCase(), isAdmin: true });
     if (!admin) {
-      const fallbackEmail = process.env.ADMIN_EMAIL || "harshitmishra9897@gmail.com";
+      const fallbackEmail = process.env.ADMIN_EMAIL || "niyoragifts@gmail.com";
       const fallbackPassword = process.env.ADMIN_PASSWORD || "harshit@123";
 
       if (email.toLowerCase() !== fallbackEmail.toLowerCase() || password !== fallbackPassword) {
@@ -118,15 +118,9 @@ const getStoreInfo = async (req, res) => {
   try {
     const dbStoreInfo = await StoreSetting.findOne({ singletonKey: "store" }).lean();
     return res.status(200).json({
-      storeName: dbStoreInfo?.storeName || process.env.STORE_NAME || "Gift Store",
+      storeName: dbStoreInfo?.storeName || process.env.STORE_NAME || "Niyora Gifts",
       storePhone: dbStoreInfo?.storePhone || process.env.STORE_PHONE || "+91-90000-00000",
       storeAddress: dbStoreInfo?.storeAddress || process.env.STORE_ADDRESS || "123 Commerce Street, Mumbai, Maharashtra 400001, India",
-      smtpFrom: dbStoreInfo?.smtpFrom || process.env.SMTP_FROM || "",
-      smtpHost: dbStoreInfo?.smtpHost || process.env.SMTP_HOST || "",
-      smtpPort: dbStoreInfo?.smtpPort !== undefined ? dbStoreInfo.smtpPort : (Number(process.env.SMTP_PORT) || 587),
-      smtpSecure: dbStoreInfo?.smtpSecure !== undefined ? dbStoreInfo.smtpSecure : (String(process.env.SMTP_SECURE || "").toLowerCase() === "true"),
-      smtpUser: dbStoreInfo?.smtpUser || process.env.SMTP_USER || "",
-      smtpPass: dbStoreInfo?.smtpPass || process.env.SMTP_PASS || "",
       storeLogoUrl: dbStoreInfo?.storeLogoUrl || "",
       specialOffer: sanitizeSpecialOffer(dbStoreInfo?.specialOffer),
       offers: sanitizeOffers(dbStoreInfo?.offers),
@@ -139,7 +133,7 @@ const getStoreInfo = async (req, res) => {
 
 const updateStoreInfo = async (req, res) => {
   try {
-    const { storeName, storePhone, storeAddress, storeLogoUrl, specialOffer, offers, smtpFrom, smtpHost, smtpPort, smtpSecure, smtpUser, smtpPass } = req.body;
+    const { storeName, storePhone, storeAddress, storeLogoUrl, specialOffer, offers } = req.body;
     if (!storeName || !storePhone || !storeAddress) {
       return res.status(400).json({ message: "storeName, storePhone and storeAddress are required" });
     }
@@ -152,12 +146,6 @@ const updateStoreInfo = async (req, res) => {
         storePhone: String(storePhone).trim(),
         storeAddress: String(storeAddress).trim(),
         storeLogoUrl: String(storeLogoUrl || "").trim(),
-        smtpFrom: String(smtpFrom || "").trim(),
-        smtpHost: String(smtpHost || "").trim(),
-        smtpPort: smtpPort !== undefined ? Number(smtpPort) : 587,
-        smtpSecure: Boolean(smtpSecure),
-        smtpUser: String(smtpUser || "").trim(),
-        smtpPass: String(smtpPass || "").trim(),
         specialOffer: sanitizeSpecialOffer(specialOffer),
         offers: sanitizeOffers(offers),
       },
@@ -169,12 +157,6 @@ const updateStoreInfo = async (req, res) => {
       storeInfo: {
         storeName: storeInfo.storeName,
         storePhone: storeInfo.storePhone,
-        smtpFrom: storeInfo.smtpFrom || "",
-        smtpHost: storeInfo.smtpHost || "",
-        smtpPort: storeInfo.smtpPort !== undefined ? storeInfo.smtpPort : 587,
-        smtpSecure: Boolean(storeInfo.smtpSecure),
-        smtpUser: storeInfo.smtpUser || "",
-        smtpPass: storeInfo.smtpPass || "",
         storeAddress: storeInfo.storeAddress,
         storeLogoUrl: storeInfo.storeLogoUrl || "",
         specialOffer: sanitizeSpecialOffer(storeInfo.specialOffer),

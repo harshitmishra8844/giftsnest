@@ -29,11 +29,11 @@ const About = () => {
       element.setAttribute("content", content);
     };
 
-    document.title = "About GiftNest | Premium Gift Store";
-    setMeta("description", "Learn about GiftNest, your trusted online gift store for flowers, cakes and personalized gifts with reliable delivery.");
-    setMeta("keywords", "GiftNest, online gifts, flowers delivery, cakes, personalized gifts, gift store");
-    setMeta("og:title", "About GiftNest | Premium Gift Store", "property");
-    setMeta("og:description", "Discover GiftNest's mission, gifting values and premium celebration experiences.", "property");
+    document.title = "About Niyora Gifts | Premium Gift Store";
+    setMeta("description", "Learn about Niyora Gifts, your trusted online gift store for flowers, cakes and personalized gifts with reliable delivery.");
+    setMeta("keywords", "Niyora Gifts, online gifts, flowers delivery, cakes, personalized gifts, gift store");
+    setMeta("og:title", "About Niyora Gifts | Premium Gift Store", "property");
+    setMeta("og:description", "Discover Niyora Gifts's mission, gifting values and premium celebration experiences.", "property");
     setMeta("og:type", "website", "property");
 
     return () => {
@@ -44,10 +44,10 @@ const About = () => {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-gradient-to-r from-emerald-900 to-teal-800 px-6 py-10 text-white shadow-xl md:px-10 scroll-reveal">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">About GiftNest</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">About Niyora Gifts</p>
         <h1 className="mt-3 text-3xl font-bold md:text-4xl">We help people celebrate with meaningful gifts.</h1>
         <p className="mt-4 max-w-3xl text-sm text-emerald-50 md:text-base">
-          GiftNest is built for moments that matter. Whether it&apos;s a birthday, anniversary, thank-you gesture, or festive
+          Niyora Gifts is built for moments that matter. Whether it&apos;s a birthday, anniversary, thank-you gesture, or festive
           celebration, we combine premium products with dependable service to create gifting experiences people remember.
         </p>
       </section>

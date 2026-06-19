@@ -18,7 +18,7 @@ const Products = () => {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "Shop Gifts | GiftNest Products";
+    document.title = "Shop Gifts | Niyora Gifts";
     return () => {
       document.title = previousTitle;
     };

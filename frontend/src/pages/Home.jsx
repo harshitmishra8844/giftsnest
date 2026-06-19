@@ -100,10 +100,10 @@ const Home = () => {
       element.setAttribute("content", content);
     };
 
-    document.title = "GiftNest | Flowers, Cakes & Personalized Gifts";
-    setMeta("description", "Shop flowers, cakes and personalized gifts at GiftNest with same-day delivery and premium packaging.");
+    document.title = "Niyora Gifts | Flowers, Cakes & Personalized Gifts";
+    setMeta("description", "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.");
     setMeta("keywords", "gift store, flowers delivery, cakes online, personalized gifts, same day delivery");
-    setMeta("og:title", "GiftNest | Flowers, Cakes & Personalized Gifts", "property");
+    setMeta("og:title", "Niyora Gifts | Flowers, Cakes & Personalized Gifts", "property");
     setMeta("og:description", "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.", "property");
     setMeta("og:type", "website", "property");
 

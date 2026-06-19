@@ -162,7 +162,7 @@ const AddProduct = () => {
         />
         <textarea
           name="specificationsText"
-          placeholder={"Specifications (one per line: Label: Value)\nBrand: GiftNest\nMaterial: Wood"}
+          placeholder={"Specifications (one per line: Label: Value)\nBrand: Niyora Gifts\nMaterial: Wood"}
           value={form.specificationsText}
           onChange={handleChange}
           rows={3}

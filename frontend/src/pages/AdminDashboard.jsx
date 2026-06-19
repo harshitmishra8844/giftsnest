@@ -67,7 +67,7 @@ const trackingCarriers = [
   { value: "xpressbees", label: "XpressBees" },
 ];
 const defaultStoreInfo = {
-  storeName: "Gift Store",
+  storeName: "Niyora Gifts",
   storePhone: "+91-90000-00000",
   storeAddress: "123 Commerce Street, Mumbai, Maharashtra 400001, India",
   storeLogoUrl: "",
@@ -86,12 +86,6 @@ const defaultStoreInfo = {
     { title: "Birthday Bundle Wave", subtitle: "Combo gifts with curated cards and packaging at festival pricing.", code: "BDAYBLISS", ctaText: "View Bundles", active: true },
     { title: "Personalized Express", subtitle: "Fast-track custom gifts with handcrafted finishing.", code: "CUSTOM10", ctaText: "Customize Now", active: true },
   ],
-  smtpFrom: "",
-  smtpHost: "",
-  smtpPort: 587,
-  smtpSecure: false,
-  smtpUser: "",
-  smtpPass: "",
 };
 
 const isReadyToShipStatus = (status) => {
@@ -314,12 +308,6 @@ const AdminDashboard = () => {
             storePhone: storeInfoRes.value.data?.storePhone || defaultStoreInfo.storePhone,
             storeAddress: storeInfoRes.value.data?.storeAddress || defaultStoreInfo.storeAddress,
             storeLogoUrl: storeInfoRes.value.data?.storeLogoUrl || defaultStoreInfo.storeLogoUrl,
-            smtpFrom: storeInfoRes.value.data?.smtpFrom || defaultStoreInfo.smtpFrom,
-            smtpHost: storeInfoRes.value.data?.smtpHost || defaultStoreInfo.smtpHost,
-            smtpPort: storeInfoRes.value.data?.smtpPort !== undefined ? storeInfoRes.value.data.smtpPort : defaultStoreInfo.smtpPort,
-            smtpSecure: storeInfoRes.value.data?.smtpSecure !== undefined ? Boolean(storeInfoRes.value.data.smtpSecure) : defaultStoreInfo.smtpSecure,
-            smtpUser: storeInfoRes.value.data?.smtpUser || defaultStoreInfo.smtpUser,
-            smtpPass: storeInfoRes.value.data?.smtpPass || defaultStoreInfo.smtpPass,
             specialOffer: storeInfoRes.value.data?.specialOffer || defaultStoreInfo.specialOffer,
             offers: Array.isArray(storeInfoRes.value.data?.offers) ? storeInfoRes.value.data.offers : defaultStoreInfo.offers,
           });
@@ -726,12 +714,6 @@ const AdminDashboard = () => {
         storePhone: storeInfo.storePhone.trim(),
         storeAddress: storeInfo.storeAddress.trim(),
         storeLogoUrl: String(storeInfo.storeLogoUrl || "").trim(),
-        smtpFrom: String(storeInfo.smtpFrom || "").trim(),
-        smtpHost: String(storeInfo.smtpHost || "").trim(),
-        smtpPort: storeInfo.smtpPort !== undefined ? Number(storeInfo.smtpPort) : 587,
-        smtpSecure: Boolean(storeInfo.smtpSecure),
-        smtpUser: String(storeInfo.smtpUser || "").trim(),
-        smtpPass: String(storeInfo.smtpPass || "").trim(),
         specialOffer: {
           title: String(storeInfo.specialOffer?.title || "").trim(),
           subtitle: String(storeInfo.specialOffer?.subtitle || "").trim(),
@@ -756,12 +738,6 @@ const AdminDashboard = () => {
       setStoreInfo({
         storeName: data.storeInfo?.storeName || payload.storeName,
         storePhone: data.storeInfo?.storePhone || payload.storePhone,
-        smtpFrom: data.storeInfo?.smtpFrom || payload.smtpFrom || "",
-        smtpHost: data.storeInfo?.smtpHost || payload.smtpHost || "",
-        smtpPort: data.storeInfo?.smtpPort !== undefined ? data.storeInfo.smtpPort : payload.smtpPort,
-        smtpSecure: data.storeInfo?.smtpSecure !== undefined ? Boolean(data.storeInfo.smtpSecure) : payload.smtpSecure,
-        smtpUser: data.storeInfo?.smtpUser || payload.smtpUser || "",
-        smtpPass: data.storeInfo?.smtpPass || payload.smtpPass || "",
         storeAddress: data.storeInfo?.storeAddress || payload.storeAddress,
         storeLogoUrl: data.storeInfo?.storeLogoUrl || payload.storeLogoUrl,
         specialOffer: data.storeInfo?.specialOffer || payload.specialOffer,
@@ -829,7 +805,7 @@ const AdminDashboard = () => {
     const paymentStamp = getPaymentStampText(safeOrder);
     const logoHtml = storeInfo.storeLogoUrl
       ? `<img src="${storeInfo.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
-      : `<div class="logo-dot">G</div>`;
+      : `<div class="logo-dot">N</div>`;
 
     return `
       <div class="sheet">
@@ -837,7 +813,7 @@ const AdminDashboard = () => {
           <div class="brand">
             ${logoHtml}
             <div>
-              <p class="brand-name">${storeInfo.storeName || "Gift Store"}</p>
+              <p class="brand-name">${storeInfo.storeName || "Niyora Gifts"}</p>
               <p class="muted">Shipping Operations Copy</p>
             </div>
           </div>
@@ -973,7 +949,7 @@ const AdminDashboard = () => {
     const paymentStamp = getPaymentStampText(safeOrder);
     const logoHtml = storeInfo.storeLogoUrl
       ? `<img src="${storeInfo.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
-      : `<div class="logo-dot">G</div>`;
+      : `<div class="logo-dot">N</div>`;
 
     const invoiceItems = items.slice(0, 8);
     const remainingCount = Math.max(0, items.length - invoiceItems.length);
@@ -984,7 +960,7 @@ const AdminDashboard = () => {
           <div class="brand">
             ${logoHtml}
             <div>
-              <p class="brand-name">${storeInfo.storeName || "Gift Store"}</p>
+              <p class="brand-name">${storeInfo.storeName || "Niyora Gifts"}</p>
               <p class="muted">Invoice</p>
             </div>
           </div>
@@ -1143,7 +1119,7 @@ const AdminDashboard = () => {
     const paymentStamp = getPaymentStampText(safeOrder);
     const logoHtml = storeInfo.storeLogoUrl
       ? `<img src="${storeInfo.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
-      : `<div class="logo-dot">G</div>`;
+      : `<div class="logo-dot">N</div>`;
 
     const printWindow = window.open("", "_blank", "width=900,height=1100");
     if (!printWindow) {
@@ -1187,7 +1163,7 @@ const AdminDashboard = () => {
               <div class="brand">
                 ${logoHtml}
                 <div>
-                  <p class="brand-name">${storeInfo.storeName || "Gift Store"}</p>
+                  <p class="brand-name">${storeInfo.storeName || "Niyora Gifts"}</p>
                   <p class="muted">Accounts Copy</p>
                 </div>
               </div>
@@ -1257,7 +1233,7 @@ const AdminDashboard = () => {
     const paymentStamp = getPaymentStampText(safeOrder);
     const logoHtml = storeInfo.storeLogoUrl
       ? `<img src="${storeInfo.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
-      : `<div class="logo-dot">G</div>`;
+      : `<div class="logo-dot">N</div>`;
 
     const invoiceItems = items.slice(0, 8);
     const remainingCount = Math.max(0, items.length - invoiceItems.length);
@@ -1269,7 +1245,7 @@ const AdminDashboard = () => {
             <div class="brand">
               ${logoHtml}
               <div>
-                <p class="brand-name">${storeInfo.storeName || "Gift Store"}</p>
+                <p class="brand-name">${storeInfo.storeName || "Niyora Gifts"}</p>
                 <p class="muted">Label + Invoice (single A4)</p>
               </div>
             </div>
@@ -1885,58 +1861,7 @@ const AdminDashboard = () => {
               />
             </div>
           </div>
-          <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
-            <p className="text-sm font-semibold text-blue-900">Email Server Settings (SMTP)</p>
-            <p className="mb-3 text-xs text-blue-700">Used for sending special retention coupons directly to customers. Leave blank to fallback to environment variables.</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                name="smtpFrom"
-                value={storeInfo.smtpFrom || ""}
-                onChange={handleStoreInfoChange}
-                placeholder="Sender Email Address (SMTP_FROM) - e.g. niyoragifts@gmail.com"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                name="smtpHost"
-                value={storeInfo.smtpHost || ""}
-                onChange={handleStoreInfoChange}
-                placeholder="SMTP Server (SMTP_HOST) - e.g. smtp.gmail.com"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                type="number"
-                name="smtpPort"
-                value={storeInfo.smtpPort || ""}
-                onChange={handleStoreInfoChange}
-                placeholder="SMTP Port (SMTP_PORT) - e.g. 587 or 465"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                name="smtpUser"
-                value={storeInfo.smtpUser || ""}
-                onChange={handleStoreInfoChange}
-                placeholder="SMTP Username (SMTP_USER)"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                type="password"
-                name="smtpPass"
-                value={storeInfo.smtpPass || ""}
-                onChange={handleStoreInfoChange}
-                placeholder="SMTP Password (SMTP_PASS) - use App Password"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <label className="flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
-                <input
-                  type="checkbox"
-                  name="smtpSecure"
-                  checked={Boolean(storeInfo.smtpSecure)}
-                  onChange={(e) => setStoreInfo((prev) => ({ ...prev, smtpSecure: e.target.checked }))}
-                />
-                Use Secure Connection (SSL/TLS - check for port 465)
-              </label>
-            </div>
-          </div>
+
           <div className="md:col-span-2 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
             <p className="text-sm font-semibold text-teal-900">Top Special Offer Banner</p>
             <p className="mb-3 text-xs text-teal-700">Shown at top of home page for festivals/events.</p>
@@ -2609,7 +2534,7 @@ const AdminDashboard = () => {
             name="specificationsText"
             value={form.specificationsText}
             onChange={handleFormChange}
-            placeholder={"Specifications (one per line: Label: Value)\nBrand: GiftNest\nMaterial: Ceramic\nOccasion: Birthday"}
+            placeholder={"Specifications (one per line: Label: Value)\nBrand: Niyora Gifts\nMaterial: Ceramic\nOccasion: Birthday"}
             rows={4}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />

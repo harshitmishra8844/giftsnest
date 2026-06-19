@@ -116,7 +116,7 @@ const ShippingPolicy = () => {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Have questions about shipping?{" "}
-              <a href="mailto:care@giftnest.com" className="font-medium text-emerald-600 hover:text-emerald-700">
+              <a href="mailto:niyoragifts@gmail.com" className="font-medium text-emerald-600 hover:text-emerald-700">
                 Contact our support team
               </a>
             </p>

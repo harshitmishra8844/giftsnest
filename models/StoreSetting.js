@@ -28,34 +28,7 @@ const storeSettingSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
-    smtpFrom: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    smtpHost: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    smtpPort: {
-      type: Number,
-      default: 587,
-    },
-    smtpSecure: {
-      type: Boolean,
-      default: false,
-    },
-    smtpUser: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    smtpPass: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+
     specialOffer: {
       title: { type: String, trim: true, maxlength: 90 },
       subtitle: { type: String, trim: true, maxlength: 180 },

@@ -2,31 +2,20 @@ const nodemailer = require("nodemailer");
 const StoreSetting = require("../models/StoreSetting");
 
 const isEmailConfigured = async () => {
-  try {
-    const info = await StoreSetting.findOne({ singletonKey: "store" }).lean();
-    const dbHost = String(info?.smtpHost || "").trim();
-    const dbUser = String(info?.smtpUser || "").trim();
-    const dbPass = String(info?.smtpPass || "").trim();
-    if (dbHost && dbUser && dbPass) return true;
-  } catch (e) {}
-
   const host = String(process.env.SMTP_HOST || "").trim();
   const user = String(process.env.SMTP_USER || "").trim();
   const pass = String(process.env.SMTP_PASS || "").trim();
   return Boolean(host && user && pass);
 };
 
-const getTransporter = async (dbStoreInfo) => {
-  // Use passed dbStoreInfo if available, otherwise fetch it from the database
-  const info = dbStoreInfo || await StoreSetting.findOne({ singletonKey: "store" }).lean();
-
-  const host = String(info?.smtpHost || process.env.SMTP_HOST || "").trim();
-  const user = String(info?.smtpUser || process.env.SMTP_USER || "").trim();
-  const pass = String(info?.smtpPass || process.env.SMTP_PASS || "").trim();
+const getTransporter = async () => {
+  const host = String(process.env.SMTP_HOST || "").trim();
+  const user = String(process.env.SMTP_USER || "").trim();
+  const pass = String(process.env.SMTP_PASS || "").trim();
 
   if (host && user && pass) {
-    const port = info?.smtpPort !== undefined ? Number(info.smtpPort) : (Number(process.env.SMTP_PORT) || 587);
-    const secure = info?.smtpSecure !== undefined ? Boolean(info.smtpSecure) : (String(process.env.SMTP_SECURE || "").toLowerCase() === "true");
+    const port = Number(process.env.SMTP_PORT) || 587;
+    const secure = String(process.env.SMTP_SECURE || "").toLowerCase() === "true";
     
     const transporter = nodemailer.createTransport({
       host,
@@ -65,7 +54,7 @@ const getTransporter = async (dbStoreInfo) => {
   return null;
 };
 
-const storeName = () => String(process.env.STORE_NAME || "Gift Store").trim() || "Gift Store";
+const storeName = () => String(process.env.STORE_NAME || "Niyora Gifts").trim() || "Niyora Gifts";
 
 const shopUrl = () => {
   const raw = String(process.env.FRONTEND_URL || "").split(",")[0].trim();
@@ -121,37 +110,146 @@ Apply this code at checkout. Thank you for shopping with us!
 `;
 
   const noteHtml = noteText
-    ? `<p style="margin-top:16px;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;"><strong>A note from us:</strong><br/>${escapeHtml(
-        noteText
-      ).replace(/\n/g, "<br/>")}</p>`
+    ? `<div style="background-color: #f9fafb; border-left: 4px solid #059669; padding: 16px; margin: 15px 0; border-radius: 0 12px 12px 0; text-align: left;">
+         <div style="font-size: 11px; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;">A note from us</div>
+         <div style="font-style: italic; color: #374151; font-size: 14px; line-height: 1.5;">"${escapeHtml(noteText).replace(/\n/g, "<br/>")}"</div>
+       </div>`
     : "";
 
   const shopHref = activeShopUrl ? encodeURI(activeShopUrl) : "";
   const shopBtn = shopHref
-    ? `<p style="margin-top:20px;"><a href="${shopHref}" style="display:inline-block;background:#047857;color:#fff;padding:12px 24px;border-radius:9999px;text-decoration:none;font-weight:600;">Continue shopping</a></p>`
+    ? `<a href="${shopHref}" style="display: inline-block; background-color: #059669; color: #ffffff; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 9999px; box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2); text-align: center;">Shop Niyora Gifts</a>`
     : "";
 
-  const html = `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111827;max-width:560px;">
-<p>${escapeHtml(greeting)}</p>
-<p>Here is your exclusive offer from <strong>${escapeHtml(activeStoreName)}</strong>.</p>
-<div style="margin:20px 0;padding:16px;background:#ecfdf5;border-radius:12px;border:2px dashed #059669;text-align:center;">
-  <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:#047857;">Your coupon code</div>
-  <div style="font-size:22px;font-weight:800;font-family:ui-monospace,monospace;margin-top:8px;letter-spacing:0.05em;">${escapeHtml(code)}</div>
-</div>
-<ul style="padding-left:18px;color:#374151;">
-  <li>${escapeHtml(offer)}</li>
-  <li>${escapeHtml(minCart)}</li>
-  <li>${escapeHtml(expiry)}</li>
-</ul>
-${noteHtml}
-${shopBtn}
-<p style="margin-top:24px;font-size:14px;color:#6b7280;">Apply this code at checkout. Thank you for shopping with us!<br/>— ${escapeHtml(
-    activeStoreName
-  )}</p>
-</body></html>`;
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exclusive Coupon from ${escapeHtml(activeStoreName)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Outfit','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f3f4f6;padding:40px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#ffffff;border-radius:20px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.05),0 4px 6px -2px rgba(0,0,0,0.025);overflow:hidden;max-width:540px;text-align:left;">
+          <!-- Top Accent Bar -->
+          <tr>
+            <td height="6" style="background-color:#059669;"></td>
+          </tr>
+          
+          <!-- Logo & Header -->
+          <tr>
+            <td align="center" style="padding: 30px 20px 20px 20px;">
+              <span style="font-size: 28px; font-weight: 800; color: #064e3b; letter-spacing: -0.03em;">Niyora <span style="color: #059669;">Gifts</span></span>
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.25em; color: #047857; margin-top: 6px; font-weight: 700;">Flowers, Cakes & Personalized Surprises</div>
+            </td>
+          </tr>
+          
+          <!-- Greeting and Intro -->
+          <tr>
+            <td style="padding: 10px 30px 20px 30px; font-size: 15px; color: #374151; line-height: 1.6;">
+              <p style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; color: #111827;">${escapeHtml(greeting)}</p>
+              <p style="margin: 0;">We are delighted to share an exclusive offer with you! Use the secure coupon code below at checkout to enjoy special savings on your next order.</p>
+            </td>
+          </tr>
+          
+          <!-- Ticket Coupon Container -->
+          <tr>
+            <td style="padding: 10px 30px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f0fdf4; border: 2px dashed #a7f3d0; border-radius: 16px; padding: 24px; text-align: center;">
+                <tr>
+                  <td>
+                    <span style="font-size: 11px; font-weight: 800; color: #047857; letter-spacing: 0.15em; text-transform: uppercase;">Your Exclusive Discount</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0 16px 0;">
+                    <span style="font-size: 26px; font-weight: 800; color: #065f46;">${escapeHtml(offer)}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="background-color: #ffffff; border: 1px dashed #6ee7b7; border-radius: 8px; padding: 12px 20px; display: inline-block; min-width: 200px;">
+                      <span style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Coupon Code</span>
+                      <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 20px; font-weight: 800; color: #064e3b; letter-spacing: 0.05em;">${escapeHtml(code)}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Offer Details & Conditions -->
+          <tr>
+            <td style="padding: 20px 30px 10px 30px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#f9fafb; border-radius: 12px; border: 1px solid #f3f4f6; padding: 16px 20px;">
+                <tr>
+                  <td style="font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 12px;">Offer Conditions</td>
+                </tr>
+                <!-- Condition: Min Cart -->
+                <tr>
+                  <td style="padding: 6px 0; font-size: 14px; color: #4b5563;">
+                    <span style="display:inline-block; width: 8px; height: 8px; background-color: #059669; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>
+                    Minimum cart value: <strong style="color: #111827;">₹${Number(coupon.minCartValue || 0)}</strong>
+                  </td>
+                </tr>
+                <!-- Condition: Expiry -->
+                <tr>
+                  <td style="padding: 6px 0; font-size: 14px; color: #4b5563;">
+                    <span style="display:inline-block; width: 8px; height: 8px; background-color: #059669; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>
+                    Validity: <strong style="color: #111827;">${escapeHtml(expiry.replace('Valid until ', '').replace('No expiry date on this offer.', 'No expiry'))}</strong>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Personal Note (if present) -->
+          ${noteHtml ? `
+          <tr>
+            <td style="padding: 10px 30px;">
+              ${noteHtml}
+            </td>
+          </tr>
+          ` : ''}
+          
+          <!-- Call to Action -->
+          <tr>
+            <td align="center" style="padding: 20px 30px 30px 30px;">
+              ${shopBtn}
+              <p style="margin: 16px 0 0 0; font-size: 13px; color: #6b7280;">Simply apply the coupon code during checkout to redeem your discount.</p>
+            </td>
+          </tr>
+          
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 30px;">
+              <div style="border-top: 1px solid #f3f4f6;"></div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 24px 30px; background-color: #fafafa;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280; font-weight: 500;">
+                Questions? Contact us at <a href="mailto:niyoragifts@gmail.com" style="color: #059669; text-decoration: none; font-weight: 600;">niyoragifts@gmail.com</a>
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                &copy; ${new Date().getFullYear()} Niyora Gifts. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   return {
-    subject: `Your ${activeStoreName} coupon: ${code}`,
+    subject: `Your Niyora Gifts coupon: ${code}`,
     text,
     html,
   };
@@ -159,14 +257,14 @@ ${shopBtn}
 
 const sendCouponEmailToCustomer = async (coupon, { to, customerName, personalNote }) => {
   const dbStoreInfo = await StoreSetting.findOne({ singletonKey: "store" }).lean();
-  const transport = await getTransporter(dbStoreInfo);
+  const transport = await getTransporter();
   if (!transport) {
     const err = new Error("EMAIL_NOT_CONFIGURED");
     err.code = "EMAIL_NOT_CONFIGURED";
     throw err;
   }
 
-  const storeNameStr = dbStoreInfo?.storeName || String(process.env.STORE_NAME || "Gift Store").trim() || "Gift Store";
+  const storeNameStr = dbStoreInfo?.storeName || String(process.env.STORE_NAME || "Niyora Gifts").trim() || "Niyora Gifts";
   const shopUrlStr = shopUrl();
 
   const { subject, html, text } = buildCouponEmailContent(coupon, {
@@ -177,9 +275,7 @@ const sendCouponEmailToCustomer = async (coupon, { to, customerName, personalNot
   });
 
   const fromAddress = String(
-    dbStoreInfo?.smtpFrom ||
     process.env.SMTP_FROM ||
-    dbStoreInfo?.smtpUser ||
     process.env.SMTP_USER ||
     ""
   ).trim();
@@ -190,7 +286,7 @@ const sendCouponEmailToCustomer = async (coupon, { to, customerName, personalNot
   const from = fromAddress || defaultFrom;
 
   const info = await transport.sendMail({
-    from: `"${storeNameStr}" <${from}>`,
+    from: `"Niyora Gifts" <${from}>`,
     to: String(to).trim(),
     subject,
     text,

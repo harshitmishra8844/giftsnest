@@ -98,7 +98,7 @@ const MyProfile = () => {
 
   const faqs = [
     { q: "How can I track my package?", a: "Once your order has Shipped, a Tracking ID and Carrier link will appear under your 'Order Tracking' tab. Click 'Track Package' to see real-time updates." },
-    { q: "Can I change my delivery address after placing an order?", a: "You can request address updates before the order transitions to 'Shipped'. Please contact care@giftnest.com or WhatsApp us immediately with your Order ID." },
+    { q: "Can I change my delivery address after placing an order?", a: "You can request address updates before the order transitions to 'Shipped'. Please contact niyoragifts@gmail.com or WhatsApp us immediately with your Order ID." },
     { q: "How do I request a cancellation?", a: "Go to the 'My Orders' tab and click 'Request Cancellation' on any eligible order (orders that are Shipped or Delivered cannot be cancelled). Our admin team will review and approve eligible requests." },
     { q: "What is your refund policy?", a: "For cancelled or returned items, refunds are processed back to the original payment source within 5-7 business days." }
   ];
@@ -1242,11 +1242,11 @@ const MyProfile = () => {
             
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <a
-                href="mailto:care@giftnest.com"
+                href="mailto:niyoragifts@gmail.com"
                 className="rounded-2xl border border-emerald-100 bg-emerald-50/20 p-5 hover:bg-emerald-50 transition duration-300 block"
               >
                 <h3 className="font-bold text-gray-900 text-base">Send Email Support</h3>
-                <p className="text-sm text-gray-600 mt-1">care@giftnest.com</p>
+                <p className="text-sm text-gray-600 mt-1">niyoragifts@gmail.com</p>
                 <p className="text-xs text-emerald-700 mt-3 font-semibold">Response within 12-24 Hours &rarr;</p>
               </a>
               <a
