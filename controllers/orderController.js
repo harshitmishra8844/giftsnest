@@ -299,7 +299,7 @@ const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: "Order status is required" });
     }
 
-    const order = await Order.findByIdAndUpdate(id, { status }, { new: true, runValidators: true });
+    const order = await Order.findByIdAndUpdate(id, { status }, { returnDocument: 'after', runValidators: true });
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
@@ -452,7 +452,7 @@ const archiveOrder = async (req, res) => {
     const order = await Order.findByIdAndUpdate(
       id,
       { archived: true },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -470,7 +470,7 @@ const unarchiveOrder = async (req, res) => {
     const order = await Order.findByIdAndUpdate(
       id,
       { archived: false },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!order) {
       return res.status(404).json({ message: "Order not found" });

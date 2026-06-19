@@ -15,7 +15,7 @@ const decrementStockForPaidOrder = async (order) => {
     const updated = await Product.findOneAndUpdate(
       { _id: pid, stock: { $gte: qty } },
       { $inc: { stock: -qty } },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!updated) {
       console.warn(

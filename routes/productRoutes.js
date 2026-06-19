@@ -18,6 +18,5 @@ router.post("/:id/reviews", protect, addProductReview);
 router.put("/:id/reviews/me", protect, updateMyProductReview);
 router.delete("/:id/reviews/me", protect, deleteMyProductReview);
 router.get("/:idOrSlug", getProductByIdOrSlug);
-router.post("/", createProduct);
 
 module.exports = router;

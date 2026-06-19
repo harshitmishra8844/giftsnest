@@ -12,6 +12,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
+const newsletterRoutes = require("./routes/newsletterRoutes");
 const { getStoreInfo } = require("./controllers/adminController");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
@@ -41,6 +42,7 @@ app.get("/api/store-info", getStoreInfo);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);   // admin login safe
 app.use("/api/user", userRoutes);
+app.use("/api/newsletter", newsletterRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -86,6 +86,29 @@ const defaultStoreInfo = {
     { title: "Birthday Bundle Wave", subtitle: "Combo gifts with curated cards and packaging at festival pricing.", code: "BDAYBLISS", ctaText: "View Bundles", active: true },
     { title: "Personalized Express", subtitle: "Fast-track custom gifts with handcrafted finishing.", code: "CUSTOM10", ctaText: "Customize Now", active: true },
   ],
+  smtpFrom: "",
+  smtpHost: "",
+  smtpPort: 587,
+  smtpSecure: false,
+  smtpUser: "",
+  smtpPass: "",
+};
+
+const isReadyToShipStatus = (status) => {
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase();
+  return normalized === "shipped" || normalized === "delivered";
+};
+
+const matchesLabelPrintFilter = (order, filter) => {
+  const normalized = String(order?.status || "")
+    .trim()
+    .toLowerCase();
+  if (filter === "shipped") return normalized === "shipped";
+  if (filter === "delivered") return normalized === "delivered";
+  if (filter === "ready") return isReadyToShipStatus(normalized);
+  return true;
 };
 
 const AdminDashboard = () => {
@@ -215,23 +238,6 @@ const AdminDashboard = () => {
 
   const visibleOrderIds = useMemo(() => ordersForViewFiltered.map((order) => order._id), [ordersForViewFiltered]);
 
-  const isReadyToShipStatus = (status) => {
-    const normalized = String(status || "")
-      .trim()
-      .toLowerCase();
-    return normalized === "shipped" || normalized === "delivered";
-  };
-
-  const matchesLabelPrintFilter = (order, filter) => {
-    const normalized = String(order?.status || "")
-      .trim()
-      .toLowerCase();
-    if (filter === "shipped") return normalized === "shipped";
-    if (filter === "delivered") return normalized === "delivered";
-    if (filter === "ready") return isReadyToShipStatus(normalized);
-    return true;
-  };
-
   const selectableVisibleOrderIds = useMemo(
     () =>
       ordersForViewFiltered
@@ -308,6 +314,12 @@ const AdminDashboard = () => {
             storePhone: storeInfoRes.value.data?.storePhone || defaultStoreInfo.storePhone,
             storeAddress: storeInfoRes.value.data?.storeAddress || defaultStoreInfo.storeAddress,
             storeLogoUrl: storeInfoRes.value.data?.storeLogoUrl || defaultStoreInfo.storeLogoUrl,
+            smtpFrom: storeInfoRes.value.data?.smtpFrom || defaultStoreInfo.smtpFrom,
+            smtpHost: storeInfoRes.value.data?.smtpHost || defaultStoreInfo.smtpHost,
+            smtpPort: storeInfoRes.value.data?.smtpPort !== undefined ? storeInfoRes.value.data.smtpPort : defaultStoreInfo.smtpPort,
+            smtpSecure: storeInfoRes.value.data?.smtpSecure !== undefined ? Boolean(storeInfoRes.value.data.smtpSecure) : defaultStoreInfo.smtpSecure,
+            smtpUser: storeInfoRes.value.data?.smtpUser || defaultStoreInfo.smtpUser,
+            smtpPass: storeInfoRes.value.data?.smtpPass || defaultStoreInfo.smtpPass,
             specialOffer: storeInfoRes.value.data?.specialOffer || defaultStoreInfo.specialOffer,
             offers: Array.isArray(storeInfoRes.value.data?.offers) ? storeInfoRes.value.data.offers : defaultStoreInfo.offers,
           });
@@ -354,7 +366,7 @@ const AdminDashboard = () => {
     const uniqueImages = Array.from(new Set([primaryImage, ...parsedImages].filter(Boolean)));
     const highlights = String(form.highlightsText || "")
       .split(/\r?\n/)
-      .map((item) => item.replace(/^[\-\u2022]\s*/, "").trim())
+      .map((item) => item.replace(/^[-\u2022]\s*/, "").trim())
       .filter(Boolean);
     const specifications = String(form.specificationsText || "")
       .split(/\r?\n/)
@@ -714,6 +726,12 @@ const AdminDashboard = () => {
         storePhone: storeInfo.storePhone.trim(),
         storeAddress: storeInfo.storeAddress.trim(),
         storeLogoUrl: String(storeInfo.storeLogoUrl || "").trim(),
+        smtpFrom: String(storeInfo.smtpFrom || "").trim(),
+        smtpHost: String(storeInfo.smtpHost || "").trim(),
+        smtpPort: storeInfo.smtpPort !== undefined ? Number(storeInfo.smtpPort) : 587,
+        smtpSecure: Boolean(storeInfo.smtpSecure),
+        smtpUser: String(storeInfo.smtpUser || "").trim(),
+        smtpPass: String(storeInfo.smtpPass || "").trim(),
         specialOffer: {
           title: String(storeInfo.specialOffer?.title || "").trim(),
           subtitle: String(storeInfo.specialOffer?.subtitle || "").trim(),
@@ -738,6 +756,12 @@ const AdminDashboard = () => {
       setStoreInfo({
         storeName: data.storeInfo?.storeName || payload.storeName,
         storePhone: data.storeInfo?.storePhone || payload.storePhone,
+        smtpFrom: data.storeInfo?.smtpFrom || payload.smtpFrom || "",
+        smtpHost: data.storeInfo?.smtpHost || payload.smtpHost || "",
+        smtpPort: data.storeInfo?.smtpPort !== undefined ? data.storeInfo.smtpPort : payload.smtpPort,
+        smtpSecure: data.storeInfo?.smtpSecure !== undefined ? Boolean(data.storeInfo.smtpSecure) : payload.smtpSecure,
+        smtpUser: data.storeInfo?.smtpUser || payload.smtpUser || "",
+        smtpPass: data.storeInfo?.smtpPass || payload.smtpPass || "",
         storeAddress: data.storeInfo?.storeAddress || payload.storeAddress,
         storeLogoUrl: data.storeInfo?.storeLogoUrl || payload.storeLogoUrl,
         specialOffer: data.storeInfo?.specialOffer || payload.specialOffer,
@@ -1556,10 +1580,13 @@ const AdminDashboard = () => {
       if (data.emailSent) {
         msg += " The customer was emailed this code.";
       }
-      setSuccess(msg);
-      if (data.emailWarning) {
+      if (data.previewUrl) {
+        msg += ` (Dev Sandbox Email Preview: ${data.previewUrl})`;
+      }
+      if (data.emailWarning && !data.emailSent) {
         setError(data.emailWarning);
       }
+      setSuccess(msg);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to generate special coupon");
     } finally {
@@ -1596,7 +1623,7 @@ const AdminDashboard = () => {
     }
     try {
       setSendingCouponEmail(true);
-      await api.post(
+      const { data } = await api.post(
         `/admin/coupons/${couponEmailTargetId}/send-email`,
         {
           to,
@@ -1605,7 +1632,11 @@ const AdminDashboard = () => {
         },
         authHeader
       );
-      setSuccess("Coupon code email sent successfully.");
+      if (data && data.previewUrl) {
+        setSuccess(`Coupon code email sent (dev preview): ${data.previewUrl}`);
+      } else {
+        setSuccess("Coupon code email sent successfully.");
+      }
       setCouponEmailTargetId("");
       setCouponEmailForm(emptyCouponEmailForm);
     } catch (err) {
@@ -1854,6 +1885,58 @@ const AdminDashboard = () => {
               />
             </div>
           </div>
+          <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+            <p className="text-sm font-semibold text-blue-900">Email Server Settings (SMTP)</p>
+            <p className="mb-3 text-xs text-blue-700">Used for sending special retention coupons directly to customers. Leave blank to fallback to environment variables.</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                name="smtpFrom"
+                value={storeInfo.smtpFrom || ""}
+                onChange={handleStoreInfoChange}
+                placeholder="Sender Email Address (SMTP_FROM) - e.g. niyoragifts@gmail.com"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+              <input
+                name="smtpHost"
+                value={storeInfo.smtpHost || ""}
+                onChange={handleStoreInfoChange}
+                placeholder="SMTP Server (SMTP_HOST) - e.g. smtp.gmail.com"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+              <input
+                type="number"
+                name="smtpPort"
+                value={storeInfo.smtpPort || ""}
+                onChange={handleStoreInfoChange}
+                placeholder="SMTP Port (SMTP_PORT) - e.g. 587 or 465"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+              <input
+                name="smtpUser"
+                value={storeInfo.smtpUser || ""}
+                onChange={handleStoreInfoChange}
+                placeholder="SMTP Username (SMTP_USER)"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+              <input
+                type="password"
+                name="smtpPass"
+                value={storeInfo.smtpPass || ""}
+                onChange={handleStoreInfoChange}
+                placeholder="SMTP Password (SMTP_PASS) - use App Password"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+              <label className="flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
+                <input
+                  type="checkbox"
+                  name="smtpSecure"
+                  checked={Boolean(storeInfo.smtpSecure)}
+                  onChange={(e) => setStoreInfo((prev) => ({ ...prev, smtpSecure: e.target.checked }))}
+                />
+                Use Secure Connection (SSL/TLS - check for port 465)
+              </label>
+            </div>
+          </div>
           <div className="md:col-span-2 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
             <p className="text-sm font-semibold text-teal-900">Top Special Offer Banner</p>
             <p className="mb-3 text-xs text-teal-700">Shown at top of home page for festivals/events.</p>
@@ -1994,8 +2077,6 @@ const AdminDashboard = () => {
           Generate a cryptographically random code (prefix <span className="font-mono text-xs">GN-SP-</span>) for
           VIP or win-back offers. These codes are hidden from the public &quot;active coupons&quot; list on checkout.
           Limits apply only after payment succeeds. Leave max fields empty for unlimited (total and/or per customer).
-          Optional: enter the customer&apos;s email below to send the new code automatically (requires SMTP in server
-          <span className="font-mono text-xs"> .env</span>).
         </p>
         {lastGeneratedSpecialCode ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-violet-200 bg-white px-3 py-2">
@@ -3085,7 +3166,169 @@ const AdminDashboard = () => {
           </table>
         </div>
       </div>
+
+      <NewsletterSubscribersSection authHeader={authHeader} />
     </section>
+  );
+};
+
+const NewsletterSubscribersSection = ({ authHeader }) => {
+  const [subscribers, setSubscribers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/admin/newsletter/subscribers", authHeader);
+      setSubscribers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load subscribers");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [authHeader]);
+
+  const handleDeleteSubscriber = async (id) => {
+    const confirmed = window.confirm("Are you sure you want to remove this subscriber?");
+    if (!confirmed) return;
+
+    // Optimistic Update: instantly update state to make UI feel very fast
+    const originalSubscribers = [...subscribers];
+    setSubscribers((prev) => prev.filter((item) => item._id !== id));
+    setSuccess("Subscriber removed successfully.");
+    setTimeout(() => setSuccess(""), 3500);
+
+    try {
+      await api.delete(`/admin/newsletter/subscribers/${id}`, authHeader);
+    } catch (err) {
+      // Revert state if API call fails
+      setSubscribers(originalSubscribers);
+      setError(err.response?.data?.message || "Failed to delete subscriber");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleCopyAllEmails = () => {
+    if (subscribers.length === 0) {
+      setError("No subscribers to copy.");
+      setTimeout(() => setError(""), 3500);
+      return;
+    }
+    const emailsList = subscribers.map((sub) => sub.email).join(", ");
+    
+    // Quick copy to clipboard
+    navigator.clipboard.writeText(emailsList)
+      .then(() => {
+        setSuccess("Copied all emails to clipboard!");
+        setTimeout(() => setSuccess(""), 3500);
+      })
+      .catch((err) => {
+        setError("Failed to copy emails.");
+        setTimeout(() => setError(""), 3500);
+      });
+  };
+
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 relative">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <svg className="h-5 w-5 text-emerald-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Newsletter Subscribers
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage email subscriptions and export addresses for campaigns.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleCopyAllEmails}
+          disabled={subscribers.length === 0}
+          className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm cursor-pointer"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+          Copy All Emails ({subscribers.length})
+        </button>
+      </div>
+
+      {/* Local Feedback Alerts */}
+      {success && (
+        <div className="my-3 rounded-lg bg-emerald-50 border border-emerald-100 p-2.5 text-xs text-emerald-800 flex items-center gap-2 transition animate-fade-in shadow-xs">
+          <svg className="h-4 w-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{success}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="my-3 rounded-lg bg-red-50 border border-red-100 p-2.5 text-xs text-red-800 flex items-center gap-2 transition animate-fade-in shadow-xs">
+          <svg className="h-4 w-4 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="py-8 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+          <svg className="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Loading subscribers...
+        </div>
+      ) : (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[500px] text-left text-sm">
+            <thead className="text-gray-500">
+              <tr>
+                <th className="py-2">Email Address</th>
+                <th className="py-2">Subscribed Date</th>
+                <th className="py-2 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {subscribers.map((sub) => (
+                <tr key={sub._id} className="border-t border-gray-100">
+                  <td className="py-2 font-medium text-gray-900">{sub.email}</td>
+                  <td className="py-2 text-gray-600">
+                    {new Date(sub.createdAt).toLocaleString()}
+                  </td>
+                  <td className="py-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSubscriber(sub._id)}
+                      className="rounded-full px-2.5 py-1 text-xs font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 transition cursor-pointer"
+                      title="Remove Subscriber"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {subscribers.length === 0 ? (
+                <tr>
+                  <td className="py-4 text-gray-500" colSpan={3}>
+                    No newsletter subscribers yet.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 };
 

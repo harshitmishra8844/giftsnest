@@ -87,18 +87,16 @@ router.put("/addresses/:addressId", protect, async (req, res) => {
       user.addresses.forEach(addr => addr.isDefault = false);
     }
 
-    user.addresses[addressIndex] = {
-      ...user.addresses[addressIndex],
-      label: label.trim(),
-      fullName: fullName.trim(),
-      phone: phone.trim(),
-      line1: line1.trim(),
-      city: city.trim(),
-      state: state.trim(),
-      postalCode: postalCode.trim(),
-      country: country || "India",
-      isDefault: Boolean(isDefault),
-    };
+    const address = user.addresses[addressIndex];
+    address.label = label.trim();
+    address.fullName = fullName.trim();
+    address.phone = phone.trim();
+    address.line1 = line1.trim();
+    address.city = city.trim();
+    address.state = state.trim();
+    address.postalCode = postalCode.trim();
+    address.country = country || "India";
+    address.isDefault = Boolean(isDefault);
 
     await user.save();
 
@@ -163,6 +161,57 @@ router.patch("/addresses/:addressId/default", protect, async (req, res) => {
   } catch (error) {
     console.error("Set default address error:", error.message);
     return res.status(500).json({ message: "Failed to set default address" });
+  }
+});
+
+// Update user profile settings
+router.put("/profile", protect, async (req, res) => {
+  try {
+    const { name, email, password, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (email && email.toLowerCase().trim() !== user.email) {
+      const emailExists = await User.findOne({ email: email.toLowerCase().trim() });
+      if (emailExists) {
+        return res.status(400).json({ message: "Email is already in use" });
+      }
+      user.email = email.toLowerCase().trim();
+    }
+
+    if (name) {
+      user.name = name.trim();
+    }
+
+    if (password && newPassword) {
+      const bcrypt = require("bcryptjs");
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+      }
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+    }
+
+    await user.save();
+
+    const { generateToken } = require("../controllers/authController");
+
+    return res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      isAdmin: Boolean(user.isAdmin),
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error("Update profile error:", error.message);
+    return res.status(500).json({ message: "Failed to update profile settings" });
   }
 });
 

@@ -119,6 +119,7 @@ const ProductDetails = () => {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightboxOpen, galleryImages, activeImage]);
 
   useEffect(() => {
@@ -200,7 +201,7 @@ const ProductDetails = () => {
       rating: String(Math.max(1, Math.min(5, Number(myReview.rating || 5)))),
       comment: String(myReview.comment || ""),
     });
-  }, [myReview?._id]);
+  }, [myReview]);
 
   if (loading) {
     return <section className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-100">Loading product details...</section>;

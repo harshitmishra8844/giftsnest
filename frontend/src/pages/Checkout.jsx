@@ -4,15 +4,7 @@ import api from "../services/api";
 import { useCart } from "../context/CartContext";
 import { getUserAuth } from "../services/userAuth";
 
-const initialAddress = {
-  fullName: "",
-  phone: "",
-  line1: "",
-  city: "",
-  state: "",
-  postalCode: "",
-  country: "India",
-};
+
 
 const loadRazorpayScript = () =>
   new Promise((resolve) => {
@@ -216,7 +208,7 @@ const Checkout = () => {
 
     if (!hasSavedAddresses) {
       setError("Please add a delivery address in My Addresses before completing your order.");
-      navigate("/profile", {
+      navigate("/my-profile", {
         state: { activeTab: "addresses", openAddressForm: true, returnTo: "/checkout" },
       });
       return;
@@ -227,7 +219,7 @@ const Checkout = () => {
       || savedAddresses[0];
     if (!selectedAddr) {
       setError("No valid delivery address found.");
-      navigate("/profile", {
+      navigate("/my-profile", {
         state: { activeTab: "addresses", openAddressForm: true, returnTo: "/checkout" },
       });
       return;
@@ -407,7 +399,7 @@ const Checkout = () => {
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <p className="text-xs text-gray-500">
                   To change address, visit your{" "}
-                  <Link to="/profile" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                  <Link to="/my-profile" className="text-emerald-600 hover:text-emerald-700 font-medium">
                     profile settings
                   </Link>
                 </p>

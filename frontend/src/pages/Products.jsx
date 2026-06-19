@@ -133,15 +133,8 @@ const Products = () => {
               A simpler catalog layout with direct product actions, clearer navigation and a calmer browsing flow.
             </p>
           </div>
-          <div className="grid gap-3 rounded-[24px] bg-emerald-50 p-4">
-            <input
-              type="text"
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              placeholder="Search by product, category, or detail"
-              className="w-full rounded-full border border-emerald-200 bg-white px-4 py-3 text-sm text-gray-700"
-            />
-            <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+          <div className="flex items-center justify-center rounded-[24px] bg-emerald-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 text-center">
               {visibleProducts.length} product{visibleProducts.length === 1 ? "" : "s"} showing
             </p>
           </div>

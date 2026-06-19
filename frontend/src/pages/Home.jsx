@@ -1,14 +1,12 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../services/api";
-import SearchBar from "../components/search/SearchBar";
-import { mockGiftProducts, trendingSearches } from "../data/mockGiftProducts";
 
 const quickCategories = [
   { name: "Birthday", image: "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center" },
   { name: "Anniversary", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center" },
   { name: "Flowers", image: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center" },
-  { name: "Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center" },
+  // Cakes removed per request
   { name: "Personalized Gifts", image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center" },
   { name: "Plants", image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center" },
 ];
@@ -41,11 +39,9 @@ const aboutHighlights = [
 ];
 
 const Home = () => {
-  const navigate = useNavigate();
   const [offers, setOffers] = useState([]);
   const [specialOffer, setSpecialOffer] = useState(null);
   const [countdownText, setCountdownText] = useState("");
-  const [searchProducts, setSearchProducts] = useState(mockGiftProducts);
 
   const isSpecialOfferLive = (offer) => {
     if (!offer?.active) return false;
@@ -116,18 +112,10 @@ const Home = () => {
     };
   }, []);
 
-  const handleSearch = (query) => {
-    if (!query) {
-      navigate("/products");
-      return;
-    }
-    navigate(`/products?q=${encodeURIComponent(query)}`);
-  };
-
   useEffect(() => {
     if (!specialOffer?.endDate) {
-      setCountdownText("");
-      return;
+      const timer = setTimeout(() => setCountdownText(""), 0);
+      return () => clearTimeout(timer);
     }
 
     const updateCountdown = () => {
@@ -153,34 +141,12 @@ const Home = () => {
         const topOffer = isSpecialOfferLive(data?.specialOffer) ? data.specialOffer : null;
         setSpecialOffer(topOffer);
         setOffers(liveOffers.slice(0, 4));
-      } catch (error) {
+      } catch {
         setSpecialOffer(null);
         setOffers([]);
       }
     };
     fetchOffers();
-  }, []);
-
-  useEffect(() => {
-    const fetchSearchProducts = async () => {
-      try {
-        const { data } = await api.get("/products");
-        const products = Array.isArray(data) ? data : [];
-        setSearchProducts(
-          products.map((item) => ({
-            id: item._id || item.id || item.slug || item.name,
-            name: item.name || "",
-            category: item.category || "",
-            price: Number(item.price || 0),
-            image: item.image || "",
-          }))
-        );
-      } catch {
-        // Keep mock fallback if API is unavailable.
-        setSearchProducts(mockGiftProducts);
-      }
-    };
-    fetchSearchProducts();
   }, []);
 
   return (
@@ -244,25 +210,6 @@ const Home = () => {
             </div>
           </div>
           <div className="grid gap-3">
-            <form
-              onSubmit={(event) => event.preventDefault()}
-              className="group relative z-30 rounded-2xl border border-white/25 bg-gradient-to-br from-white/20 via-white/10 to-emerald-200/10 p-4 shadow-lg backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:shadow-emerald-300/30 hover:shadow-2xl"
-            >
-              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-emerald-300/25 blur-2xl transition duration-500 group-hover:bg-emerald-300/40" />
-              <div className="absolute -left-8 bottom-0 h-16 w-16 animate-pulse rounded-full bg-teal-300/20 blur-2xl" />
-              <label htmlFor="home-product-search" className="relative text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100">
-                Find The Perfect Gift
-              </label>
-              <p className="relative mt-1 text-xs text-emerald-50/90">Search by product name, category, or details</p>
-              <div className="relative z-40 mt-3">
-                <SearchBar
-                  inputId="home-product-search"
-                  products={searchProducts}
-                  trendingSearches={trendingSearches}
-                  onSearch={handleSearch}
-                />
-              </div>
-            </form>
             {aboutHighlights.map((item) => (
               <article key={item.title} className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur">
                 <h3 className="text-sm font-bold">{item.title}</h3>
@@ -273,23 +220,25 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="fade-in-up scroll-reveal rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="fade-in-up scroll-reveal rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-emerald-900">Shop by Category</h2>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Top Picks for Every Occasion</p>
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-3 md:grid-cols-6">
+
+        <div className="mt-6 flex flex-wrap justify-center gap-6">
           {quickCategories.map((category) => (
             <Link
               key={category.name}
               to="/products"
-              className="group relative aspect-square overflow-hidden rounded-xl bg-cover bg-center"
-              style={{ backgroundImage: `url(${category.image})` }}
+              className="group relative w-[160px] h-[160px] md:w-[180px] md:h-[180px] overflow-hidden rounded-xl shadow-sm transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg"
+              style={{ backgroundImage: `url(${category.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
             >
-              <div className="absolute inset-0 bg-black/40 transition group-hover:bg-black/55" />
-              <span className="absolute inset-0 z-10 flex items-center justify-center px-2 text-center text-xs font-semibold text-white md:text-sm">
-                {category.name}
-              </span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/30 to-transparent opacity-90 group-hover:opacity-95 transition-opacity" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="z-10 rounded-full bg-white/10 px-3 py-1 text-center text-sm font-semibold text-white backdrop-blur-sm">
+                  {category.name}
+                </span>
+              </div>
             </Link>
           ))}
         </div>

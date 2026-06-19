@@ -98,7 +98,7 @@ const completeDemoPayment = async (req, res) => {
         status: "Order Confirmed",
         razorpayPaymentId: `demo_pay_${appOrder._id}`,
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!updatedOrder) {
@@ -157,7 +157,7 @@ const verifyPayment = async (req, res) => {
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!updatedOrder) {

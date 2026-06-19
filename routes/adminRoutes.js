@@ -25,6 +25,11 @@ const {
   generateSpecialCoupon,
   sendCouponEmail,
 } = require("../controllers/couponController");
+const {
+  getNewsletterSubscribers,
+  deleteNewsletterSubscriber,
+} = require("../controllers/newsletterController");
+
 
 const router = express.Router();
 
@@ -52,5 +57,8 @@ router.post("/coupons/:id/send-email", protect, adminOnly, sendCouponEmail);
 router.post("/coupons", protect, adminOnly, createCoupon);
 router.put("/coupons/:id", protect, adminOnly, updateCoupon);
 router.delete("/coupons/:id", protect, adminOnly, deleteCoupon);
+
+router.get("/newsletter/subscribers", protect, adminOnly, getNewsletterSubscribers);
+router.delete("/newsletter/subscribers/:id", protect, adminOnly, deleteNewsletterSubscriber);
 
 module.exports = router;

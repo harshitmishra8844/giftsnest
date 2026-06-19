@@ -119,25 +119,26 @@ const generateSpecialCoupon = async (req, res) => {
 
     let emailSent = false;
     let emailWarning = null;
+    let previewUrl = null;
     const ce = String(customerEmail || "").trim().toLowerCase();
     if (ce) {
-      if (!isEmailConfigured()) {
-        emailWarning =
-          "Coupon was created but email was not sent: configure SMTP_HOST, SMTP_USER, and SMTP_PASS on the server.";
-      } else if (!isValidEmail(ce)) {
+      if (!isValidEmail(ce)) {
         emailWarning = "Coupon was created but email was not sent: invalid email address.";
       } else {
         try {
-          await sendCouponEmailToCustomer(coupon, {
+          const sendResult = await sendCouponEmailToCustomer(coupon, {
             to: ce,
             customerName: String(customerName || "").trim(),
             personalNote: String(emailMessage || "").trim(),
           });
+          if (sendResult && sendResult.previewUrl) {
+            previewUrl = sendResult.previewUrl;
+          }
           emailSent = true;
         } catch (mailErr) {
           console.error("Special coupon email error:", mailErr.message);
           emailWarning =
-            "Coupon was created but the email could not be sent. Use “Email customer” in Manage coupons to try again.";
+            "Coupon was created but the email could not be sent. Use \u201CEmail customer\u201D in Manage coupons to try again.";
         }
       }
     }
@@ -146,6 +147,7 @@ const generateSpecialCoupon = async (req, res) => {
       ...coupon.toObject(),
       paidRedemptionsCount: 0,
       emailSent,
+      previewUrl: previewUrl || undefined,
       emailWarning: emailWarning || undefined,
     });
   } catch (error) {
@@ -162,12 +164,6 @@ const sendCouponEmail = async (req, res) => {
     if (!isValidEmail(email)) {
       return res.status(400).json({ message: "A valid recipient email address is required" });
     }
-    if (!isEmailConfigured()) {
-      return res.status(503).json({
-        message:
-          "Email is not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS on the server (optional: SMTP_PORT, SMTP_SECURE, SMTP_FROM).",
-      });
-    }
     const coupon = await Coupon.findById(id);
     if (!coupon) {
       return res.status(404).json({ message: "Coupon not found" });
@@ -175,12 +171,25 @@ const sendCouponEmail = async (req, res) => {
     if (!coupon.active) {
       return res.status(400).json({ message: "Cannot email an inactive coupon" });
     }
-    await sendCouponEmailToCustomer(coupon, {
-      to: email,
-      customerName: String(customerName || "").trim(),
-      personalNote: String(message || "").trim(),
-    });
-    return res.status(200).json({ message: "Email sent successfully" });
+    try {
+      const result = await sendCouponEmailToCustomer(coupon, {
+        to: email,
+        customerName: String(customerName || "").trim(),
+        personalNote: String(message || "").trim(),
+      });
+      if (result && result.previewUrl) {
+        return res.status(200).json({ message: "Email sent (test SMTP)", previewUrl: result.previewUrl });
+      }
+      return res.status(200).json({ message: "Email sent successfully" });
+    } catch (err) {
+      if (err.code === "EMAIL_NOT_CONFIGURED") {
+        return res.status(503).json({
+          message:
+            "Email is not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS on the server (optional: SMTP_PORT, SMTP_SECURE, SMTP_FROM).",
+        });
+      }
+      throw err;
+    }
   } catch (error) {
     if (error.code === "EMAIL_NOT_CONFIGURED") {
       return res.status(503).json({ message: "Email service is not configured" });
@@ -218,7 +227,7 @@ const updateCoupon = async (req, res) => {
       payload.endDate = parseOptionalEndDate(payload.endDate);
     }
 
-    const coupon = await Coupon.findByIdAndUpdate(id, payload, { new: true, runValidators: true });
+    const coupon = await Coupon.findByIdAndUpdate(id, payload, { returnDocument: 'after', runValidators: true });
     if (!coupon) return res.status(404).json({ message: "Coupon not found" });
     const paid = await Order.countDocuments({ couponCode: coupon.code, paymentStatus: "Paid" });
     return res.status(200).json({ ...coupon.toObject(), paidRedemptionsCount: paid });

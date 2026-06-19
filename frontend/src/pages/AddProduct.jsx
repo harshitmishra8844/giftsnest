@@ -83,7 +83,7 @@ const AddProduct = () => {
         images: allImages,
         highlights: String(form.highlightsText || "")
           .split(/\r?\n/)
-          .map((item) => item.replace(/^[\-\u2022]\s*/, "").trim())
+          .map((item) => item.replace(/^[-\u2022]\s*/, "").trim())
           .filter(Boolean),
         specifications: String(form.specificationsText || "")
           .split(/\r?\n/)

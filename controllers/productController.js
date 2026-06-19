@@ -272,7 +272,7 @@ const updateProduct = async (req, res) => {
       updates.specifications = sanitizeSpecifications(updates.specifications);
     }
     const product = await Product.findByIdAndUpdate(id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
 

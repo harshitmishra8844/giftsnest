@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SuggestionsList from "./SuggestionsList";
 
 const RECENT_KEY = "giftnest-recent-searches";
@@ -6,23 +7,23 @@ const MAX_RECENT = 5;
 const DEBOUNCE_MS = 300;
 
 const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-search-input" }) => {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
-  const [recentSearches, setRecentSearches] = useState([]);
-  const inputRef = useRef(null);
-  const listboxId = "gift-search-suggestions";
-
-  useEffect(() => {
+  const [isListening, setIsListening] = useState(false);
+  const [recentSearches, setRecentSearches] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
-      setRecentSearches(Array.isArray(saved) ? saved.slice(0, MAX_RECENT) : []);
+      return Array.isArray(saved) ? saved.slice(0, MAX_RECENT) : [];
     } catch {
-      setRecentSearches([]);
+      return [];
     }
-  }, []);
+  });
+  const inputRef = useRef(null);
+  const listboxId = "gift-search-suggestions";
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -33,9 +34,12 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
 
   useEffect(() => {
     if (!isOpen) return;
-    setIsLoading(true);
+    const loadTimer = setTimeout(() => setIsLoading(true), 0);
     const timer = setTimeout(() => setIsLoading(false), 180);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(loadTimer);
+      clearTimeout(timer);
+    };
   }, [debouncedQuery, isOpen]);
 
   const suggestionPool = useMemo(() => {
@@ -46,13 +50,24 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
       const productName = String(product.name || "").trim();
       if (productName && !seen.has(`product-${productName.toLowerCase()}`)) {
         seen.add(`product-${productName.toLowerCase()}`);
-        items.push({ id: `product-${product.id}`, label: productName, type: "Product" });
+        items.push({
+          id: `product-${product.id}`,
+          label: productName,
+          type: "Product",
+          price: product.price,
+          image: product.image,
+          category: product.category,
+        });
       }
 
       const category = String(product.category || "").trim();
       if (category && !seen.has(`category-${category.toLowerCase()}`)) {
         seen.add(`category-${category.toLowerCase()}`);
-        items.push({ id: `category-${category}`, label: category, type: "Category" });
+        items.push({
+          id: `category-${category}`,
+          label: category,
+          type: "Category",
+        });
       }
     });
 
@@ -64,7 +79,12 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
     if (!term) return [];
     return suggestionPool.filter((item) => item.label.toLowerCase().includes(term)).slice(0, 8);
   }, [debouncedQuery, suggestionPool]);
-  const shouldShowDropdown = isOpen && debouncedQuery.trim() && suggestions.length > 0;
+  const shouldShowDropdown = isOpen && (
+    debouncedQuery.trim() !== "" ||
+    recentSearches.length > 0 ||
+    (trendingSearches && trendingSearches.length > 0)
+  );
+  const noResults = debouncedQuery.trim() !== "" && suggestions.length === 0;
 
   const storeRecent = (term) => {
     const trimmed = term.trim();
@@ -72,6 +92,11 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
     const next = [trimmed, ...recentSearches.filter((entry) => entry.toLowerCase() !== trimmed.toLowerCase())].slice(0, MAX_RECENT);
     setRecentSearches(next);
     localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem(RECENT_KEY);
   };
 
   const runSearch = (term) => {
@@ -102,9 +127,15 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
     if (event.key === "Enter") {
       event.preventDefault();
       if (activeIndex >= 0 && suggestions[activeIndex]) {
-        const selected = suggestions[activeIndex].label;
-        setQuery(selected);
-        runSearch(selected);
+        const selected = suggestions[activeIndex];
+        if (selected.type === "Product") {
+          const productId = selected.id.replace("product-", "");
+          navigate(`/products/${productId}`);
+          setIsOpen(false);
+        } else {
+          setQuery(selected.label);
+          runSearch(selected.label);
+        }
         return;
       }
       runSearch(query);
@@ -118,15 +149,32 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
 
   const handleVoiceSearch = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      alert("Voice search is not supported in this browser.");
+      return;
+    }
     const recognition = new SpeechRecognition();
     recognition.lang = "en-IN";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
     recognition.onresult = (event) => {
       const text = event.results?.[0]?.[0]?.transcript || "";
       setQuery(text);
       runSearch(text);
+      setIsListening(false);
     };
     recognition.start();
   };
@@ -208,10 +256,21 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
           query={debouncedQuery}
           activeIndex={activeIndex}
           isLoading={isLoading}
-          noResults={false}
-          onSelect={(term) => {
-            setQuery(term);
-            runSearch(term);
+          noResults={noResults}
+          onSelect={(selected) => {
+            if (selected && typeof selected === "object") {
+              if (selected.type === "Product") {
+                const productId = selected.id.replace("product-", "");
+                navigate(`/products/${productId}`);
+                setIsOpen(false);
+              } else {
+                setQuery(selected.label);
+                runSearch(selected.label);
+              }
+            } else if (typeof selected === "string") {
+              setQuery(selected);
+              runSearch(selected);
+            }
           }}
           onPickTrending={(term) => {
             setQuery(term);
@@ -219,8 +278,41 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
           }}
           recentSearches={recentSearches}
           trendingSearches={trendingSearches}
+          onClearRecent={clearRecentSearches}
         />
       ) : null}
+
+      {isListening && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-8 text-center shadow-2xl border border-gray-100 flex flex-col items-center space-y-6">
+            <h3 className="text-xl font-bold text-gray-900">Voice Search</h3>
+            <p className="text-sm text-gray-500">Listening to your voice...</p>
+            
+            {/* Pulsing microphone animation */}
+            <div className="relative flex items-center justify-center w-24 h-24">
+              <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
+              <div className="absolute inset-2 bg-emerald-500/40 rounded-full animate-pulse" />
+              <div className="relative w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+            </div>
+            
+            <p className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100 uppercase tracking-wider">
+              Speak clearly now
+            </p>
+            
+            <button
+              type="button"
+              onClick={() => setIsListening(false)}
+              className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
