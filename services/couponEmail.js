@@ -31,7 +31,7 @@ const getTransporter = async () => {
   }
 
   // Fallback transport: use Ethereal if no SMTP is configured, so coupon email sending can still be tested.
-  if (process.env.DISABLE_EMAIL_FALLBACK !== "true") {
+  if (process.env.NODE_ENV !== "production" && process.env.DISABLE_EMAIL_FALLBACK !== "true") {
     try {
       const testAccount = await nodemailer.createTestAccount();
       const transporter = nodemailer.createTransport({
