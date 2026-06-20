@@ -10,7 +10,7 @@ const fallbackBaseURL = isDev && baseURL !== localBaseURL ? localBaseURL : null;
 
 const api = axios.create({
   baseURL,
-  timeout: 10000,
+  timeout: 60000,
 });
 
 api.interceptors.request.use((config) => {
