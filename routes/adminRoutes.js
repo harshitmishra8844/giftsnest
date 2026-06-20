@@ -1,5 +1,5 @@
 const express = require("express");
-const { adminLogin, getStoreInfo, updateStoreInfo } = require("../controllers/adminController");
+const { adminLogin, getStoreInfo, updateStoreInfo, getEmailDiagnostics } = require("../controllers/adminController");
 const {
   getProducts,
   createProduct,
