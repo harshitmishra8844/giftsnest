@@ -29,6 +29,62 @@ const ProductDetails = () => {
   const [toastMessage, setToastMessage] = useState("");
   const [recentlyAdded, setRecentlyAdded] = useState(false);
 
+  // Personalization fields
+  const [customText, setCustomText] = useState("");
+  const [customImage, setCustomImage] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      alert("Please select a valid image file");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      const formData = new FormData();
+      formData.append("image", file);
+      const { data } = await api.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setCustomImage(data.imageUrl);
+    } catch (err) {
+      console.error("Error uploading personalization image:", err);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const isCustomizationValid = useMemo(() => {
+    if (!product?.isPersonalized) return true;
+
+    // Check text field:
+    if (product.personalizationTextLabel) {
+      if (!customText.trim()) return false;
+      if (product.personalizationTextLimit && customText.length > product.personalizationTextLimit) {
+        return false;
+      }
+    }
+
+    // Check image field:
+    if (product.personalizationImageRequired) {
+      if (!customImage) return false;
+    }
+
+    return true;
+  }, [product, customText, customImage]);
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -229,7 +285,9 @@ const ProductDetails = () => {
 
   const stock = Number(product.stock ?? 0);
   const outOfStock = Number.isFinite(stock) && stock <= 0;
-  const cartQuantity = cartItems.find((item) => item._id === product._id)?.quantity || 0;
+  const cartQuantity = cartItems
+    .filter((item) => item._id === product._id)
+    .reduce((sum, item) => sum + item.quantity, 0);
   const reachedMaxStock = Number.isFinite(stock) && cartQuantity >= stock;
   const rating = Math.max(0, Math.min(5, Number(product.rating || 0)));
   const numReviews = Math.max(0, Number(product.numReviews || 0));
@@ -293,19 +351,47 @@ const ProductDetails = () => {
   };
 
   const handleAddToCart = () => {
-    addToCart(product);
+    let payload = { ...product };
+    if (product.isPersonalized) {
+      payload.customization = {
+        text: product.personalizationTextLabel ? customText : "",
+        uploadedImage: customImage,
+      };
+      payload.cartItemId = `${product._id}-${JSON.stringify(payload.customization)}`;
+    }
+    addToCart(payload);
     setToastMessage(`${product.name} added to cart`);
     setRecentlyAdded(true);
   };
 
+  const handleBuyNow = () => {
+    let payload = { ...product };
+    if (product.isPersonalized) {
+      payload.customization = {
+        text: product.personalizationTextLabel ? customText : "",
+        uploadedImage: customImage,
+      };
+      payload.cartItemId = `${product._id}-${JSON.stringify(payload.customization)}`;
+    }
+    addToCart(payload);
+    navigate("/checkout");
+  };
+
   const handleDecreaseQty = () => {
     if (cartQuantity <= 0) return;
-    updateQuantity(product._id, cartQuantity - 1);
+    const match = cartItems.find((item) => item._id === product._id);
+    if (match) {
+      updateQuantity(match.cartItemId || match._id, match.quantity - 1);
+    }
   };
 
   const handleIncreaseQty = () => {
-    addToCart(product);
-    setToastMessage(`${product.name} added to cart`);
+    const match = cartItems.find((item) => item._id === product._id);
+    if (match) {
+      updateQuantity(match.cartItemId || match._id, match.quantity + 1);
+    } else {
+      handleAddToCart();
+    }
   };
 
   const handleCardAdd = (item) => {
@@ -464,7 +550,7 @@ const ProductDetails = () => {
             
             {/* Gallery Checkout Bar for Tablet/Desktop */}
             <div className="mt-6 hidden grid-cols-2 gap-4 sm:grid">
-              {cartQuantity > 0 ? (
+              {!product.isPersonalized && cartQuantity > 0 ? (
                 <QuantityStepper
                   quantity={cartQuantity}
                   onDecrease={handleDecreaseQty}
@@ -477,20 +563,17 @@ const ProductDetails = () => {
               ) : (
                 <button
                   type="button"
-                  disabled={outOfStock}
+                  disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
                   onClick={handleAddToCart}
                   className="rounded-full bg-amber-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
                 >
-                  {outOfStock ? "Sold out" : recentlyAdded ? "Added ✓" : "Add to Cart"}
+                  {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
                 </button>
               )}
               <button
                 type="button"
-                disabled={outOfStock}
-                onClick={() => {
-                  handleAddToCart();
-                  navigate("/checkout");
-                }}
+                disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
+                onClick={handleBuyNow}
                 className="rounded-full bg-emerald-950 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
               >
                 Buy Now
@@ -515,6 +598,97 @@ const ProductDetails = () => {
               </div>
             </div>
 
+            {/* Personalization Options */}
+            {product.isPersonalized && (
+              <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/20 via-white to-emerald-50/10 p-5 shadow-sm space-y-4 animate-[fadeIn_0.3s_ease-out] ring-1 ring-amber-100/20">
+                <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+                  <span className="text-base">✨</span>
+                  <div>
+                    <h3 className="text-xs font-serif font-bold text-gray-950">Personalize Your Gift</h3>
+                    <p className="text-[9px] text-gray-400 font-light uppercase tracking-wider">Configure your custom options below</p>
+                  </div>
+                </div>
+
+                {/* Text personalization */}
+                {product.personalizationTextLabel && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-gray-700">
+                      {product.personalizationTextLabel} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={customText}
+                        onChange={(e) => setCustomText(e.target.value)}
+                        maxLength={product.personalizationTextLimit || 20}
+                        placeholder={`Enter personalization text (max ${product.personalizationTextLimit || 20} chars)`}
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs transition-all focus:border-amber-500 focus:bg-amber-50/10 focus:ring-1 focus:ring-amber-500/20 placeholder:text-gray-400 font-light"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-medium text-gray-400">
+                        {customText.length}/{product.personalizationTextLimit || 20}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Image upload personalization */}
+                {(product.personalizationImageLabel || product.personalizationImageRequired) && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-gray-700">
+                      {product.personalizationImageLabel || "Upload Photo"} {product.personalizationImageRequired && <span className="text-red-500">*</span>}
+                    </label>
+                    
+                    <div className="flex gap-3 items-center">
+                      <div className="flex-1">
+                        <div className="border border-dashed border-gray-300 rounded-xl p-3.5 text-center hover:border-amber-500 transition-colors bg-white/40 cursor-pointer relative group">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            disabled={uploadingImage}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <div className="space-y-1 text-xs text-gray-550">
+                            <svg className="w-6 h-6 mx-auto text-gray-400 group-hover:text-amber-600 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p className="font-semibold text-[10px] group-hover:text-amber-700 transition-colors duration-200">Click to upload photo</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Photo preview */}
+                      {(customImage || uploadingImage) && (
+                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center p-1 border border-gray-150 shadow-inner relative flex-shrink-0 animate-[popIn_0.2s_ease-out]">
+                          {uploadingImage ? (
+                            <div className="flex flex-col items-center gap-1 animate-pulse">
+                              <svg className="animate-spin h-4.5 w-4.5 text-amber-600" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span className="text-[7px] text-amber-750 font-bold uppercase tracking-wider">Uploading</span>
+                            </div>
+                          ) : (
+                            <>
+                              <img src={customImage} alt="Custom Preview" className="max-h-full max-w-full object-contain rounded-lg" />
+                              <button
+                                type="button"
+                                onClick={() => setCustomImage("")}
+                                className="absolute top-0.5 right-0.5 bg-black/75 hover:bg-black text-white w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold transition-all"
+                                aria-label="Remove image"
+                              >
+                                ×
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Price & Primary Purchase Card */}
             <div className="space-y-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-baseline gap-3">
@@ -525,7 +699,7 @@ const ProductDetails = () => {
 
               {/* Purchase Options directly inside details column */}
               <div className="grid grid-cols-2 gap-3 py-1">
-                {cartQuantity > 0 ? (
+                {!product.isPersonalized && cartQuantity > 0 ? (
                   <QuantityStepper
                     quantity={cartQuantity}
                     onDecrease={handleDecreaseQty}
@@ -538,20 +712,17 @@ const ProductDetails = () => {
                 ) : (
                   <button
                     type="button"
-                    disabled={outOfStock}
+                    disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
                     onClick={handleAddToCart}
                     className="rounded-full bg-amber-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
                   >
-                    {outOfStock ? "Sold out" : recentlyAdded ? "Added ✓" : "Add to Cart"}
+                    {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
                   </button>
                 )}
                 <button
                   type="button"
-                  disabled={outOfStock}
-                  onClick={() => {
-                    handleAddToCart();
-                    navigate("/checkout");
-                  }}
+                  disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
+                  onClick={handleBuyNow}
                   className="rounded-full bg-emerald-950 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
                 >
                   Buy Now
@@ -879,7 +1050,7 @@ const ProductDetails = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {cartQuantity > 0 ? (
+            {!product.isPersonalized && cartQuantity > 0 ? (
               <QuantityStepper
                 quantity={cartQuantity}
                 onDecrease={handleDecreaseQty}
@@ -894,20 +1065,17 @@ const ProductDetails = () => {
             ) : (
               <button
                 type="button"
-                disabled={outOfStock}
+                disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
                 onClick={handleAddToCart}
                 className="rounded-full bg-amber-600 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-60 transition-all duration-200"
               >
-                {recentlyAdded ? "Added ✓" : "Add to Cart"}
+                {uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
               </button>
             )}
             <button
               type="button"
-              disabled={outOfStock}
-              onClick={() => {
-                handleAddToCart();
-                navigate("/checkout");
-              }}
+              disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
+              onClick={handleBuyNow}
               className="rounded-full bg-emerald-950 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-60 transition-all duration-200"
             >
               Buy Now

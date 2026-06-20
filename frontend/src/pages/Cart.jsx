@@ -32,7 +32,7 @@ const Cart = () => {
         <h2 className="text-2xl font-serif font-light text-gray-950">Shopping Cart ({itemCount})</h2>
         {cartItems.map((item) => (
           <article
-            key={item._id}
+            key={item.cartItemId || item._id}
             className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-white/60 p-4 shadow-sm backdrop-blur-sm hover:border-amber-300/20 transition-all duration-300 sm:flex-row"
           >
             <div className="h-24 w-full sm:w-28 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center p-1 border border-gray-100/50">
@@ -46,18 +46,25 @@ const Cart = () => {
               <div>
                 <h3 className="text-base font-serif font-semibold text-gray-950">{item.name}</h3>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400 mt-0.5">{item.category}</p>
-                {item.customization && (
+                {item.customization && (item.customization.text || item.customization.uploadedImage || item.customization.textSize || item.customization.position) && (
                   <div className="mt-2 space-y-1 rounded-lg bg-emerald-50/20 p-2.5 border border-emerald-100/10">
                     <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-800">Customized Details</p>
                     {item.customization.text && (
                       <p className="text-[11px] text-gray-600 font-light">Text: "{item.customization.text}"</p>
                     )}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-gray-500 font-light">Style:</span>
-                      <span className="text-[11px] text-gray-600 font-light">
-                        {item.customization.textSize} text, {item.customization.position} position
-                      </span>
-                    </div>
+                    {item.customization.uploadedImage && (
+                      <p className="text-[11px] text-gray-600 font-light">Photo: Uploaded ✓</p>
+                    )}
+                    {(item.customization.textSize || item.customization.position) && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-gray-500 font-light">Style:</span>
+                        <span className="text-[11px] text-gray-600 font-light">
+                          {item.customization.textSize || ""} {item.customization.textSize && "text"}
+                          {item.customization.textSize && item.customization.position && ", "}
+                          {item.customization.position || ""} {item.customization.position && "position"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
                 <p className="mt-2 text-sm font-semibold font-serif text-gray-900">INR {item.price}</p>
@@ -66,8 +73,8 @@ const Cart = () => {
               <div className="flex items-center gap-4">
                 <QuantityStepper
                   quantity={item.quantity}
-                  onDecrease={() => updateQuantity(item._id, item.quantity - 1)}
-                  onIncrease={() => updateQuantity(item._id, item.quantity + 1)}
+                  onDecrease={() => updateQuantity(item.cartItemId || item._id, item.quantity - 1)}
+                  onIncrease={() => updateQuantity(item.cartItemId || item._id, item.quantity + 1)}
                   decreaseAriaLabel={`Decrease ${item.name} quantity`}
                   increaseAriaLabel={`Increase ${item.name} quantity`}
                   className="rounded-full border-gray-200 bg-white"
@@ -75,7 +82,7 @@ const Cart = () => {
                   valueClassName="text-xs"
                 />
                 <button
-                  onClick={() => removeFromCart(item._id)}
+                  onClick={() => removeFromCart(item.cartItemId || item._id)}
                   className="text-[10px] font-bold uppercase tracking-wider text-red-500 hover:text-red-700 transition-colors"
                 >
                   Remove

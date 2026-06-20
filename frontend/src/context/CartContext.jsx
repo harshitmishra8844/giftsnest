@@ -33,15 +33,18 @@ export const CartProvider = ({ children }) => {
     const max = maxStockForItem(product);
     if (max <= 0) return;
 
+    // Generate a unique identifier for personalized items based on customization options
+    const cartItemId = product.cartItemId || (product.customization ? `${product._id}-${JSON.stringify(product.customization)}` : product._id);
+
     setCartItems((prevItems) => {
-      const existing = prevItems.find((item) => item._id === product._id);
+      const existing = prevItems.find((item) => (item.cartItemId || item._id) === cartItemId);
       if (existing) {
-        const merged = { ...existing, ...product, image: image || existing.image };
+        const merged = { ...existing, ...product, image: image || existing.image, cartItemId };
         const cap = maxStockForItem(merged);
         const nextQty = Math.min(existing.quantity + 1, cap);
         if (nextQty === existing.quantity) return prevItems;
         return prevItems.map((item) =>
-          item._id === product._id ? { ...merged, quantity: nextQty } : item
+          (item.cartItemId || item._id) === cartItemId ? { ...merged, quantity: nextQty } : item
         );
       }
 
@@ -50,21 +53,22 @@ export const CartProvider = ({ children }) => {
         {
           ...product,
           image,
+          cartItemId,
           quantity: 1,
         },
       ];
     });
   };
 
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = (cartItemId, quantity) => {
     if (quantity <= 0) {
-      setCartItems((prevItems) => prevItems.filter((item) => item._id !== productId));
+      setCartItems((prevItems) => prevItems.filter((item) => (item.cartItemId || item._id) !== cartItemId));
       return;
     }
 
     setCartItems((prevItems) =>
       prevItems.map((item) => {
-        if (item._id !== productId) return item;
+        if ((item.cartItemId || item._id) !== cartItemId) return item;
         const cap = maxStockForItem(item);
         const q = Math.min(Math.max(1, Math.floor(Number(quantity))), cap);
         return { ...item, quantity: q };
@@ -72,8 +76,8 @@ export const CartProvider = ({ children }) => {
     );
   };
 
-  const removeFromCart = (productId) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item._id !== productId));
+  const removeFromCart = (cartItemId) => {
+    setCartItems((prevItems) => prevItems.filter((item) => (item.cartItemId || item._id) !== cartItemId));
   };
 
   const clearCart = () => setCartItems([]);

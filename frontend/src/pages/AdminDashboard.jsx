@@ -21,6 +21,11 @@ const emptyForm = {
   careInstructions: "",
   category: "",
   stock: "10",
+  isPersonalized: false,
+  personalizationTextLabel: "",
+  personalizationTextLimit: "20",
+  personalizationImageRequired: false,
+  personalizationImageLabel: "",
 };
 const emptyCouponForm = {
   code: "",
@@ -420,8 +425,9 @@ const AdminDashboard = () => {
   };
 
   const handleFormChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, type, checked, value } = event.target;
+    const val = type === "checkbox" ? checked : value;
+    setForm((prev) => ({ ...prev, [name]: val }));
   };
 
   const handleSaveProduct = async (event) => {
@@ -551,6 +557,11 @@ const AdminDashboard = () => {
       careInstructions: getSpecValue("Care Instructions"),
       category: product.category,
       stock: String(product.stock ?? 0),
+      isPersonalized: Boolean(product.isPersonalized),
+      personalizationTextLabel: product.personalizationTextLabel || "",
+      personalizationTextLimit: String(product.personalizationTextLimit ?? 20),
+      personalizationImageRequired: Boolean(product.personalizationImageRequired),
+      personalizationImageLabel: product.personalizationImageLabel || "",
     });
     setEditingId(product._id);
     setImageFile(null);
@@ -2761,6 +2772,69 @@ const AdminDashboard = () => {
               })}
             </div>
           </div>
+
+          {/* Personalization Options */}
+          <div className="md:col-span-2 rounded-xl border border-teal-100 bg-teal-50/40 p-4 space-y-3 shadow-xs">
+            <label className="flex items-center gap-2 text-sm font-semibold text-teal-900 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                name="isPersonalized"
+                checked={Boolean(form.isPersonalized)}
+                onChange={handleFormChange}
+                className="rounded text-teal-600 focus:ring-teal-600 cursor-pointer"
+              />
+              Requires Personalization (FNP-style Customization)
+            </label>
+            
+            {form.isPersonalized && (
+              <div className="grid gap-3 sm:grid-cols-2 pt-2.5 border-t border-teal-200/30">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Custom Text Input Label</label>
+                  <input
+                    name="personalizationTextLabel"
+                    value={form.personalizationTextLabel || ""}
+                    onChange={handleFormChange}
+                    placeholder="e.g., Name on mug, Custom Message"
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs focus:ring-1 focus:ring-teal-950 focus:border-teal-950 outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Characters Limit</label>
+                  <input
+                    type="number"
+                    min="1"
+                    name="personalizationTextLimit"
+                    value={form.personalizationTextLimit || "20"}
+                    onChange={handleFormChange}
+                    placeholder="e.g., 20"
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs focus:ring-1 focus:ring-teal-950 focus:border-teal-950 outline-none"
+                  />
+                </div>
+                <div className="flex items-center pt-3.5 sm:col-span-2 gap-4">
+                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      name="personalizationImageRequired"
+                      checked={Boolean(form.personalizationImageRequired)}
+                      onChange={handleFormChange}
+                      className="rounded text-teal-600 focus:ring-teal-600 cursor-pointer"
+                    />
+                    <span className="font-medium text-gray-800">Require Photo Upload</span>
+                  </label>
+                  {form.personalizationImageRequired && (
+                    <input
+                      name="personalizationImageLabel"
+                      value={form.personalizationImageLabel || ""}
+                      onChange={handleFormChange}
+                      placeholder="e.g., Upload photo to print"
+                      className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs focus:ring-1 focus:ring-teal-950 focus:border-teal-950 outline-none"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="md:col-span-2">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Upload Product Images</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -3116,37 +3190,37 @@ const AdminDashboard = () => {
               <p className="mt-1 text-xs text-gray-600">{order.address?.fullName || "Guest"} • INR {order.totalPrice}</p>
               <p className="text-xs text-gray-600">Status: {order.status}</p>
               <p className="text-xs text-gray-600 break-all">Tracking: {order.trackingId || "-"}</p>
-              {findOrderCustomImage(order) ? (
-                <div className="mt-3 flex items-center gap-3">
-                  <img
-                    src={findOrderCustomImage(order)}
-                    alt="Uploaded custom"
-                    className="h-14 w-14 rounded-lg object-cover border"
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/200x200?text=Image+Error';
-                      e.target.alt = 'Image failed to load';
-                    }}
-                  />
-                  <a
-                    href={findOrderCustomImage(order)}
-                    download={`order-${order.orderCode || order._id}-custom-image.png`}
-                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                    onClick={(e) => {
-                      // If it's a base64 image, create a download link
-                      const imageSrc = findOrderCustomImage(order);
-                      if (imageSrc.startsWith('data:image/')) {
-                        e.preventDefault();
-                        const link = document.createElement('a');
-                        link.href = imageSrc;
-                        link.download = `order-${order.orderCode || order._id}-custom-image.png`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                      }
-                    }}
-                  >
-                    Download image
-                  </a>
+              {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
+                <div className="mt-3 space-y-2 rounded-xl bg-gray-50 p-2.5 border border-gray-150/50">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Customizations</p>
+                  {order.products?.filter(p => p.customization?.text || p.customization?.uploadedImage).map((p, idx) => (
+                    <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gray-200/50 pt-1.5 first:border-0 first:pt-0">
+                      <p className="font-semibold text-gray-800 line-clamp-1">{p.name}</p>
+                      {p.customization?.text && (
+                        <p className="text-gray-650">Text: <span className="text-amber-800 font-medium">"{p.customization.text}"</span></p>
+                      )}
+                      {p.customization?.uploadedImage && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <img
+                            src={p.customization.uploadedImage}
+                            alt="Custom uploaded"
+                            className="h-10 w-10 rounded object-cover border"
+                            onError={(e) => {
+                              e.target.src = 'https://via.placeholder.com/200x200?text=Error';
+                            }}
+                          />
+                          <a
+                            href={p.customization.uploadedImage}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-lg border border-emerald-250 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                          >
+                            View Image
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : null}
               <div className="mt-2 grid grid-cols-2 gap-2">
@@ -3189,7 +3263,7 @@ const AdminDashboard = () => {
                 </th>
                 <th className="py-2">Order ID</th>
                 <th className="py-2">Status</th>
-                <th className="py-2">Custom Image</th>
+                <th className="py-2">Customization</th>
                 <th className="py-2">Customer</th>
                 <th className="py-2">Shipping Address</th>
                 <th className="py-2">Total</th>
@@ -3225,40 +3299,39 @@ const AdminDashboard = () => {
                     </span>
                   </td>
                   <td className="py-2">
-                    {findOrderCustomImage(order) ? (
-                      <div className="flex flex-col gap-2">
-                        <img
-                          src={findOrderCustomImage(order)}
-                          alt="Uploaded custom"
-                          className="h-16 w-16 rounded-lg object-cover border"
-                          onError={(e) => {
-                            e.target.src = 'https://via.placeholder.com/200x200?text=Image+Error';
-                            e.target.alt = 'Image failed to load';
-                          }}
-                        />
-                        <a
-                          href={findOrderCustomImage(order)}
-                          download={`order-${order.orderCode || order._id}-custom-image.png`}
-                          className="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                          onClick={(e) => {
-                            // If it's a base64 image, create a download link
-                            const imageSrc = findOrderCustomImage(order);
-                            if (imageSrc.startsWith('data:image/')) {
-                              e.preventDefault();
-                              const link = document.createElement('a');
-                              link.href = imageSrc;
-                              link.download = `order-${order.orderCode || order._id}-custom-image.png`;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                            }
-                          }}
-                        >
-                          Download
-                        </a>
+                    {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
+                      <div className="space-y-3 max-w-[200px]">
+                        {order.products?.filter(p => p.customization?.text || p.customization?.uploadedImage).map((p, idx) => (
+                          <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gray-150/40 pt-1.5 first:border-0 first:pt-0">
+                            <p className="font-semibold text-gray-800 line-clamp-1">{p.name}</p>
+                            {p.customization?.text && (
+                              <p className="text-gray-650">Text: <span className="text-amber-800 font-medium">"{p.customization.text}"</span></p>
+                            )}
+                            {p.customization?.uploadedImage && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <img
+                                  src={p.customization.uploadedImage}
+                                  alt="Custom uploaded"
+                                  className="h-10 w-10 rounded object-cover border"
+                                  onError={(e) => {
+                                    e.target.src = 'https://via.placeholder.com/200x200?text=Error';
+                                  }}
+                                />
+                                <a
+                                  href={p.customization.uploadedImage}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="rounded-lg border border-emerald-250 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                                >
+                                  View
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-500">No custom image</span>
+                      <span className="text-xs text-gray-400">None</span>
                     )}
                   </td>
                   <td className="py-2">{order.address?.fullName || "Guest"}</td>

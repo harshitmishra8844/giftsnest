@@ -197,7 +197,22 @@ const getReviewEligibility = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
-    const { name, price, image, images, description, category, stock, highlights, specifications } = req.body;
+    const {
+      name,
+      price,
+      image,
+      images,
+      description,
+      category,
+      stock,
+      highlights,
+      specifications,
+      isPersonalized,
+      personalizationTextLabel,
+      personalizationTextLimit,
+      personalizationImageRequired,
+      personalizationImageLabel,
+    } = req.body;
     const normalizedImages = Array.isArray(images)
       ? images.map((item) => String(item || "").trim()).filter(Boolean)
       : [];
@@ -228,6 +243,11 @@ const createProduct = async (req, res) => {
       category,
       stock: stockNum,
       customisable: true,
+      isPersonalized: Boolean(isPersonalized),
+      personalizationTextLabel: String(personalizationTextLabel || "").trim(),
+      personalizationTextLimit: personalizationTextLimit ? Number(personalizationTextLimit) : 20,
+      personalizationImageRequired: Boolean(personalizationImageRequired),
+      personalizationImageLabel: String(personalizationImageLabel || "").trim(),
     });
 
     return res.status(201).json({ message: "Product created successfully", product });

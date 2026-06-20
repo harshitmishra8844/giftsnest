@@ -100,6 +100,28 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isPersonalized: {
+      type: Boolean,
+      default: false,
+    },
+    personalizationTextLabel: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    personalizationTextLimit: {
+      type: Number,
+      default: 20,
+    },
+    personalizationImageRequired: {
+      type: Boolean,
+      default: false,
+    },
+    personalizationImageLabel: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     rating: {
       type: Number,
       default: 0,
