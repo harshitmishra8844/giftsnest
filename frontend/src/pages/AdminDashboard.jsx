@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { clearAdminAuth, getAdminAuth } from "../services/adminAuth";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const orderStatuses = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered", "Cancelled"];
 
@@ -359,6 +362,135 @@ const AdminDashboard = () => {
 
   const findOrderCustomImage = (order) =>
     order.products?.find((product) => product.customization?.uploadedImage)?.customization?.uploadedImage || "";
+
+  const handleExportExcel = () => {
+    try {
+      const dataToExport = productsByStock.map((prod) => {
+        const stockLevel = Number(prod.stock ?? 0);
+        const status = stockLevel <= 0 ? "Out of stock" : stockLevel <= 5 ? "Low stock" : "In stock";
+        return {
+          "Product ID": prod._id || "",
+          "Name": prod.name || "",
+          "Category": prod.category || "",
+          "Price (INR)": prod.price || 0,
+          "Stock Level": stockLevel,
+          "Inventory Status": status,
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      
+      const maxLens = {};
+      dataToExport.forEach((row) => {
+        Object.keys(row).forEach((key) => {
+          const valStr = String(row[key]);
+          maxLens[key] = Math.max(maxLens[key] || key.length, valStr.length);
+        });
+      });
+      worksheet["!cols"] = Object.keys(maxLens).map((key) => ({
+        wch: maxLens[key] + 3,
+      }));
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Status");
+      
+      const dateStr = new Date().toISOString().split("T")[0];
+      XLSX.writeFile(workbook, `niyora-gifts-stock-report-${dateStr}.xlsx`);
+    } catch (err) {
+      console.error("Export Excel error:", err);
+      alert("Failed to export Excel report.");
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const dateStr = new Date().toLocaleString("en-IN");
+      const cleanDateStr = new Date().toISOString().split("T")[0];
+
+      doc.setFillColor(4, 120, 87);
+      doc.rect(0, 0, 210, 40, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text(storeInfo.storeName || "Niyora Gifts", 14, 18);
+      
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(209, 250, 229);
+      doc.text("Stock Status Report (Admin Copy)", 14, 25);
+      doc.text(`Generated on: ${dateStr}`, 14, 32);
+
+      doc.setFillColor(243, 244, 246);
+      doc.rect(14, 48, 182, 24, "F");
+
+      doc.setTextColor(17, 24, 39);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("INVENTORY OVERVIEW", 18, 54);
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(55, 65, 81);
+      doc.text(`Total Products: ${products.length}`, 18, 62);
+      doc.text(`Total Stock Units: ${stockSummary.units}`, 18, 67);
+      doc.text(`Low Stock Items: ${stockSummary.low}`, 100, 62);
+      doc.text(`Out of Stock Items: ${stockSummary.out}`, 100, 67);
+
+      const tableRows = productsByStock.map((prod) => {
+        const stockLevel = Number(prod.stock ?? 0);
+        const status = stockLevel <= 0 ? "Out of Stock" : stockLevel <= 5 ? "Low Stock" : "In Stock";
+        return [
+          prod.name || "",
+          prod.category || "",
+          `INR ${Number(prod.price || 0).toFixed(2)}`,
+          String(stockLevel),
+          status
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 78,
+        head: [["Product Name", "Category", "Price", "Stock", "Status"]],
+        body: tableRows,
+        theme: "striped",
+        headStyles: {
+          fillColor: [4, 120, 87],
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [249, 250, 251],
+        },
+        columnStyles: {
+          0: { cellWidth: 70 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 28, halign: "right" },
+          3: { cellWidth: 20, halign: "center" },
+          4: { cellWidth: 29, halign: "center" },
+        },
+        styles: {
+          fontSize: 8.5,
+          cellPadding: 3,
+        },
+        didDrawPage: (data) => {
+          doc.setFontSize(8);
+          doc.setTextColor(156, 163, 175);
+          doc.text(
+            `Page ${data.pageNumber} of ${doc.internal.getNumberOfPages()}`,
+            data.settings.margin.left,
+            doc.internal.pageSize.height - 10
+          );
+        }
+      });
+
+      doc.save(`niyora-gifts-stock-report-${cleanDateStr}.pdf`);
+    } catch (err) {
+      console.error("Export PDF error:", err);
+      alert("Failed to export PDF report.");
+    }
+  };
 
   const fetchCoupons = async () => {
     try {
@@ -1790,7 +1922,7 @@ const AdminDashboard = () => {
               Monitor and adjust product inventory. Stock values dynamically decrement upon completed customer orders.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-3 text-xs">
             <span className="rounded-full bg-white/80 border border-gray-200/60 px-3.5 py-1.5 font-medium text-gray-700 shadow-2xs">
               Total Units: <strong className="font-semibold text-gray-955">{stockSummary.units}</strong>
             </span>
@@ -1800,6 +1932,23 @@ const AdminDashboard = () => {
             <span className="rounded-full bg-rose-50/50 border border-rose-200/30 px-3.5 py-1.5 font-medium text-rose-900">
               Out of Stock: <strong className="font-semibold text-rose-955">{stockSummary.out}</strong>
             </span>
+            
+            <div className="flex items-center gap-2 ml-2 border-l border-gray-200 pl-3">
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                className="rounded-full border border-emerald-250 bg-emerald-50 hover:bg-emerald-100/80 px-3.5 py-1.5 font-bold text-emerald-800 transition duration-200 cursor-pointer shadow-2xs hover:shadow-xs flex items-center gap-1.5"
+              >
+                <span>📊</span> Export Excel
+              </button>
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                className="rounded-full border border-rose-250 bg-rose-50 hover:bg-rose-100/80 px-3.5 py-1.5 font-bold text-rose-800 transition duration-200 cursor-pointer shadow-2xs hover:shadow-xs flex items-center gap-1.5"
+              >
+                <span>📕</span> Export PDF
+              </button>
+            </div>
           </div>
         </div>
 
