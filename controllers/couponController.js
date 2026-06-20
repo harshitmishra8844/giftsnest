@@ -21,7 +21,8 @@ const getCoupons = async (req, res) => {
     }));
     return res.status(200).json(withCounts);
   } catch (error) {
-    return res.status(500).json({ message: "Failed to fetch coupons" });
+    console.error("Fetch coupons error:", error);
+    return res.status(500).json({ message: `Failed to fetch coupons: ${error.message || error}` });
   }
 };
 
@@ -65,7 +66,8 @@ const createCoupon = async (req, res) => {
 
     return res.status(201).json({ ...coupon.toObject(), paidRedemptionsCount: 0 });
   } catch (error) {
-    return res.status(500).json({ message: "Failed to create coupon" });
+    console.error("Create coupon error:", error);
+    return res.status(500).json({ message: `Failed to create coupon: ${error.message || error}` });
   }
 };
 
@@ -234,7 +236,8 @@ const updateCoupon = async (req, res) => {
     const paid = await Order.countDocuments({ couponCode: coupon.code, paymentStatus: "Paid" });
     return res.status(200).json({ ...coupon.toObject(), paidRedemptionsCount: paid });
   } catch (error) {
-    return res.status(500).json({ message: "Failed to update coupon" });
+    console.error("Update coupon error:", error);
+    return res.status(500).json({ message: `Failed to update coupon: ${error.message || error}` });
   }
 };
 
@@ -245,7 +248,8 @@ const deleteCoupon = async (req, res) => {
     if (!coupon) return res.status(404).json({ message: "Coupon not found" });
     return res.status(200).json({ message: "Coupon deleted" });
   } catch (error) {
-    return res.status(500).json({ message: "Failed to delete coupon" });
+    console.error("Delete coupon error:", error);
+    return res.status(500).json({ message: `Failed to delete coupon: ${error.message || error}` });
   }
 };
 
