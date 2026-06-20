@@ -46,6 +46,7 @@ const getSmtpConfig = () => {
   const from = String(getEnvValue("SMTP_FROM", "EMAIL_FROM", "FROM_EMAIL") || "").trim();
   const resendApiKey = String(getEnvValue("RESEND_API_KEY", "RESEND_KEY") || "").trim();
   const resendFrom = String(getEnvValue("RESEND_FROM_EMAIL", "RESEND_FROM", "SMTP_FROM", "EMAIL_FROM") || "").trim();
+  const brevoApiKey = String(getEnvValue("BREVO_API_KEY", "BREVO_KEY", "SENDINBLUE_API_KEY") || "").trim();
 
   const secure = ["true", "1", "yes", "y", "on"].includes(secureValue);
   const port = Number.isInteger(Number(portValue)) ? Number(portValue) : undefined;
@@ -63,6 +64,8 @@ const getSmtpConfig = () => {
     resendApiKey,
     resendFrom,
     resendConfigured: Boolean(resendApiKey && resendFrom),
+    brevoApiKey,
+    brevoConfigured: Boolean(brevoApiKey),
     debug: parseBooleanEnv("SMTP_DEBUG", false),
     logger: parseBooleanEnv("SMTP_LOGGER", false),
     connectionTimeout: parseNumberEnv("SMTP_CONNECTION_TIMEOUT_MS", 20000),
@@ -74,7 +77,7 @@ const getSmtpConfig = () => {
     invalidPort,
     hasCredentials: Boolean(host && user && pass && !invalidPort),
     isGmail: smtpHostIsGmail,
-    provider: Boolean(host && user && pass && !invalidPort) ? "smtp" : Boolean(resendApiKey && resendFrom) ? "resend" : undefined,
+    provider: Boolean(host && user && pass && !invalidPort) ? "smtp" : Boolean(resendApiKey && resendFrom) ? "resend" : Boolean(brevoApiKey) ? "brevo" : undefined,
   };
 };
 
@@ -88,6 +91,7 @@ const buildDiagnostics = (config) => ({
   smtpIsGmail: config.isGmail,
   smtpCredentialsLoaded: Boolean(config.user && config.pass),
   resendConfigured: config.resendConfigured,
+  brevoConfigured: config.brevoConfigured,
   debug: config.debug,
   logger: config.logger,
   connectionTimeout: config.connectionTimeout,
@@ -262,12 +266,92 @@ const sendViaResend = async (mailOptions, config) => {
   };
 };
 
+const sendViaBrevo = async (mailOptions, config) => {
+  if (!config.brevoConfigured) {
+    const error = new Error("Brevo provider is not configured.");
+    error.code = "BREVO_NOT_CONFIGURED";
+    throw error;
+  }
+
+  if (typeof fetch !== "function") {
+    const error = new Error("Fetch is not available in this Node runtime. Cannot send email via Brevo.");
+    error.code = "FETCH_NOT_AVAILABLE";
+    throw error;
+  }
+
+  const fromEmail = config.from || "niyoragifts@gmail.com";
+  let fromName = "Niyora Gifts";
+  const fromMatch = mailOptions.from ? String(mailOptions.from).match(/^"([^"]+)"\s*<([^>]+)>/) : null;
+  const senderEmail = fromMatch ? fromMatch[2] : fromEmail;
+  const senderName = fromMatch ? fromMatch[1] : fromName;
+
+  const body = {
+    sender: {
+      name: senderName,
+      email: senderEmail,
+    },
+    to: [
+      {
+        email: mailOptions.to,
+      },
+    ],
+    subject: mailOptions.subject,
+  };
+
+  if (mailOptions.text) {
+    body.textContent = mailOptions.text;
+  }
+  if (mailOptions.html) {
+    body.htmlContent = mailOptions.html;
+  }
+
+  console.info("[email] Sending email via Brevo HTTP API", {
+    from: senderEmail,
+    to: mailOptions.to,
+    subject: mailOptions.subject,
+  });
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "api-key": config.brevoApiKey,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = new Error(`Brevo send failed: ${response.status} ${response.statusText}`);
+    error.code = "BREVO_SEND_FAILED";
+    error.response = data;
+    throw error;
+  }
+
+  console.info("[email] Email sent successfully via Brevo API", {
+    messageId: data.messageId,
+    to: mailOptions.to,
+  });
+
+  return {
+    messageId: data.messageId,
+    accepted: [mailOptions.to],
+    rejected: [],
+    response: data,
+  };
+};
+
 const sendMailWithRetries = async (mailOptions) => {
   const config = getSmtpConfig();
 
   if (config.invalidPort) {
     const error = new Error(`SMTP_PORT is invalid: ${String(getEnvValue("SMTP_PORT", "EMAIL_PORT", "EMAIL_SERVER_PORT"))}`);
     error.code = "INVALID_SMTP_PORT";
+    if (config.brevoConfigured) {
+      console.warn("[email] Invalid SMTP port configured; using Brevo HTTP API.");
+      return sendViaBrevo(mailOptions, config);
+    }
     if (config.resendConfigured) {
       console.warn("[email] Invalid SMTP port configured; using Resend fallback provider.");
       return sendViaResend(mailOptions, config);
@@ -277,6 +361,10 @@ const sendMailWithRetries = async (mailOptions) => {
 
   const transporter = await getTransporter();
   if (!transporter) {
+    if (config.brevoConfigured) {
+      console.warn("[email] SMTP is not configured; sending via Brevo HTTP API.");
+      return sendViaBrevo(mailOptions, config);
+    }
     if (config.resendConfigured) {
       console.warn("[email] SMTP is not configured; sending via Resend fallback provider.");
       return sendViaResend(mailOptions, config);
@@ -324,6 +412,11 @@ const sendMailWithRetries = async (mailOptions) => {
       console.warn(`[email] Temporary SMTP failure will retry in ${delayMs}ms (attempt ${attempt + 1}/${attempts})`);
       await delay(delayMs);
     }
+  }
+
+  if (config.brevoConfigured) {
+    console.warn("[email] SMTP failed after retries; switching to Brevo HTTP API.");
+    return sendViaBrevo(mailOptions, config);
   }
 
   if (config.resendConfigured) {
