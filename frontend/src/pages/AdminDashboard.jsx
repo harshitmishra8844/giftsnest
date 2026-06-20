@@ -1486,7 +1486,10 @@ const AdminDashboard = () => {
       setEditingCouponIsSpecial(false);
       setSuccess(editingCouponId ? "Coupon updated successfully." : "Coupon created successfully.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save coupon");
+      const apiMessage = err.response?.data?.message;
+      const status = err.response?.status;
+      const statusText = err.response?.statusText;
+      setError(apiMessage ? `Failed to save coupon: ${apiMessage}` : `Failed to save coupon (Status: ${status || "Network Error"} ${statusText || ""})`);
     }
   };
 
@@ -1566,7 +1569,10 @@ const AdminDashboard = () => {
       }
       setSuccess(msg);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to generate special coupon");
+      const apiMessage = err.response?.data?.message;
+      const status = err.response?.status;
+      const statusText = err.response?.statusText;
+      setError(apiMessage ? `Failed to generate special coupon: ${apiMessage}` : `Failed to generate special coupon (Status: ${status || "Network Error"} ${statusText || ""})`);
     } finally {
       setGeneratingSpecial(false);
     }
@@ -1578,7 +1584,10 @@ const AdminDashboard = () => {
       await fetchCoupons();
       setSuccess("Coupon deleted successfully.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete coupon");
+      const apiMessage = err.response?.data?.message;
+      const status = err.response?.status;
+      const statusText = err.response?.statusText;
+      setError(apiMessage ? `Failed to delete coupon: ${apiMessage}` : `Failed to delete coupon (Status: ${status || "Network Error"} ${statusText || ""})`);
     }
   };
 
