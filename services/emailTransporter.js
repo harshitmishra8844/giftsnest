@@ -1,13 +1,23 @@
 const nodemailer = require("nodemailer");
 
+const getEnvValue = (...names) => {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value !== undefined && String(value).trim() !== "") {
+      return value;
+    }
+  }
+  return undefined;
+};
+
 const parseBooleanEnv = (name, defaultValue = false) => {
-  const raw = String(process.env[name] || "").trim().toLowerCase();
+  const raw = String(getEnvValue(name) || "").trim().toLowerCase();
   if (!raw) return defaultValue;
   return ["1", "true", "yes", "y", "on"].includes(raw);
 };
 
 const parseNumberEnv = (name, defaultValue) => {
-  const raw = String(process.env[name] || "").trim();
+  const raw = String(getEnvValue(name) || "").trim();
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
 };
@@ -28,15 +38,20 @@ const TEMPORARY_SMTP_ERROR_CODES = new Set([
 const TEMPORARY_SMTP_RESPONSE_CODES = new Set([421, 450, 451, 452, 454]);
 
 const getSmtpConfig = () => {
-  const host = String(process.env.SMTP_HOST || "").trim();
-  const portValue = String(process.env.SMTP_PORT || "").trim();
-  const secureValue = String(process.env.SMTP_SECURE || "").trim().toLowerCase();
-  const user = String(process.env.SMTP_USER || "").trim();
-  const pass = String(process.env.SMTP_PASS || "").trim();
-  const from = String(process.env.SMTP_FROM || "").trim();
+  const host = String(getEnvValue("SMTP_HOST", "EMAIL_HOST", "EMAIL_SERVER") || "").trim();
+  const portValue = String(getEnvValue("SMTP_PORT", "EMAIL_PORT", "EMAIL_SERVER_PORT") || "").trim();
+  const secureValue = String(getEnvValue("SMTP_SECURE", "EMAIL_SECURE") || "").trim().toLowerCase();
+  const user = String(getEnvValue("SMTP_USER", "EMAIL_USER") || "").trim();
+  const pass = String(getEnvValue("SMTP_PASS", "EMAIL_PASS") || "").trim();
+  const from = String(getEnvValue("SMTP_FROM", "EMAIL_FROM", "FROM_EMAIL") || "").trim();
+  const resendApiKey = String(getEnvValue("RESEND_API_KEY", "RESEND_KEY") || "").trim();
+  const resendFrom = String(getEnvValue("RESEND_FROM_EMAIL", "RESEND_FROM", "SMTP_FROM", "EMAIL_FROM") || "").trim();
+
   const secure = ["true", "1", "yes", "y", "on"].includes(secureValue);
   const port = Number.isInteger(Number(portValue)) ? Number(portValue) : undefined;
   const effectivePort = port || (secure ? 465 : 587);
+  const invalidPort = portValue !== "" && !Number.isInteger(Number(portValue));
+  const smtpHostIsGmail = Boolean(host && /(?:^|\.)gmail\.com$/i.test(host));
 
   return {
     host,
@@ -45,6 +60,9 @@ const getSmtpConfig = () => {
     user,
     pass,
     from,
+    resendApiKey,
+    resendFrom,
+    resendConfigured: Boolean(resendApiKey && resendFrom),
     debug: parseBooleanEnv("SMTP_DEBUG", false),
     logger: parseBooleanEnv("SMTP_LOGGER", false),
     connectionTimeout: parseNumberEnv("SMTP_CONNECTION_TIMEOUT_MS", 20000),
@@ -53,24 +71,29 @@ const getSmtpConfig = () => {
     maxRetries: parseNumberEnv("SMTP_RETRY_COUNT", 2),
     retryDelayMs: parseNumberEnv("SMTP_RETRY_DELAY_MS", 1200),
     verifyStrict: parseBooleanEnv("SMTP_STARTUP_VERIFY_STRICT", true),
-    hasCredentials: Boolean(host && user && pass),
-    isGmail: Boolean(host && /(?:^|\.)gmail\.com$/i.test(host)),
+    invalidPort,
+    hasCredentials: Boolean(host && user && pass && !invalidPort),
+    isGmail: smtpHostIsGmail,
+    provider: Boolean(host && user && pass && !invalidPort) ? "smtp" : Boolean(resendApiKey && resendFrom) ? "resend" : undefined,
   };
 };
 
 let sharedTransporter = null;
 
 const buildDiagnostics = (config) => ({
-  host: config.host,
-  port: config.port,
-  secure: config.secure,
-  isGmail: config.isGmail,
-  credentialsLoaded: Boolean(config.user && config.pass),
+  provider: config.provider,
+  smtpHost: config.host,
+  smtpPort: config.port,
+  smtpSecure: config.secure,
+  smtpIsGmail: config.isGmail,
+  smtpCredentialsLoaded: Boolean(config.user && config.pass),
+  resendConfigured: config.resendConfigured,
   debug: config.debug,
   logger: config.logger,
   connectionTimeout: config.connectionTimeout,
   greetingTimeout: config.greetingTimeout,
   socketTimeout: config.socketTimeout,
+  invalidPort: config.invalidPort,
 });
 
 const createSmtpTransporter = async (config) => {
@@ -134,7 +157,16 @@ const getTransporter = async () => {
 
 const verifyEmailTransporter = async () => {
   const config = getSmtpConfig();
+  if (config.invalidPort) {
+    throw new Error(`SMTP_PORT is invalid: ${String(getEnvValue("SMTP_PORT", "EMAIL_PORT", "EMAIL_SERVER_PORT"))}`);
+  }
+
   if (!config.hasCredentials) {
+    if (config.resendConfigured) {
+      console.info("[email] SMTP is not configured, but Resend fallback provider is available.");
+      return true;
+    }
+
     console.warn("[email] SMTP verification skipped because SMTP_HOST, SMTP_USER or SMTP_PASS is missing.");
     return false;
   }
@@ -167,23 +199,103 @@ const isTemporarySmtpFailure = (error) => {
   return false;
 };
 
+const sendViaResend = async (mailOptions, config) => {
+  if (!config.resendConfigured) {
+    const error = new Error("Resend provider is not configured.");
+    error.code = "RESEND_NOT_CONFIGURED";
+    throw error;
+  }
+
+  if (typeof fetch !== "function") {
+    const error = new Error("Fetch is not available in this Node runtime. Cannot send email via Resend.");
+    error.code = "FETCH_NOT_AVAILABLE";
+    throw error;
+  }
+
+  const fromEmail = config.resendFrom || config.from || `no-reply@${String(process.env.DOMAIN || "example.com").trim()}`;
+  const body = {
+    from: fromEmail,
+    to: mailOptions.to,
+    subject: mailOptions.subject,
+  };
+
+  if (mailOptions.text) {
+    body.text = mailOptions.text;
+  }
+  if (mailOptions.html) {
+    body.html = mailOptions.html;
+  }
+
+  console.info("[email] Sending email via Resend fallback provider", {
+    from: fromEmail,
+    to: mailOptions.to,
+    subject: mailOptions.subject,
+  });
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = new Error(`Resend send failed: ${response.status} ${response.statusText}`);
+    error.code = "RESEND_SEND_FAILED";
+    error.response = data;
+    throw error;
+  }
+
+  console.info("[email] Email sent successfully via Resend", {
+    messageId: data.id,
+    to: mailOptions.to,
+  });
+
+  return {
+    messageId: data.id,
+    accepted: [mailOptions.to],
+    rejected: [],
+    response: data,
+  };
+};
+
 const sendMailWithRetries = async (mailOptions) => {
+  const config = getSmtpConfig();
+
+  if (config.invalidPort) {
+    const error = new Error(`SMTP_PORT is invalid: ${String(getEnvValue("SMTP_PORT", "EMAIL_PORT", "EMAIL_SERVER_PORT"))}`);
+    error.code = "INVALID_SMTP_PORT";
+    if (config.resendConfigured) {
+      console.warn("[email] Invalid SMTP port configured; using Resend fallback provider.");
+      return sendViaResend(mailOptions, config);
+    }
+    throw error;
+  }
+
   const transporter = await getTransporter();
   if (!transporter) {
+    if (config.resendConfigured) {
+      console.warn("[email] SMTP is not configured; sending via Resend fallback provider.");
+      return sendViaResend(mailOptions, config);
+    }
+
     const err = new Error("EMAIL_NOT_CONFIGURED");
     err.code = "EMAIL_NOT_CONFIGURED";
     throw err;
   }
 
-  const config = getSmtpConfig();
   const attempts = config.maxRetries + 1;
   let attempt = 0;
+  let lastError = null;
 
   while (attempt < attempts) {
     attempt += 1;
     try {
       const info = await transporter.sendMail(mailOptions);
-      console.info("[email] Email sent successfully", {
+      console.info("[email] Email sent successfully via SMTP", {
         messageId: info.messageId,
         attempt,
         from: mailOptions.from,
@@ -191,8 +303,9 @@ const sendMailWithRetries = async (mailOptions) => {
       });
       return info;
     } catch (error) {
+      lastError = error;
       const temporary = isTemporarySmtpFailure(error);
-      console.error("[email] Email send failed", {
+      console.error("[email] SMTP send failed", {
         attempt,
         maxAttempts: attempts,
         message: error.message,
@@ -204,8 +317,7 @@ const sendMailWithRetries = async (mailOptions) => {
       });
 
       if (!temporary || attempt >= attempts) {
-        error.message = `SMTP send failed after ${attempt} attempt(s): ${error.message}`;
-        throw error;
+        break;
       }
 
       const delayMs = Math.min(config.retryDelayMs * attempt, 10000);
@@ -214,7 +326,17 @@ const sendMailWithRetries = async (mailOptions) => {
     }
   }
 
-  throw new Error("SMTP send retry loop exited unexpectedly");
+  if (config.resendConfigured) {
+    console.warn("[email] SMTP failed after retries; switching to Resend fallback provider.");
+    return sendViaResend(mailOptions, config);
+  }
+
+  if (lastError) {
+    lastError.message = `SMTP send failed after ${attempt} attempt(s): ${lastError.message}`;
+    throw lastError;
+  }
+
+  throw new Error("SMTP send failed after retries.");
 };
 
 const isSmtpConfigured = () => {
