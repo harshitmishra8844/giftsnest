@@ -2,7 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
-dotenv.config({ override: true });
+// Load local environment variables only when they are not already set.
+// This preserves Render-provided environment values in production.
+dotenv.config({ override: false });
 
 const connectDB = require("./config/db");
 const productRoutes = require("./routes/productRoutes");
@@ -15,6 +17,7 @@ const userRoutes = require("./routes/userRoutes");
 const newsletterRoutes = require("./routes/newsletterRoutes");
 const { getStoreInfo } = require("./controllers/adminController");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const { verifyEmailTransporter, getSmtpConfig } = require("./services/emailTransporter");
 
 const app = express();
 
@@ -49,14 +52,45 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+const logSmtpStartupInfo = () => {
+  const smtpConfig = getSmtpConfig();
+  console.info("[startup] SMTP configuration summary", {
+    host: smtpConfig.host || "<missing>",
+    port: smtpConfig.port,
+    secure: smtpConfig.secure,
+    credentialsLoaded: smtpConfig.credentialsLoaded,
+    isGmail: smtpConfig.isGmail,
+    connectionTimeout: smtpConfig.connectionTimeout,
+    greetingTimeout: smtpConfig.greetingTimeout,
+    socketTimeout: smtpConfig.socketTimeout,
+  });
+  if (!smtpConfig.credentialsLoaded) {
+    console.warn("[startup] SMTP credentials are not fully configured. Email sending will be disabled in production.");
+  }
+};
+
 const startServer = async () => {
   try {
     await connectDB();
+    logSmtpStartupInfo();
+
+    if (process.env.NODE_ENV === "production") {
+      try {
+        await verifyEmailTransporter();
+      } catch (smtpError) {
+        console.error("[startup] SMTP transporter verification failed", {
+          message: smtpError.message,
+          code: smtpError.code,
+          stack: smtpError.stack,
+        });
+      }
+    }
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error.message);
+    console.error("Failed to start server:", error.message, error.stack);
     process.exit(1);
   }
 };

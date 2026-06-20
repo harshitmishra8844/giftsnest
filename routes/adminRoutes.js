@@ -60,5 +60,6 @@ router.delete("/coupons/:id", protect, adminOnly, deleteCoupon);
 
 router.get("/newsletter/subscribers", protect, adminOnly, getNewsletterSubscribers);
 router.delete("/newsletter/subscribers/:id", protect, adminOnly, deleteNewsletterSubscriber);
+router.get("/email-diagnostics", protect, adminOnly, getEmailDiagnostics);
 
 module.exports = router;

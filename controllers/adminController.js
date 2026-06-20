@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const StoreSetting = require("../models/StoreSetting");
 const { generateToken } = require("./authController");
+const { getSmtpConfig, isSmtpConfigured, verifyEmailTransporter } = require("../services/emailTransporter");
 
 const defaultOffers = [
   {
@@ -169,4 +170,57 @@ const updateStoreInfo = async (req, res) => {
   }
 };
 
-module.exports = { adminLogin, getStoreInfo, updateStoreInfo };
+const getEmailDiagnostics = async (req, res) => {
+  try {
+    const smtpConfig = getSmtpConfig();
+    const smtpConfigured = isSmtpConfigured();
+    const diagnostics = {
+      smtpConfigured,
+      smtpHost: smtpConfig.host || null,
+      smtpPort: smtpConfig.port,
+      smtpSecure: smtpConfig.secure,
+      smtpUserLoaded: Boolean(smtpConfig.user),
+      smtpPassLoaded: Boolean(smtpConfig.pass),
+      smtpFrom: smtpConfig.from || null,
+      smtpConnectionTimeoutMs: smtpConfig.connectionTimeout,
+      smtpGreetingTimeoutMs: smtpConfig.greetingTimeout,
+      smtpSocketTimeoutMs: smtpConfig.socketTimeout,
+      smtpDebug: smtpConfig.debug,
+      smtpLogger: smtpConfig.logger,
+      smtpIsGmail: smtpConfig.isGmail,
+      environment: process.env.NODE_ENV || "<unset>",
+    };
+
+    if (!smtpConfigured) {
+      return res.status(200).json({
+        message: "SMTP settings are not fully configured.",
+        diagnostics,
+      });
+    }
+
+    let verifyResult = null;
+    let verifyError = null;
+    try {
+      verifyResult = await verifyEmailTransporter();
+    } catch (error) {
+      verifyError = {
+        message: error.message,
+        code: error.code,
+        responseCode: error.responseCode,
+        stack: error.stack,
+      };
+    }
+
+    return res.status(200).json({
+      message: "SMTP diagnostics completed.",
+      diagnostics,
+      verifyResult,
+      verifyError,
+    });
+  } catch (error) {
+    console.error("Get email diagnostics error:", error);
+    return res.status(500).json({ message: "Failed to retrieve email diagnostics", error: error.message || error });
+  }
+};
+
+module.exports = { adminLogin, getStoreInfo, updateStoreInfo, getEmailDiagnostics };

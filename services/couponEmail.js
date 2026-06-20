@@ -1,58 +1,12 @@
 const nodemailer = require("nodemailer");
 const StoreSetting = require("../models/StoreSetting");
+const {
+  getTransporter,
+  sendMailWithRetries,
+  isSmtpConfigured,
+} = require("./emailTransporter");
 
-const isEmailConfigured = async () => {
-  const host = String(process.env.SMTP_HOST || "").trim();
-  const user = String(process.env.SMTP_USER || "").trim();
-  const pass = String(process.env.SMTP_PASS || "").trim();
-  return Boolean(host && user && pass);
-};
-
-const getTransporter = async () => {
-  const host = String(process.env.SMTP_HOST || "").trim();
-  const user = String(process.env.SMTP_USER || "").trim();
-  const pass = String(process.env.SMTP_PASS || "").trim();
-
-  if (host && user && pass) {
-    const port = Number(process.env.SMTP_PORT) || 587;
-    const secure = String(process.env.SMTP_SECURE || "").toLowerCase() === "true";
-    
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: {
-        user,
-        pass,
-      },
-    });
-    transporter.isTest = false;
-    return transporter;
-  }
-
-  // Fallback transport: use Ethereal if no SMTP is configured, so coupon email sending can still be tested.
-  if (process.env.NODE_ENV !== "production" && process.env.DISABLE_EMAIL_FALLBACK !== "true") {
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      const transporter = nodemailer.createTransport({
-        host: testAccount.smtp.host,
-        port: testAccount.smtp.port,
-        secure: testAccount.smtp.secure,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-      transporter.isTest = true;
-      transporter.testAccount = testAccount;
-      return transporter;
-    } catch (e) {
-      console.error("Failed to create Ethereal test account:", e ? e.message || e : "Unknown error");
-    }
-  }
-
-  return null;
-};
+const isEmailConfigured = async () => isSmtpConfigured();
 
 const storeName = () => String(process.env.STORE_NAME || "Niyora Gifts").trim() || "Niyora Gifts";
 
@@ -288,19 +242,31 @@ const sendCouponEmailToCustomer = async (coupon, { to, customerName, personalNot
     : `no-reply@${String(process.env.DOMAIN || "example.com").trim()}`;
   const from = fromAddress || defaultFrom;
 
-  const info = await transport.sendMail({
+  const mailOptions = {
     from: `"Niyora Gifts" <${from}>`,
     to: String(to).trim(),
     subject,
     text,
     html,
-  });
+  };
+
+  const info = await sendMailWithRetries(mailOptions);
 
   if (transport.isTest) {
     const preview = nodemailer.getTestMessageUrl(info);
-    return { previewUrl: preview };
+    return {
+      previewUrl: preview,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+    };
   }
-  return {};
+
+  return {
+    messageId: info.messageId,
+    accepted: info.accepted,
+    rejected: info.rejected,
+  };
 };
 
 module.exports = {

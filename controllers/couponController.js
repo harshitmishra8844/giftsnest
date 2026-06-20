@@ -138,7 +138,7 @@ const generateSpecialCoupon = async (req, res) => {
           }
           emailSent = true;
         } catch (mailErr) {
-          console.error("Special coupon email error:", mailErr ? mailErr.message || mailErr : "Unknown error");
+          console.error("Special coupon email error:", mailErr);
           emailWarning =
             `Coupon was created but the email could not be sent: ${mailErr.message || mailErr}. Use "Email customer" in Manage coupons to try again.`;
         }
@@ -198,7 +198,7 @@ const sendCouponEmail = async (req, res) => {
     if (error.code === "EMAIL_NOT_CONFIGURED") {
       return res.status(503).json({ message: "Email service is not configured" });
     }
-    console.error("Send coupon email error:", error.message);
+    console.error("Send coupon email error:", error);
     return res.status(500).json({ message: `Failed to send email: ${error.message || error}` });
   }
 };
