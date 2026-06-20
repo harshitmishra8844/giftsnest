@@ -4,9 +4,13 @@ const {
   getTransporter,
   sendMailWithRetries,
   isSmtpConfigured,
+  getSmtpConfig,
 } = require("./emailTransporter");
 
-const isEmailConfigured = async () => isSmtpConfigured();
+const isEmailConfigured = async () => {
+  const config = getSmtpConfig();
+  return Boolean(config.provider);
+};
 
 const storeName = () => String(process.env.STORE_NAME || "Niyora Gifts").trim() || "Niyora Gifts";
 
@@ -214,12 +218,14 @@ Apply this code at checkout. Thank you for shopping with us!
 
 const sendCouponEmailToCustomer = async (coupon, { to, customerName, personalNote }) => {
   const dbStoreInfo = await StoreSetting.findOne({ singletonKey: "store" }).lean();
-  const transport = await getTransporter();
-  if (!transport) {
+  const config = getSmtpConfig();
+  if (!config.provider) {
     const err = new Error("EMAIL_NOT_CONFIGURED");
     err.code = "EMAIL_NOT_CONFIGURED";
     throw err;
   }
+
+  const transport = await getTransporter();
 
   const storeNameStr = dbStoreInfo?.storeName || String(process.env.STORE_NAME || "Niyora Gifts").trim() || "Niyora Gifts";
   const shopUrlStr = shopUrl();
@@ -237,7 +243,8 @@ const sendCouponEmailToCustomer = async (coupon, { to, customerName, personalNot
     ""
   ).trim();
 
-  const defaultFrom = transport.isTest
+  const isTest = transport ? transport.isTest : false;
+  const defaultFrom = isTest
     ? transport.testAccount?.user || `no-reply@${String(process.env.DOMAIN || "example.com").trim()}`
     : `no-reply@${String(process.env.DOMAIN || "example.com").trim()}`;
   const from = fromAddress || defaultFrom;
@@ -252,7 +259,7 @@ const sendCouponEmailToCustomer = async (coupon, { to, customerName, personalNot
 
   const info = await sendMailWithRetries(mailOptions);
 
-  if (transport.isTest) {
+  if (isTest) {
     const preview = nodemailer.getTestMessageUrl(info);
     return {
       previewUrl: preview,
