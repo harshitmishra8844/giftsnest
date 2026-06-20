@@ -58,7 +58,10 @@ const storeName = () => String(process.env.STORE_NAME || "Niyora Gifts").trim() 
 
 const shopUrl = () => {
   const raw = String(process.env.FRONTEND_URL || "").split(",")[0].trim();
-  return raw || "";
+  if (!raw || raw.includes("your-vercel-url") || raw.includes("vercel.app") || raw.includes("localhost")) {
+    return "https://www.niyoragifts.in";
+  }
+  return raw;
 };
 
 const escapeHtml = (s) =>
