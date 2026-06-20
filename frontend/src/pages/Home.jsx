@@ -6,7 +6,7 @@ const quickCategories = [
   { name: "Birthday", image: "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center" },
   { name: "Anniversary", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center" },
   { name: "Flowers", image: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center" },
-  // Cakes removed per request
+  { name: "Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center" },
   { name: "Personalized Gifts", image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center" },
   { name: "Plants", image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center" },
 ];
@@ -229,7 +229,7 @@ const Home = () => {
           {quickCategories.map((category) => (
             <Link
               key={category.name}
-              to="/products"
+              to={`/products?category=${encodeURIComponent(category.name)}`}
               className="group relative w-[160px] h-[160px] md:w-[180px] md:h-[180px] overflow-hidden rounded-xl shadow-sm transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg"
               style={{ backgroundImage: `url(${category.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
             >

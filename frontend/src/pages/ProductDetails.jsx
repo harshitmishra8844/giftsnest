@@ -140,10 +140,19 @@ const ProductDetails = () => {
 
   const relatedProducts = useMemo(() => {
     if (!product?._id) return [];
-    const currentCategory = String(product.category || "").toLowerCase();
+    const currentCategories = String(product.category || "")
+      .split(",")
+      .map((cat) => cat.trim().toLowerCase())
+      .filter(Boolean);
     return allProducts
       .filter((item) => item?._id !== product._id)
-      .filter((item) => String(item.category || "").toLowerCase() === currentCategory)
+      .filter((item) => {
+        const itemCategories = String(item.category || "")
+          .split(",")
+          .map((cat) => cat.trim().toLowerCase())
+          .filter(Boolean);
+        return itemCategories.some((cat) => currentCategories.includes(cat));
+      })
       .slice(0, 4);
   }, [allProducts, product]);
 
@@ -367,13 +376,32 @@ const ProductDetails = () => {
     <section className="space-y-6 pb-24 md:pb-0">
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 md:p-8">
         <div className="mb-5 text-sm text-gray-500">
-          <Link to="/products" className="hover:text-emerald-700">Products</Link> / <span className="text-gray-700">{product.category}</span> / {product.name}
+          <Link to="/products" className="hover:text-emerald-700">Products</Link>
+          {String(product.category || "")
+            .split(",")
+            .map((cat) => cat.trim())
+            .filter(Boolean)
+            .map((cat, idx) => (
+              <span key={cat}>
+                {" "}
+                /{" "}
+                <Link
+                  to={`/products?category=${encodeURIComponent(cat)}`}
+                  className="hover:text-emerald-700 font-medium text-gray-700"
+                >
+                  {cat}
+                </Link>
+              </span>
+            ))}
+          {" "}
+          / {product.name}
         </div>
 
-        <div className="grid gap-8 xl:grid-cols-[0.9fr_0.95fr_0.72fr]">
-          <div className="xl:sticky xl:top-24 xl:h-fit">
+        <div className="grid gap-8 lg:grid-cols-2">
+          {/* Left Column: Image Gallery */}
+          <div className="lg:sticky lg:top-24 lg:h-fit">
             <div
-              className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 shadow-sm"
+              className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/50 shadow-sm flex items-center justify-center p-4 h-[320px] md:h-[500px]"
               onMouseMove={handleImageMouseMove}
               onMouseLeave={() => setZoomOrigin("center center")}
               onTouchStart={handleImageTouchStart}
@@ -382,7 +410,7 @@ const ProductDetails = () => {
               <img
                 src={activeImage || "https://via.placeholder.com/900x700?text=Niyora+Gifts"}
                 alt={product.name}
-                className="h-[360px] w-full cursor-zoom-in rounded-2xl object-cover transition-all duration-500 ease-out group-hover:scale-[1.22] md:h-[560px]"
+                className="max-h-full max-w-full cursor-zoom-in rounded-xl object-contain transition-all duration-500 ease-out group-hover:scale-[1.08]"
                 style={{ transformOrigin: zoomOrigin }}
                 onClick={() => setLightboxOpen(true)}
               />
@@ -422,18 +450,20 @@ const ProductDetails = () => {
                       setUserInteractedWithGallery(true);
                       setActiveImage(imageUrl);
                     }}
-                    className={`overflow-hidden rounded-lg border-2 transition-all duration-200 ${
+                    className={`overflow-hidden rounded-lg border-2 transition-all duration-200 aspect-square flex items-center justify-center p-1 bg-gray-50 ${
                       activeImage === imageUrl
                         ? "scale-[1.02] border-emerald-600 shadow-sm"
                         : "border-transparent hover:scale-[1.01] hover:border-emerald-200"
                     }`}
                   >
-                    <img src={imageUrl} alt={product.name} className="h-20 w-full object-cover transition duration-200 hover:brightness-105" />
+                    <img src={imageUrl} alt={product.name} className="max-h-full max-w-full object-contain transition duration-200 hover:brightness-105" />
                   </button>
                 ))}
               </div>
             ) : null}
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            
+            {/* Gallery Checkout Bar for Tablet/Desktop */}
+            <div className="mt-4 hidden grid-cols-2 gap-3 sm:grid">
               {cartQuantity > 0 ? (
                 <QuantityStepper
                   quantity={cartQuantity}
@@ -468,7 +498,8 @@ const ProductDetails = () => {
             </div>
           </div>
 
-          <div className="space-y-5">
+          {/* Right Column: Info and options */}
+          <div className="space-y-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{product.category}</p>
               <h1 className="mt-1 text-3xl font-bold leading-tight text-gray-900">{product.name}</h1>
@@ -483,13 +514,50 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-5">
+            {/* Price & Primary Purchase Card */}
+            <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-end gap-3">
                 <p className="text-3xl font-bold text-gray-900">INR {product.price}</p>
                 <p className="text-sm text-gray-500 line-through">INR {comparePrice}</p>
                 <p className="text-sm font-semibold text-emerald-700">Special price</p>
               </div>
-              <div className="grid gap-2 text-sm text-gray-700">
+
+              {/* Purchase Options directly inside details column */}
+              <div className="grid grid-cols-2 gap-3 py-1">
+                {cartQuantity > 0 ? (
+                  <QuantityStepper
+                    quantity={cartQuantity}
+                    onDecrease={handleDecreaseQty}
+                    onIncrease={handleIncreaseQty}
+                    increaseDisabled={outOfStock || reachedMaxStock}
+                    decreaseAriaLabel={`Decrease ${product.name} quantity`}
+                    increaseAriaLabel={`Increase ${product.name} quantity`}
+                    className="rounded-xl"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    disabled={outOfStock}
+                    onClick={handleAddToCart}
+                    className="rounded-xl bg-amber-500 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {outOfStock ? "Sold out" : recentlyAdded ? "Added ✓" : "Add to Cart"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={outOfStock}
+                  onClick={() => {
+                    handleAddToCart();
+                    navigate("/checkout");
+                  }}
+                  className="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Buy Now
+                </button>
+              </div>
+
+              <div className="border-t border-gray-100 pt-3 grid gap-2 text-sm text-gray-700">
                 <p>
                   Estimated delivery by{" "}
                   <span className="font-semibold text-gray-900">
@@ -501,29 +569,30 @@ const ProductDetails = () => {
                     Material: <span className="font-semibold text-gray-900">{materialText}</span>
                   </p>
                 ) : null}
-                <p>Free secure gift packaging and order tracking included.</p>
-                <p>Admin-managed highlights and product specs are shown below.</p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            {/* Highlights */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900">Highlights</h2>
               <ul className="mt-3 grid gap-2 text-sm text-gray-700">
                 {highlights.map((item) => (
                   <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-600" />
+                    <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-emerald-600" />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            {/* Product Description */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900">Product Description</h2>
-              <p className="mt-3 text-sm leading-7 text-gray-700">{product.description}</p>
+              <p className="mt-3 text-sm leading-7 text-gray-700 whitespace-pre-line">{product.description}</p>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            {/* Specifications */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900">Specifications</h2>
               <div className="mt-3 overflow-hidden rounded-xl border border-gray-100">
                 {specifications.map((item, index) => (
@@ -539,87 +608,18 @@ const ProductDetails = () => {
                 ))}
               </div>
             </div>
-          </div>
 
-          <aside className="space-y-4 xl:sticky xl:top-24 xl:h-fit">
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Quick Buy</p>
-              <p className="mt-2 text-2xl font-bold text-gray-900">INR {product.price}</p>
-              <p className="text-xs text-gray-600">
-                {outOfStock ? "Out of stock right now" : `Only ${stock} left, order soon`}
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                {cartQuantity > 0 ? (
-                  <QuantityStepper
-                    quantity={cartQuantity}
-                    onDecrease={handleDecreaseQty}
-                    onIncrease={handleIncreaseQty}
-                    increaseDisabled={outOfStock || reachedMaxStock}
-                    decreaseAriaLabel={`Decrease ${product.name} quantity`}
-                    increaseAriaLabel={`Increase ${product.name} quantity`}
-                    className="rounded-xl"
-                    buttonClassName="h-7 w-7"
-                    valueClassName="text-xs"
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    disabled={outOfStock}
-                    onClick={handleAddToCart}
-                    className="rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {recentlyAdded ? "Added ✓" : "Add to Cart"}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  disabled={outOfStock}
-                  onClick={() => {
-                    handleAddToCart();
-                    navigate("/checkout");
-                  }}
-                  className="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Buy Now
-                </button>
-              </div>
-            </div>
-
+            {/* Services info merged at the bottom of specifications */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-gray-900">Delivery & Services</p>
-              <div className="mt-3 space-y-3 text-sm text-gray-700">
-                <div className="rounded-xl bg-gray-50 px-3 py-3">
-                  Delivery by{" "}
-                  <span className="font-semibold text-gray-900">
-                    {deliveryTimeText || deliveryEstimate}
-                  </span>
-                </div>
-                {materialText ? (
-                  <div className="rounded-xl bg-gray-50 px-3 py-3">
-                    Material: <span className="font-semibold text-gray-900">{materialText}</span>
-                  </div>
-                ) : null}
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 text-sm text-gray-700">
                 <div className="rounded-xl bg-gray-50 px-3 py-3">Same-day support in selected cities</div>
                 <div className="rounded-xl bg-gray-50 px-3 py-3">Replacement help for damaged orders</div>
-                <div className="rounded-xl bg-gray-50 px-3 py-3">Secure checkout and order tracking</div>
+                <div className="rounded-xl bg-gray-50 px-3 py-3">Secure checkout and packaging</div>
+                <div className="rounded-xl bg-gray-50 px-3 py-3">Order tracking code provided</div>
               </div>
             </div>
-
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-gray-900">Why shoppers like this</p>
-              <div className="mt-3 grid gap-2">
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
-                  Rich admin-managed details
-                </div>
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
-                  Multi-image product gallery
-                </div>
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
-                  Verified purchase reviews
-                </div>
-              </div>
-            </div>
-          </aside>
+          </div>
         </div>
       </div>
 

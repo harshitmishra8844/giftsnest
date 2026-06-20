@@ -131,6 +131,78 @@ const AdminDashboard = () => {
   const [success, setSuccess] = useState("");
   const [uploadWarning, setUploadWarning] = useState("");
 
+  const allFormImages = useMemo(() => {
+    const parsed = String(form.imagesText || "")
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (form.image && !parsed.includes(form.image)) {
+      return [form.image, ...parsed];
+    }
+    return parsed;
+  }, [form.imagesText, form.image]);
+
+  const handleDeleteFormImage = (urlToDelete) => {
+    const newImagesText = String(form.imagesText || "")
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter((item) => item && item !== urlToDelete)
+      .join("\n");
+    
+    let newImage = form.image;
+    if (form.image === urlToDelete) {
+      const remaining = String(newImagesText)
+        .split(/\r?\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      newImage = remaining[0] || "";
+    }
+    
+    setForm((prev) => ({
+      ...prev,
+      image: newImage,
+      imagesText: newImagesText,
+    }));
+  };
+
+  const handleSetPrimaryFormImage = (url) => {
+    setForm((prev) => {
+      const existing = String(prev.imagesText || "")
+        .split(/\r?\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      
+      if (!existing.includes(url)) {
+        existing.unshift(url);
+      }
+      
+      return {
+        ...prev,
+        image: url,
+        imagesText: existing.join("\n")
+      };
+    });
+  };
+
+  const handleToggleCategorySelection = (cat) => {
+    const currentList = String(form.category || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    
+    let newList;
+    if (currentList.includes(cat)) {
+      newList = currentList.filter((item) => item !== cat);
+    } else {
+      newList = [...currentList, cat];
+    }
+    
+    setForm((prev) => ({
+      ...prev,
+      category: newList.join(", ")
+    }));
+  };
+
   const getUploadErrorMessage = (err) => {
     const status = err?.response?.status;
     const apiMessage = String(err?.response?.data?.message || "").trim();
@@ -162,25 +234,35 @@ const AdminDashboard = () => {
     [adminAuth]
   );
 
-  const productCategories = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          products
-            .map((product) => String(product.category || "").trim())
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b)),
-    [products]
-  );
+  const productCategories = useMemo(() => {
+    const standard = ["Birthday", "Anniversary", "Flowers", "Cakes", "Personalized Gifts", "Plants"];
+    const dynamic = [];
+    products.forEach((product) => {
+      if (product.category) {
+        String(product.category)
+          .split(",")
+          .forEach((cat) => {
+            const trimmed = cat.trim();
+            if (trimmed && !dynamic.includes(trimmed)) {
+              dynamic.push(trimmed);
+            }
+          });
+      }
+    });
+    return Array.from(new Set([...standard, ...dynamic])).sort((a, b) => a.localeCompare(b));
+  }, [products]);
 
   const filteredProducts = useMemo(
     () =>
       selectedCategory === "All"
         ? products
         : products.filter(
-            (product) =>
-              String(product.category || "").toLowerCase() === selectedCategory.toLowerCase()
+            (product) => {
+              const productCat = String(product.category || "").toLowerCase();
+              const selectedCat = selectedCategory.toLowerCase();
+              const categoriesList = productCat.split(",").map(c => c.trim());
+              return categoriesList.includes(selectedCat);
+            }
           ),
     [products, selectedCategory]
   );
@@ -2439,7 +2521,12 @@ const AdminDashboard = () => {
             All ({products.length})
           </button>
           {productCategories.map((category) => {
-            const count = products.filter((product) => product.category === category).length;
+            const count = products.filter((product) => {
+              const productCat = String(product.category || "").toLowerCase();
+              const selectedCat = category.toLowerCase();
+              const categoriesList = productCat.split(",").map(c => c.trim());
+              return categoriesList.includes(selectedCat);
+            }).length;
             return (
               <button
                 key={category}
@@ -2487,8 +2574,41 @@ const AdminDashboard = () => {
             onChange={handleFormChange}
             placeholder={selectedCategory !== "All" ? `Category (${selectedCategory})` : "Category"}
             required
+            list="category-suggestions"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />
+          <datalist id="category-suggestions">
+            {productCategories.map((cat) => (
+              <option key={cat} value={cat} />
+            ))}
+          </datalist>
+          <div className="md:col-span-2 space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Select Categories (click to toggle multiple)
+            </label>
+            <div className="flex flex-wrap gap-1.5 p-2.5 bg-gray-50 rounded-xl border border-gray-200 shadow-inner">
+              {productCategories.map((cat) => {
+                const isSelected = String(form.category || "")
+                  .split(",")
+                  .map((item) => item.trim())
+                  .includes(cat);
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => handleToggleCategorySelection(cat)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold tracking-wide transition cursor-pointer select-none ${
+                      isSelected
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    {isSelected ? `✓ ${cat}` : `+ ${cat}`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="md:col-span-2">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Upload Product Images</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -2516,6 +2636,53 @@ const AdminDashboard = () => {
               <p className="mt-2 text-xs text-amber-600">Upload at least one image to continue.</p>
             )}
           </div>
+          
+          {allFormImages.length > 0 ? (
+            <div className="md:col-span-2 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Image Gallery Previews</p>
+              <div className="flex flex-wrap gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                {allFormImages.map((url, idx) => {
+                  const isPrimary = form.image === url;
+                  return (
+                    <div key={idx} className="relative group w-24 h-24 md:w-28 md:h-28 rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center shadow-sm">
+                      <img src={url} alt={`Preview ${idx + 1}`} className="max-w-full max-h-full object-contain p-1" />
+                      {isPrimary && (
+                        <span className="absolute top-0 left-0 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm">
+                          Primary
+                        </span>
+                      )}
+                      {/* Hover controls */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        {!isPrimary && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimaryFormImage(url)}
+                            title="Set as primary image"
+                            className="p-1.5 rounded-full bg-white text-emerald-600 hover:bg-emerald-50 transition shadow"
+                          >
+                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteFormImage(url)}
+                          title="Remove image"
+                          className="p-1.5 rounded-full bg-white text-red-600 hover:bg-red-50 transition shadow"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <textarea
             name="imagesText"
             value={form.imagesText}

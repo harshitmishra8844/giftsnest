@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import ProductCard from "../components/ProductCard";
 import { useCart } from "../context/CartContext";
@@ -7,6 +7,7 @@ import CartToast from "../components/CartToast";
 
 const Products = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { cartItems, addToCart, updateQuantity } = useCart();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +28,7 @@ const Products = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     setSearchText(params.get("q") || "");
+    setSelectedCategory(params.get("category") || "All");
   }, [location.search]);
 
   useEffect(() => {
@@ -46,28 +48,37 @@ const Products = () => {
     fetchProducts();
   }, [refreshSeed]);
 
-  const categoryChips = useMemo(
-    () => [
-      "All",
-      ...Array.from(
-        new Set(
-          products
-            .map((product) => String(product.category || "").trim())
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b)),
-    ],
-    [products]
-  );
+  const categoryChips = useMemo(() => {
+    const standard = ["Birthday", "Anniversary", "Flowers", "Cakes", "Personalized Gifts", "Plants"];
+    const dynamic = [];
+    products.forEach((product) => {
+      if (product.category) {
+        String(product.category)
+          .split(",")
+          .forEach((cat) => {
+            const trimmed = cat.trim();
+            if (trimmed && !dynamic.includes(trimmed)) {
+              dynamic.push(trimmed);
+            }
+          });
+      }
+    });
+    const combined = Array.from(new Set([...standard, ...dynamic]));
+    return ["All", ...combined.sort((a, b) => a.localeCompare(b))];
+  }, [products]);
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
     const searchTokens = normalizedSearch.split(/\s+/).filter(Boolean);
 
     return products.filter((product) => {
+      const productCat = String(product.category || "").toLowerCase();
+      const selectedCat = selectedCategory.toLowerCase();
+      const categoriesList = productCat.split(",").map(c => c.trim()).filter(Boolean);
       const matchesCategory =
         selectedCategory === "All" ||
-        String(product.category || "").toLowerCase() === selectedCategory.toLowerCase();
+        categoriesList.includes(selectedCat) ||
+        categoriesList.some(c => c.includes(selectedCat) || selectedCat.includes(c));
       const tags = Array.isArray(product.tags) ? product.tags.join(" ") : "";
       const haystack = `${product.name || ""} ${product.category || ""} ${product.description || ""} ${product.slug || ""} ${tags}`.toLowerCase();
       const matchesSearch =
@@ -146,7 +157,15 @@ const Products = () => {
           <button
             key={chip}
             type="button"
-            onClick={() => setSelectedCategory(chip)}
+            onClick={() => {
+              const params = new URLSearchParams(location.search);
+              if (chip === "All") {
+                params.delete("category");
+              } else {
+                params.set("category", chip);
+              }
+              navigate({ search: params.toString() }, { replace: true });
+            }}
             className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
               selectedCategory === chip
                 ? "bg-emerald-700 text-white"
