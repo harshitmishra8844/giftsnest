@@ -50,6 +50,8 @@ const uploadImage = async (req, res) => {
       return res.status(400).json({ message: "Image file is required" });
     }
 
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+
     if (!canUploadToCloudinary) {
       // Fallback to local disk when Cloudinary credentials are unavailable.
       await ensureLocalUploadsDir();
@@ -57,7 +59,7 @@ const uploadImage = async (req, res) => {
       const fileName = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${fileExt}`;
       const absolutePath = path.join(localUploadsDir, fileName);
       await fs.promises.writeFile(absolutePath, req.file.buffer);
-      const imageUrl = `${req.protocol}://${req.get("host")}/uploads/products/${fileName}`;
+      const imageUrl = `${protocol}://${req.get("host")}/uploads/products/${fileName}`;
 
       return res.status(201).json({
         message:
@@ -86,7 +88,27 @@ const uploadImage = async (req, res) => {
     });
   } catch (error) {
     console.error("Image upload error:", error.message);
-    return res.status(500).json({ message: "Failed to upload image" });
+    
+    // Fallback to local disk if Cloudinary fails (e.g. account is disabled or network error)
+    try {
+      await ensureLocalUploadsDir();
+      const fileExt = extensionFromMime(req.file.mimetype);
+      const fileName = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${fileExt}`;
+      const absolutePath = path.join(localUploadsDir, fileName);
+      await fs.promises.writeFile(absolutePath, req.file.buffer);
+      
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const imageUrl = `${protocol}://${req.get("host")}/uploads/products/${fileName}`;
+
+      return res.status(201).json({
+        message: `Cloudinary upload failed (${error.message || "unknown error"}). Uploaded image is stored locally in development mode.`,
+        imageUrl,
+        publicId: null,
+      });
+    } catch (fallbackError) {
+      console.error("Local fallback upload error:", fallbackError.message);
+      return res.status(500).json({ message: `Failed to upload image: ${error.message}` });
+    }
   }
 };
 

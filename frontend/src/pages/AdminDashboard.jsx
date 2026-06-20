@@ -506,10 +506,8 @@ const AdminDashboard = () => {
         };
       });
       setSuccess("Image uploaded and added to product gallery.");
-      if (String(data?.message || "").toLowerCase().includes("development mode")) {
-        setUploadWarning(
-          "Cloudinary is not configured yet. Image was uploaded and saved locally (development mode)."
-        );
+      if (data?.message && !data.message.toLowerCase().includes("successfully")) {
+        setUploadWarning(data.message);
       }
     } catch (err) {
       setError(getUploadErrorMessage(err));
@@ -767,7 +765,11 @@ const AdminDashboard = () => {
         throw new Error("Upload failed");
       }
       setStoreInfo((prev) => ({ ...prev, storeLogoUrl: data.imageUrl }));
-      setSuccess("Logo uploaded. Click 'Save Store Settings' to persist it.");
+      if (data?.message && !data.message.toLowerCase().includes("successfully")) {
+        setSuccess(`Logo uploaded (stored locally: ${data.message}). Click 'Save Store Settings' to persist it.`);
+      } else {
+        setSuccess("Logo uploaded. Click 'Save Store Settings' to persist it.");
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Failed to upload logo");
     } finally {

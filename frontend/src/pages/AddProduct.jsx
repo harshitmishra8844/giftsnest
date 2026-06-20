@@ -57,7 +57,7 @@ const AddProduct = () => {
       setLoading(true);
 
       const uploadedFromFiles = [];
-      let fallbackUsed = false;
+      let fallbackWarning = "";
       for (const file of files) {
         const uploadData = new FormData();
         uploadData.append("image", file);
@@ -69,8 +69,8 @@ const AddProduct = () => {
         if (uploadResponse.data?.imageUrl) {
           uploadedFromFiles.push(uploadResponse.data.imageUrl);
         }
-        if (String(uploadResponse.data?.message || "").toLowerCase().includes("development mode")) {
-          fallbackUsed = true;
+        if (uploadResponse.data?.message && !uploadResponse.data.message.toLowerCase().includes("successfully")) {
+          fallbackWarning = uploadResponse.data.message;
         }
       }
 
@@ -124,10 +124,8 @@ const AddProduct = () => {
 
       const productResponse = await api.post("/products", payload);
       setMessage(`Product added successfully: ${productResponse.data.product.name}`);
-      if (fallbackUsed) {
-        setDevUploadWarning(
-          "Cloudinary is not configured yet. Image was uploaded and saved locally (development mode)."
-        );
+      if (fallbackWarning) {
+        setDevUploadWarning(fallbackWarning);
       }
       setForm(initialForm);
       setFiles([]);

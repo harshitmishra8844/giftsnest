@@ -136,7 +136,7 @@ const generateSpecialCoupon = async (req, res) => {
           }
           emailSent = true;
         } catch (mailErr) {
-          console.error("Special coupon email error:", mailErr.message);
+          console.error("Special coupon email error:", mailErr ? mailErr.message || mailErr : "Unknown error");
           emailWarning =
             "Coupon was created but the email could not be sent. Use \u201CEmail customer\u201D in Manage coupons to try again.";
         }
@@ -151,8 +151,10 @@ const generateSpecialCoupon = async (req, res) => {
       emailWarning: emailWarning || undefined,
     });
   } catch (error) {
-    console.error("Generate special coupon error:", error.message);
-    return res.status(500).json({ message: "Failed to generate special coupon" });
+    console.error("Generate special coupon error:", error);
+    return res.status(500).json({
+      message: `Failed to generate special coupon: ${error ? error.message || error : "Unknown error"}`
+    });
   }
 };
 

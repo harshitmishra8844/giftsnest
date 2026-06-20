@@ -47,7 +47,7 @@ const getTransporter = async () => {
       transporter.testAccount = testAccount;
       return transporter;
     } catch (e) {
-      console.error("Failed to create Ethereal test account:", e.message);
+      console.error("Failed to create Ethereal test account:", e ? e.message || e : "Unknown error");
     }
   }
 
