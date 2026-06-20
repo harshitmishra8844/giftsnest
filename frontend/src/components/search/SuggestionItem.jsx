@@ -18,7 +18,7 @@ const SuggestionItem = ({ item, query, isActive, onSelect }) => {
         }}
         className={`flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 text-left text-sm transition-all duration-200 cursor-pointer ${
           isActive
-            ? "bg-emerald-50 text-emerald-955 border border-emerald-100 scale-[1.01] shadow-sm"
+            ? "bg-emerald-50 text-emerald-950 border border-emerald-100 scale-[1.01] shadow-sm"
             : "text-gray-700 hover:bg-emerald-50/50 border border-transparent"
         }`}
       >

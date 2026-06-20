@@ -28,65 +28,65 @@ const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
   };
 
   return (
-    <article className="overflow-hidden rounded-[22px] border border-emerald-100 bg-white shadow-md transition hover:-translate-y-1 hover:shadow-xl">
-      <button type="button" onClick={openDetails} className="block w-full text-left">
-        <div className="relative">
+    <article className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-md hover:border-amber-200/50 flex flex-col justify-between h-full">
+      <button type="button" onClick={openDetails} className="block w-full text-left focus:outline-none">
+        <div className="relative overflow-hidden aspect-[4/3] bg-gray-50 flex items-center justify-center">
           <img
             src={imageUrl}
             alt={product.name}
-            className="h-56 w-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             loading="lazy"
           />
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent px-4 pb-4 pt-10">
-            <div className="inline-flex rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
+          <div className="absolute top-3 left-3">
+            <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-amber-800 shadow-sm backdrop-blur-sm border border-amber-100/20">
               {product.category}
-            </div>
+            </span>
           </div>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="space-y-3.5 p-4">
           <div>
-            <h3 className="line-clamp-1 text-lg font-bold text-gray-900">
+            <h3 className="line-clamp-1 text-base font-serif font-semibold text-gray-950 group-hover:text-amber-800 transition-colors">
               <Link
                 to={productUrl}
                 onClick={(event) => event.stopPropagation()}
-                className="hover:text-emerald-700"
+                className="hover:text-amber-800"
               >
                 {product.name}
               </Link>
             </h3>
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-500 font-light">
               {previewText || "Tap to explore full product details, images and delivery information."}
             </p>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 pt-1">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Starting at</p>
-              <p className="text-2xl font-bold text-gray-900">INR {product.price}</p>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-gray-400">Starting at</p>
+              <p className="text-lg font-semibold font-serif text-gray-900">INR {product.price}</p>
             </div>
             {hasStockLimit ? (
               <div
-                className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
                   outOfStock
-                    ? "bg-red-50 text-red-600"
+                    ? "bg-red-50/80 text-red-600 border-red-100"
                     : lowStock
-                      ? "bg-amber-50 text-amber-700"
-                      : "bg-emerald-50 text-emerald-700"
+                      ? "bg-amber-50/80 text-amber-700 border-amber-100"
+                      : "bg-emerald-50/80 text-emerald-800 border-emerald-100"
                 }`}
               >
-                {outOfStock ? "Sold out" : lowStock ? `${stock} left` : "Ready to ship"}
+                {outOfStock ? "Sold out" : lowStock ? `${stock} left` : "Ready"}
               </div>
             ) : null}
           </div>
         </div>
       </button>
 
-      <div className="grid grid-cols-2 gap-2 border-t border-emerald-100 bg-emerald-50/50 p-4">
+      <div className="grid grid-cols-2 gap-2 border-t border-gray-100 bg-gray-50/30 p-4 mt-auto">
         <button
           type="button"
           onClick={openDetails}
-          className="rounded-full border border-emerald-600 bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-emerald-700 transition hover:bg-emerald-50"
+          className="rounded-full border border-gray-200 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
         >
           Explore
         </button>
@@ -98,13 +98,16 @@ const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
             increaseDisabled={outOfStock || reachedMaxStock}
             decreaseAriaLabel={`Decrease ${product.name} quantity`}
             increaseAriaLabel={`Increase ${product.name} quantity`}
+            className="rounded-full border-gray-200 bg-white"
+            buttonClassName="h-7 w-7 text-gray-600 hover:bg-gray-150"
+            valueClassName="text-gray-900 text-xs"
           />
         ) : (
           <button
             type="button"
             onClick={handleAdd}
             disabled={outOfStock}
-            className="rounded-full bg-emerald-700 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full bg-emerald-950 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition-all duration-200 hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
           >
             {outOfStock ? "Sold out" : recentlyAdded ? "Added ✓" : "Add to Cart"}
           </button>

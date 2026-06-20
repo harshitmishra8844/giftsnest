@@ -132,55 +132,56 @@ const Products = () => {
   }
 
   return (
-    <section className="space-y-8">
-      <div className="overflow-hidden rounded-[30px] border border-emerald-100 bg-white shadow-sm">
-        <div className="grid gap-6 px-6 py-7 md:grid-cols-[1.3fr_0.7fr] md:px-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Gift Storefront</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
-              Pick a gift, open the detail page, and shop without the fuss
+    <section className="space-y-10">
+      <div className="border-b border-gray-200/40 pb-8">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-amber-700">Gift Catalog</p>
+            <h1 className="text-3xl font-light font-serif tracking-tight text-gray-900 md:text-5xl">
+              Curated Gift Storefront
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-600 md:text-base">
-              A simpler catalog layout with direct product actions, clearer navigation and a calmer browsing flow.
+            <p className="mt-2 text-sm text-gray-500 font-light leading-6 max-w-xl">
+              Discover premium bouquets, fresh cakes, and custom keepsakes hand-crafted for your celebrations.
             </p>
           </div>
-          <div className="flex items-center justify-center rounded-[24px] bg-emerald-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 text-center">
-              {visibleProducts.length} product{visibleProducts.length === 1 ? "" : "s"} showing
-            </p>
+          <div className="inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-emerald-800 border border-emerald-100/30">
+            {visibleProducts.length} gift{visibleProducts.length === 1 ? "" : "s"} available
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {categoryChips.map((chip) => (
-          <button
-            key={chip}
-            type="button"
-            onClick={() => {
-              const params = new URLSearchParams(location.search);
-              if (chip === "All") {
-                params.delete("category");
-              } else {
-                params.set("category", chip);
-              }
-              navigate({ search: params.toString() }, { replace: true });
-            }}
-            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
-              selectedCategory === chip
-                ? "bg-emerald-700 text-white"
-                : "border border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50"
-            }`}
-          >
-            {chip}
-          </button>
-        ))}
+      <div className="flex flex-wrap gap-2.5">
+        {categoryChips.map((chip) => {
+          const isSelected = selectedCategory === chip;
+          return (
+            <button
+              key={chip}
+              type="button"
+              onClick={() => {
+                const params = new URLSearchParams(location.search);
+                if (chip === "All") {
+                  params.delete("category");
+                } else {
+                  params.set("category", chip);
+                }
+                navigate({ search: params.toString() }, { replace: true });
+              }}
+              className={`rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition duration-300 cursor-pointer ${
+                isSelected
+                  ? "bg-emerald-950 text-white shadow-md"
+                  : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              {chip}
+            </button>
+          );
+        })}
       </div>
 
       {visibleProducts.length === 0 ? (
-        <div className="rounded-[24px] border border-emerald-100 bg-white p-10 text-center shadow-sm">
-          <p className="text-lg font-semibold text-gray-900">No products found</p>
-          <p className="mt-2 text-sm text-gray-600">Try another search or switch to a different category.</p>
+        <div className="rounded-3xl border border-gray-100 bg-white p-12 text-center shadow-sm">
+          <p className="text-lg font-bold font-serif text-gray-900">No gifts found</p>
+          <p className="mt-2 text-sm text-gray-500 font-light">Try another search filter or select another category above.</p>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

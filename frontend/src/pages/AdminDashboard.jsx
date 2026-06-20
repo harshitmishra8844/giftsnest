@@ -1726,92 +1726,111 @@ const AdminDashboard = () => {
   }
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold text-gray-900">Admin Dashboard</h2>
-        <button
-          onClick={handleLogout}
-          className="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          Logout
-        </button>
+    <section className="space-y-8 pb-16">
+      {/* Header Banner */}
+      <div className="rounded-3xl bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-900 p-6 text-white md:p-8 shadow-xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute left-1/3 bottom-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300">Management Console</p>
+            <h1 className="mt-1 text-2xl md:text-3xl font-serif font-light tracking-tight text-white">Niyora Gifts Administrator</h1>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="self-start md:self-auto rounded-full bg-white px-5 py-2.5 text-xs font-bold text-emerald-950 shadow-sm transition duration-300 hover:bg-red-50 hover:text-red-700 hover:scale-105"
+          >
+            Logout Console
+          </button>
+        </div>
       </div>
 
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
-      {success ? <p className="text-sm text-green-600">{success}</p> : null}
-      {uploadWarning ? <p className="text-sm text-amber-700">{uploadWarning}</p> : null}
+      {error ? <p className="text-xs text-red-650 font-medium">{error}</p> : null}
+      {success ? <p className="text-xs text-emerald-800 font-medium">{success}</p> : null}
+      {uploadWarning ? <p className="text-xs text-amber-800 font-medium">{uploadWarning}</p> : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm text-gray-500">Products</p>
-          <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Products</p>
+          <p className="mt-1.5 text-2xl font-serif font-light text-gray-950">{products.length}</p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm text-gray-500">Orders</p>
-          <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+        <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Orders</p>
+          <p className="mt-1.5 text-2xl font-serif font-light text-gray-950">{orders.length}</p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm text-gray-500">Revenue</p>
-          <p className="text-2xl font-bold text-gray-900">
+        <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Revenue</p>
+          <p className="mt-1.5 text-2xl font-serif font-light text-emerald-800">
             INR {orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm text-gray-500">Active Coupons</p>
-          <p className="text-2xl font-bold text-gray-900">{coupons.filter((coupon) => coupon.active).length}</p>
+        <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Coupons</p>
+          <p className="mt-1.5 text-2xl font-serif font-light text-gray-950">{coupons.filter((coupon) => coupon.active).length}</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/60 to-white p-5 shadow-sm ring-1 ring-amber-100">
-        <h3 className="text-lg font-semibold text-gray-900">Stock management</h3>
-        <p className="mt-1 text-sm text-gray-600">
-          Track inventory for products on the site. Stock is checked at checkout and reduced when payment succeeds.
-          Set initial quantity when you add a product, or adjust counts here anytime.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm">
-          <span className="rounded-full bg-white px-3 py-1 font-medium text-gray-800 ring-1 ring-gray-200">
-            Total units: <strong>{stockSummary.units}</strong>
-          </span>
-          <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-900">
-            Low (1–5): <strong>{stockSummary.low}</strong>
-          </span>
-          <span className="rounded-full bg-red-100 px-3 py-1 font-medium text-red-900">
-            Out of stock: <strong>{stockSummary.out}</strong>
-          </span>
+      <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-4">
+          <div>
+            <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Stock Management</h3>
+            <p className="mt-1 text-xs text-gray-500 font-light">
+              Monitor and adjust product inventory. Stock values dynamically decrement upon completed customer orders.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-white/80 border border-gray-200/60 px-3.5 py-1.5 font-medium text-gray-700 shadow-2xs">
+              Total Units: <strong className="font-semibold text-gray-955">{stockSummary.units}</strong>
+            </span>
+            <span className="rounded-full bg-amber-50/50 border border-amber-200/50 px-3.5 py-1.5 font-medium text-amber-900">
+              Low: <strong className="font-semibold text-amber-955">{stockSummary.low}</strong>
+            </span>
+            <span className="rounded-full bg-rose-50/50 border border-rose-200/30 px-3.5 py-1.5 font-medium text-rose-900">
+              Out of Stock: <strong className="font-semibold text-rose-955">{stockSummary.out}</strong>
+            </span>
+          </div>
         </div>
-        <div className="mt-4 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="text-gray-500">
-              <tr>
-                <th className="py-2">Product</th>
-                <th className="py-2">Category</th>
-                <th className="py-2">Price</th>
-                <th className="py-2">Stock</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Update</th>
-                <th className="py-2">Actions</th>
+
+        <div className="mt-6 hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[720px] text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-gray-150/40">
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Product Name</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Category</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Price</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Stock</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Status</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans text-center">Adjust Stock</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {productsByStock.map((product) => {
                 const s = Number(product.stock ?? 0);
-                const status =
+                const statusBadge =
                   s <= 0 ? (
-                    <span className="font-semibold text-red-600">Out of stock</span>
+                    <span className="inline-flex rounded-full bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-700">
+                      Out of stock
+                    </span>
                   ) : s <= 5 ? (
-                    <span className="font-semibold text-amber-700">Low</span>
+                    <span className="inline-flex rounded-full bg-amber-50 border border-amber-200/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
+                      Low
+                    </span>
                   ) : (
-                    <span className="text-emerald-700">In stock</span>
+                    <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                      In Stock
+                    </span>
                   );
                 return (
-                  <tr key={product._id} className="border-t border-gray-100">
-                    <td className="py-2 font-medium text-gray-900">{product.name}</td>
-                    <td className="py-2 text-gray-600">{product.category}</td>
-                    <td className="py-2">INR {product.price}</td>
-                    <td className="py-2 tabular-nums">{s}</td>
-                    <td className="py-2">{status}</td>
-                    <td className="py-2">
-                      <div className="flex flex-wrap items-center gap-1">
+                  <tr key={product._id} className="hover:bg-gray-50/40 transition-colors">
+                    <td className="py-3.5 pr-3 font-serif text-sm font-medium text-gray-900">{product.name}</td>
+                    <td className="py-3.5 px-1 text-gray-500 font-light">{product.category}</td>
+                    <td className="py-3.5 px-1 font-light text-gray-600">INR {product.price}</td>
+                    <td className="py-3.5 px-1 tabular-nums font-semibold text-gray-900">{s}</td>
+                    <td className="py-3.5 px-1">{statusBadge}</td>
+                    <td className="py-3.5 px-1">
+                      <div className="flex items-center justify-center gap-1.5">
                         <input
                           type="number"
                           min="0"
@@ -1819,25 +1838,25 @@ const AdminDashboard = () => {
                           onChange={(e) =>
                             setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
                           }
-                          className="w-20 rounded border border-gray-200 px-2 py-1 text-sm"
+                          className="w-16 rounded-full border border-gray-200/80 bg-white px-2.5 py-1 text-center text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
                         />
                         <button
                           type="button"
                           disabled={savingStockId === product._id}
                           onClick={() => saveProductStock(product._id)}
-                          className="rounded-lg bg-amber-600 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+                          className="rounded-full bg-emerald-950 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-emerald-900 transition-all duration-300 disabled:opacity-50 hover-float"
                         >
                           {savingStockId === product._id ? "…" : "Save"}
                         </button>
                       </div>
                     </td>
-                    <td className="py-2">
+                    <td className="py-3.5 pl-3 text-right">
                       <button
                         type="button"
                         onClick={() => startEditProduct(product)}
-                        className="text-blue-600 hover:underline"
+                        className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition-colors hover:underline"
                       >
-                        Edit product
+                        Edit Details
                       </button>
                     </td>
                   </tr>
@@ -1845,47 +1864,69 @@ const AdminDashboard = () => {
               })}
               {products.length === 0 ? (
                 <tr>
-                  <td className="py-4 text-gray-500" colSpan={7}>
-                    No products yet. Add a product below to manage stock.
+                  <td className="py-8 text-center text-gray-400 font-light" colSpan={7}>
+                    No products cataloged yet. Add products below to begin.
                   </td>
                 </tr>
               ) : null}
             </tbody>
           </table>
         </div>
-        <div className="mt-3 space-y-2 md:hidden">
+        <div className="mt-4 space-y-3.5 md:hidden">
           {productsByStock.map((product) => {
             const s = Number(product.stock ?? 0);
+            const statusBadge =
+              s <= 0 ? (
+                <span className="inline-flex rounded-full bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-700">
+                  Out of stock
+                </span>
+              ) : s <= 5 ? (
+                <span className="inline-flex rounded-full bg-amber-50 border border-amber-200/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
+                  Low
+                </span>
+              ) : (
+                <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                  In Stock
+                </span>
+              );
             return (
-              <article key={product._id} className="rounded-lg border border-gray-200 bg-white p-3">
-                <p className="text-sm font-semibold text-gray-900">{product.name}</p>
-                <p className="text-xs text-gray-600">
-                  {product.category} · INR {product.price} · Stock {s}
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    value={stockInputValue(product)}
-                    onChange={(e) =>
-                      setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
-                    }
-                    className="w-24 rounded border border-gray-200 px-2 py-1 text-sm"
-                  />
-                  <button
-                    type="button"
-                    disabled={savingStockId === product._id}
-                    onClick={() => saveProductStock(product._id)}
-                    className="rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold text-white"
-                  >
-                    Save stock
-                  </button>
+              <article key={product._id} className="rounded-2xl border border-gray-150/40 bg-white/50 p-4 space-y-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <p className="text-sm font-serif font-medium text-gray-950">{product.name}</p>
+                    <p className="mt-0.5 text-[10px] text-gray-400 tracking-wider uppercase font-light">
+                      {product.category} · INR {product.price}
+                    </p>
+                  </div>
+                  {statusBadge}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-gray-500 font-light">Stock:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={stockInputValue(product)}
+                      onChange={(e) =>
+                        setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
+                      }
+                      className="w-16 rounded-full border border-gray-200/80 bg-white px-2.5 py-1 text-center text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                    />
+                    <button
+                      type="button"
+                      disabled={savingStockId === product._id}
+                      onClick={() => saveProductStock(product._id)}
+                      className="rounded-full bg-emerald-950 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-emerald-900 transition-all duration-300 disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => startEditProduct(product)}
-                    className="text-xs text-blue-600 hover:underline"
+                    className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition-colors"
                   >
-                    Edit
+                    Edit Details
                   </button>
                 </div>
               </article>
@@ -2089,17 +2130,15 @@ const AdminDashboard = () => {
         </form>
       </div>
 
-      <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-5 shadow-sm ring-1 ring-violet-100">
-        <h3 className="text-lg font-semibold text-gray-900">Special retention coupons</h3>
-        <p className="mt-1 text-sm text-gray-600">
-          Generate a cryptographically random code (prefix <span className="font-mono text-xs">GN-SP-</span>) for
-          VIP or win-back offers. These codes are hidden from the public &quot;active coupons&quot; list on checkout.
-          Limits apply only after payment succeeds. Leave max fields empty for unlimited (total and/or per customer).
+      <div className="rounded-3xl border border-violet-150/40 bg-gradient-to-br from-violet-50/20 via-white/80 to-violet-50/10 backdrop-blur-md p-6 shadow-sm">
+        <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Special Retention Coupons</h3>
+        <p className="mt-1 text-xs text-gray-500 font-light leading-relaxed">
+          Generate secure, random coupon codes (prefixed with <span className="font-mono text-xs font-semibold text-violet-800">GN-SP-</span>) for VIP clients or win-back campaigns. These codes remain hidden from the public checkout lists.
         </p>
         {lastGeneratedSpecialCode ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-violet-200 bg-white px-3 py-2">
-            <span className="text-xs font-medium text-gray-600">Latest code:</span>
-            <code className="rounded bg-violet-100 px-2 py-1 font-mono text-sm font-bold text-violet-900">
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-violet-200/60 bg-white px-4 py-2.5 shadow-2xs animate-fade-in">
+            <span className="text-xs font-medium text-gray-600">Generated Code:</span>
+            <code className="rounded-md bg-violet-50 border border-violet-100 px-2.5 py-1 font-mono text-sm font-bold text-violet-900">
               {lastGeneratedSpecialCode}
             </code>
             <button
@@ -2108,197 +2147,269 @@ const AdminDashboard = () => {
                 void navigator.clipboard?.writeText(lastGeneratedSpecialCode);
                 setSuccess("Code copied to clipboard.");
               }}
-              className="rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700"
+              className="rounded-full bg-violet-950 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-violet-900 transition-all hover-float"
             >
-              Copy
+              Copy Code
             </button>
           </div>
         ) : null}
-        <form onSubmit={generateSpecialRetentionCoupon} className="mt-4 grid gap-3 md:grid-cols-3">
-          <select
-            value={specialCouponForm.type}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, type: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          >
-            <option value="percent">Percent</option>
-            <option value="flat">Flat</option>
-          </select>
-          <input
-            type="number"
-            min="1"
-            placeholder="Value"
-            value={specialCouponForm.value}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, value: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            required
-          />
-          <input
-            type="number"
-            min="0"
-            placeholder="Minimum cart value"
-            value={specialCouponForm.minCartValue}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, minCartValue: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            required
-          />
-          <input
-            type="number"
-            min="0"
-            placeholder="Max discount (optional)"
-            value={specialCouponForm.maxDiscount}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxDiscount: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            type="number"
-            min="1"
-            placeholder="Max total paid uses (empty = unlimited)"
-            value={specialCouponForm.maxRedemptions}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxRedemptions: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            type="number"
-            min="1"
-            placeholder="Max per customer (empty = unlimited)"
-            value={specialCouponForm.maxRedemptionsPerUser}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxRedemptionsPerUser: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            type="date"
-            value={specialCouponForm.endDate || ""}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            title="Valid until (optional)"
-          />
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+        <form onSubmit={generateSpecialRetentionCoupon} className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Type</label>
+            <select
+              value={specialCouponForm.type}
+              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, type: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+            >
+              <option value="percent">Percentage Off</option>
+              <option value="flat">Flat Discount</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Value</label>
             <input
-              type="checkbox"
-              checked={specialCouponForm.active}
-              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, active: e.target.checked }))}
+              type="number"
+              min="1"
+              placeholder="e.g. 15 or 500"
+              value={specialCouponForm.value}
+              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, value: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+              required
             />
-            Active
-          </label>
-          <p className="md:col-span-3 text-xs font-semibold uppercase tracking-wide text-violet-900">
-            Email to customer (optional)
-          </p>
-          <input
-            type="email"
-            autoComplete="off"
-            placeholder="Customer email"
-            value={specialCouponForm.customerEmail}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, customerEmail: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-1"
-          />
-          <input
-            placeholder="Customer name (optional)"
-            value={specialCouponForm.customerName}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, customerName: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-1"
-          />
-          <input
-            placeholder="Short personal note (optional)"
-            value={specialCouponForm.emailMessage}
-            onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, emailMessage: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-1"
-          />
-          <div className="md:col-span-3">
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Min Cart Value</label>
+            <input
+              type="number"
+              min="0"
+              placeholder="e.g. 1000"
+              value={specialCouponForm.minCartValue}
+              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, minCartValue: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Discount (Optional)</label>
+            <input
+              type="number"
+              min="0"
+              placeholder="e.g. 150"
+              value={specialCouponForm.maxDiscount}
+              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxDiscount: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Global Uses</label>
+            <input
+              type="number"
+              min="1"
+              placeholder="Unlimited if empty"
+              value={specialCouponForm.maxRedemptions}
+              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxRedemptions: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Uses Per Customer</label>
+            <input
+              type="number"
+              min="1"
+              placeholder="Unlimited if empty"
+              value={specialCouponForm.maxRedemptionsPerUser}
+              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxRedemptionsPerUser: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Valid Until</label>
+            <input
+              type="date"
+              value={specialCouponForm.endDate || ""}
+              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+            />
+          </div>
+          <div className="flex items-center pt-5">
+            <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={specialCouponForm.active}
+                onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, active: e.target.checked }))}
+                className="rounded text-violet-600 focus:ring-violet-600 cursor-pointer"
+              />
+              <span className="font-medium text-gray-800">Coupon Active</span>
+            </label>
+          </div>
+          
+          <div className="md:col-span-3 border-t border-violet-100/50 my-2 pt-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-violet-900 mb-3">
+              Direct Email Delivery (Optional)
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Recipient Email</label>
+                <input
+                  type="email"
+                  autoComplete="off"
+                  placeholder="customer@example.com"
+                  value={specialCouponForm.customerEmail}
+                  onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, customerEmail: e.target.value }))}
+                  className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Recipient Name</label>
+                <input
+                  placeholder="e.g. John Doe"
+                  value={specialCouponForm.customerName}
+                  onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, customerName: e.target.value }))}
+                  className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Personal Note</label>
+                <input
+                  placeholder="e.g. Enjoy this exclusive VIP offer!"
+                  value={specialCouponForm.emailMessage}
+                  onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, emailMessage: e.target.value }))}
+                  className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-3 pt-2">
             <button
               type="submit"
               disabled={generatingSpecial}
-              className="rounded-full bg-violet-600 px-5 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-70"
+              className="rounded-full bg-violet-900 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-violet-800 transition-all duration-300 disabled:opacity-70 hover-float"
             >
-              {generatingSpecial ? "Generating…" : "Generate secure code & create"}
+              {generatingSpecial ? "Generating…" : "Generate Secure Code & Dispatch"}
             </button>
           </div>
         </form>
       </div>
 
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {editingCouponId ? "Edit Coupon" : "Create Coupon"} (Minimum cart value rule)
+      <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
+        <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">
+          {editingCouponId ? "Edit Coupon Rule" : "Create Public Coupon"}
         </h3>
-        <form onSubmit={saveCoupon} className="mt-3 grid gap-3 md:grid-cols-3">
-          <input
-            placeholder="Code (e.g. GIFT10)"
-            value={couponForm.code}
-            onChange={(e) => setCouponForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-600"
-            required
-            disabled={editingCouponIsSpecial}
-            title={editingCouponIsSpecial ? "System-generated codes cannot be changed" : undefined}
-          />
-          <select
-            value={couponForm.type}
-            onChange={(e) => setCouponForm((prev) => ({ ...prev, type: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          >
-            <option value="percent">Percent</option>
-            <option value="flat">Flat</option>
-          </select>
-          <input
-            type="number"
-            min="1"
-            placeholder="Value"
-            value={couponForm.value}
-            onChange={(e) => setCouponForm((prev) => ({ ...prev, value: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            required
-          />
-          <input
-            type="number"
-            min="0"
-            placeholder="Minimum cart value"
-            value={couponForm.minCartValue}
-            onChange={(e) => setCouponForm((prev) => ({ ...prev, minCartValue: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            required
-          />
-          <input
-            type="number"
-            min="0"
-            placeholder="Max discount (optional)"
-            value={couponForm.maxDiscount}
-            onChange={(e) => setCouponForm((prev) => ({ ...prev, maxDiscount: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            type="date"
-            value={couponForm.endDate || ""}
-            onChange={(e) => setCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            title="Valid until (optional)"
-          />
-          <input
-            type="number"
-            min="1"
-            placeholder="Max total paid uses (optional)"
-            value={couponForm.maxRedemptions}
-            onChange={(e) => setCouponForm((prev) => ({ ...prev, maxRedemptions: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            title="Empty = unlimited redemptions globally"
-          />
-          <input
-            type="number"
-            min="1"
-            placeholder="Max per customer (optional)"
-            value={couponForm.maxRedemptionsPerUser}
-            onChange={(e) => setCouponForm((prev) => ({ ...prev, maxRedemptionsPerUser: e.target.value }))}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            title="Empty = unlimited uses per account"
-          />
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+        <p className="mt-1 text-xs text-gray-500 font-light mb-4">
+          Define standard promotional campaign parameters. These coupons display on active checkout promo lists.
+        </p>
+        <form onSubmit={saveCoupon} className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Code</label>
             <input
-              type="checkbox"
-              checked={couponForm.active}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, active: e.target.checked }))}
+              placeholder="e.g. FESTIVE15"
+              value={couponForm.code}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all disabled:bg-gray-100 disabled:text-gray-550"
+              required
+              disabled={editingCouponIsSpecial}
+              title={editingCouponIsSpecial ? "System-generated codes cannot be changed" : undefined}
             />
-            Active
-          </label>
-          <div className="md:col-span-3 flex items-center gap-2">
-            <button type="submit" className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
-              {editingCouponId ? "Update Coupon" : "Create Coupon"}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Type</label>
+            <select
+              value={couponForm.type}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, type: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+            >
+              <option value="percent">Percentage Off</option>
+              <option value="flat">Flat Discount</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discount Value</label>
+            <input
+              type="number"
+              min="1"
+              placeholder="e.g. 10 or 250"
+              value={couponForm.value}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, value: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Min Cart Value</label>
+            <input
+              type="number"
+              min="0"
+              placeholder="e.g. 1500"
+              value={couponForm.minCartValue}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, minCartValue: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Discount (Optional)</label>
+            <input
+              type="number"
+              min="0"
+              placeholder="e.g. 300"
+              value={couponForm.maxDiscount}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, maxDiscount: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Valid Until</label>
+            <input
+              type="date"
+              value={couponForm.endDate || ""}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+              title="Valid until (optional)"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Global Redemptions</label>
+            <input
+              type="number"
+              min="1"
+              placeholder="Unlimited if empty"
+              value={couponForm.maxRedemptions}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, maxRedemptions: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+              title="Empty = unlimited redemptions globally"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Uses Per Customer</label>
+            <input
+              type="number"
+              min="1"
+              placeholder="Unlimited if empty"
+              value={couponForm.maxRedemptionsPerUser}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, maxRedemptionsPerUser: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+              title="Empty = unlimited uses per account"
+            />
+          </div>
+          <div className="flex items-center pt-5">
+            <label className="flex items-center gap-2 text-xs text-gray-655 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={couponForm.active}
+                onChange={(e) => setCouponForm((prev) => ({ ...prev, active: e.target.checked }))}
+                className="rounded text-emerald-900 focus:ring-emerald-900 cursor-pointer"
+              />
+              <span className="font-medium text-gray-800">Coupon Active</span>
+            </label>
+          </div>
+        
+          <div className="md:col-span-3 flex items-center gap-2.5 pt-2">
+            <button
+              type="submit"
+              className="rounded-full bg-emerald-950 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-emerald-900 transition-all duration-300 hover-float"
+            >
+              {editingCouponId ? "Update Coupon Rule" : "Create Coupon"}
             </button>
             {editingCouponId ? (
               <button
@@ -2308,7 +2419,7 @@ const AdminDashboard = () => {
                   setEditingCouponIsSpecial(false);
                   setCouponForm(emptyCouponForm);
                 }}
-                className="rounded-full border border-gray-200 px-4 py-2 text-sm"
+                className="rounded-full border border-gray-200 bg-white/50 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 transition-all"
               >
                 Cancel
               </button>
@@ -2317,52 +2428,62 @@ const AdminDashboard = () => {
         </form>
       </div>
 
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">Manage Coupons</h3>
-        <p className="mt-1 text-sm text-gray-600">
-          Use &quot;Email customer&quot; to send any active coupon code by email (configure SMTP on the server).
+      <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
+        <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Manage Coupons</h3>
+        <p className="mt-1 text-xs text-gray-500 font-light mb-4">
+          Monitor campaign redemptions and usage stats. Use &quot;Email&quot; to send specific codes directly to customer inboxes.
         </p>
+        
         {couponEmailTargetId ? (
           <form
             onSubmit={submitCouponEmail}
-            className="mt-4 rounded-xl border border-sky-200 bg-sky-50/60 p-4"
+            className="mt-4 rounded-2xl border border-sky-100 bg-sky-50/20 p-5 animate-fade-in"
           >
-            <p className="text-sm font-semibold text-gray-900">
-              Email coupon{" "}
-              <span className="font-mono text-violet-800">
+            <p className="text-sm font-serif font-medium text-gray-900">
+              Email Coupon Code:{" "}
+              <span className="font-mono text-violet-800 font-semibold">
                 {coupons.find((c) => c._id === couponEmailTargetId)?.code || "—"}
               </span>
             </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <input
-                type="email"
-                required
-                placeholder="Customer email"
-                value={couponEmailForm.to}
-                onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, to: e.target.value }))}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                placeholder="Customer name (optional)"
-                value={couponEmailForm.customerName}
-                onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, customerName: e.target.value }))}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <textarea
-                placeholder="Personal note (optional)"
-                value={couponEmailForm.message}
-                onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, message: e.target.value }))}
-                rows={2}
-                className="sm:col-span-2 rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Customer Email</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="recipient@example.com"
+                  value={couponEmailForm.to}
+                  onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, to: e.target.value }))}
+                  className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Customer Name (Optional)</label>
+                <input
+                  placeholder="e.g. Sarah"
+                  value={couponEmailForm.customerName}
+                  onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, customerName: e.target.value }))}
+                  className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
+                />
+              </div>
+              <div className="sm:col-span-2 flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Personal Note (Optional)</label>
+                <textarea
+                  placeholder="Add a custom note to the email..."
+                  value={couponEmailForm.message}
+                  onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, message: e.target.value }))}
+                  rows={2}
+                  className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
+                />
+              </div>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2.5">
               <button
                 type="submit"
                 disabled={sendingCouponEmail}
-                className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-70"
+                className="rounded-full bg-sky-700 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-sky-600 transition-all disabled:opacity-70 hover-float"
               >
-                {sendingCouponEmail ? "Sending…" : "Send email"}
+                {sendingCouponEmail ? "Sending…" : "Send Email"}
               </button>
               <button
                 type="button"
@@ -2370,96 +2491,108 @@ const AdminDashboard = () => {
                   setCouponEmailTargetId("");
                   setCouponEmailForm(emptyCouponEmailForm);
                 }}
-                className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="rounded-full border border-gray-300 bg-white px-5 py-2 text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 transition-all"
               >
                 Cancel
               </button>
             </div>
           </form>
         ) : null}
-        <div className="mt-3 space-y-3 md:hidden">
+
+        <div className="mt-4 space-y-3 md:hidden">
           {coupons.map((coupon) => (
-            <article key={coupon._id} className="rounded-xl border border-gray-200 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-gray-900">{coupon.code}</p>
-                <div className="flex flex-wrap items-center gap-1">
+            <article key={coupon._id} className="rounded-2xl border border-gray-150/40 bg-white/50 p-4 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-serif font-bold text-gray-950 tracking-wide">{coupon.code}</span>
                   {coupon.isSpecial ? (
-                    <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-800">
+                    <span className="rounded-full bg-violet-50 border border-violet-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-violet-800">
                       Special
                     </span>
                   ) : null}
-                  <span className="text-xs uppercase text-gray-600">{coupon.type}</span>
                 </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{coupon.type}</span>
               </div>
-              <p className="mt-1 text-xs text-gray-600">
-                Value: {coupon.value} • Min Cart: INR {coupon.minCartValue}
-              </p>
-              <p className="text-xs text-gray-600">
-                Max Discount: {coupon.maxDiscount ? `INR ${coupon.maxDiscount}` : "-"} • {coupon.active ? "Active" : "Inactive"}
-              </p>
-              <p className="text-xs text-gray-700">{formatCouponUsage(coupon)}</p>
-              <p className="text-xs text-gray-600">
-                Valid until:{" "}
-                {coupon.endDate
-                  ? new Date(coupon.endDate).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : "No expiry"}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                <button onClick={() => startEditCoupon(coupon)} className="text-blue-600 hover:underline">
+              <div className="text-xs space-y-1 font-light text-gray-600">
+                <p>Value: <strong className="font-medium text-gray-900">{coupon.value}</strong> • Min Cart: INR {coupon.minCartValue}</p>
+                <p>Max Discount: {coupon.maxDiscount ? `INR ${coupon.maxDiscount}` : "None"} • Status: {coupon.active ? (
+                  <span className="font-semibold text-emerald-800">Active</span>
+                ) : (
+                  <span className="font-semibold text-gray-500">Inactive</span>
+                )}</p>
+                <p className="text-[11px] text-gray-500">{formatCouponUsage(coupon)}</p>
+                <p className="text-[11px] text-gray-400">
+                  Expiry:{" "}
+                  {coupon.endDate
+                    ? new Date(coupon.endDate).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "No expiry"}
+                </p>
+              </div>
+              <div className="mt-2.5 flex flex-wrap gap-4 border-t border-gray-100 pt-2.5 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => startEditCoupon(coupon)}
+                  className="text-emerald-800 hover:text-emerald-950 transition-colors"
+                >
                   Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => openCouponEmailPanel(coupon)}
                   disabled={!coupon.active}
-                  className="text-sky-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                  className="text-sky-800 hover:text-sky-950 transition-colors disabled:opacity-40"
                 >
-                  Email customer
+                  Email
                 </button>
-                <button onClick={() => removeCoupon(coupon._id)} className="text-red-600 hover:underline">
+                <button
+                  type="button"
+                  onClick={() => removeCoupon(coupon._id)}
+                  className="text-rose-800 hover:text-rose-950 transition-colors"
+                >
                   Delete
                 </button>
               </div>
             </article>
           ))}
-          {coupons.length === 0 ? <p className="text-sm text-gray-500">No coupons found.</p> : null}
+          {coupons.length === 0 ? <p className="text-xs text-gray-400 font-light">No coupons defined yet.</p> : null}
         </div>
-        <div className="mt-3 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[960px] text-left text-sm">
-            <thead className="text-gray-500">
-              <tr>
-                <th className="py-2">Code</th>
-                <th className="py-2">Type</th>
-                <th className="py-2">Value</th>
-                <th className="py-2">Min Cart</th>
-                <th className="py-2">Max Discount</th>
-                <th className="py-2">Paid usage</th>
-                <th className="py-2">Valid until</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Actions</th>
+
+        <div className="mt-4 hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[960px] text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-gray-150/40">
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Coupon Code</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Type</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Value</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Min Cart</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Max Discount</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Redemptions Status</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Valid Until</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Status</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {coupons.map((coupon) => (
-                <tr key={coupon._id} className="border-t border-gray-100">
-                  <td className="py-2">
-                    <span className="font-semibold">{coupon.code}</span>
+                <tr key={coupon._id} className="hover:bg-gray-50/40 transition-colors">
+                  <td className="py-3.5 pr-2">
+                    <span className="font-serif font-bold text-sm text-gray-955 tracking-wide">{coupon.code}</span>
                     {coupon.isSpecial ? (
-                      <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-800">
+                      <span className="ml-2 inline-flex rounded-full bg-violet-50 border border-violet-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-violet-800">
                         Special
                       </span>
                     ) : null}
                   </td>
-                  <td className="py-2 uppercase">{coupon.type}</td>
-                  <td className="py-2">{coupon.value}</td>
-                  <td className="py-2">INR {coupon.minCartValue}</td>
-                  <td className="py-2">{coupon.maxDiscount ? `INR ${coupon.maxDiscount}` : "-"}</td>
-                  <td className="max-w-[220px] py-2 text-xs text-gray-700">{formatCouponUsage(coupon)}</td>
-                  <td className="py-2 text-gray-700">
+                  <td className="py-3.5 px-1 uppercase font-light text-gray-500">{coupon.type}</td>
+                  <td className="py-3.5 px-1 font-semibold text-gray-955">{coupon.value}</td>
+                  <td className="py-3.5 px-1 font-light text-gray-650">INR {coupon.minCartValue}</td>
+                  <td className="py-3.5 px-1 font-light text-gray-650">{coupon.maxDiscount ? `INR ${coupon.maxDiscount}` : "—"}</td>
+                  <td className="max-w-[220px] py-3.5 px-1 text-xs text-gray-500 font-light">{formatCouponUsage(coupon)}</td>
+                  <td className="py-3.5 px-1 text-gray-500 font-light">
                     {coupon.endDate
                       ? new Date(coupon.endDate).toLocaleDateString("en-IN", {
                           day: "2-digit",
@@ -2468,21 +2601,39 @@ const AdminDashboard = () => {
                         })
                       : "—"}
                   </td>
-                  <td className="py-2">{coupon.active ? "Active" : "Inactive"}</td>
-                  <td className="py-2">
-                    <div className="flex flex-wrap gap-2">
-                      <button onClick={() => startEditCoupon(coupon)} className="text-blue-600 hover:underline">
+                  <td className="py-3.5 px-1">
+                    {coupon.active ? (
+                      <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full bg-gray-50 border border-gray-150/40 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500">
+                        Inactive
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3.5 pl-2 text-right">
+                    <div className="flex items-center justify-end gap-3.5 font-semibold text-xs">
+                      <button
+                        type="button"
+                        onClick={() => startEditCoupon(coupon)}
+                        className="text-emerald-800 hover:text-emerald-950 hover:underline transition-colors"
+                      >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => openCouponEmailPanel(coupon)}
                         disabled={!coupon.active}
-                        className="text-sky-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                        className="text-sky-800 hover:text-sky-950 hover:underline transition-colors disabled:opacity-40"
                       >
                         Email
                       </button>
-                      <button onClick={() => removeCoupon(coupon._id)} className="text-red-600 hover:underline">
+                      <button
+                        type="button"
+                        onClick={() => removeCoupon(coupon._id)}
+                        className="text-rose-800 hover:text-rose-950 hover:underline transition-colors"
+                      >
                         Delete
                       </button>
                     </div>
@@ -2491,8 +2642,8 @@ const AdminDashboard = () => {
               ))}
               {coupons.length === 0 ? (
                 <tr>
-                  <td className="py-4 text-gray-500" colSpan={9}>
-                    No coupons found.
+                  <td className="py-8 text-center text-gray-400 font-light" colSpan={9}>
+                    No coupons created yet. Use form above to add your first promotion.
                   </td>
                 </tr>
               ) : null}
@@ -2501,9 +2652,10 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">Product Categories</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
+      <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
+        <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Catalog Categories</h3>
+        <p className="mt-1 text-xs text-gray-500 font-light mb-4">Filter visible products below or set default category configuration for new entries.</p>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => {
@@ -2512,10 +2664,10 @@ const AdminDashboard = () => {
                 setForm((prev) => ({ ...prev, category: "" }));
               }
             }}
-            className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+            className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
               selectedCategory === "All"
-                ? "bg-emerald-600 text-white"
-                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                ? "bg-emerald-950 text-white border border-emerald-950 shadow-sm scale-102"
+                : "bg-white/50 border border-gray-200 text-gray-650 hover:border-emerald-950/40 hover:text-emerald-950 cursor-pointer"
             }`}
           >
             All ({products.length})
@@ -2537,10 +2689,10 @@ const AdminDashboard = () => {
                     setForm((prev) => ({ ...prev, category }));
                   }
                 }}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                   selectedCategory === category
-                    ? "bg-emerald-600 text-white"
-                    : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    ? "bg-emerald-950 text-white border border-emerald-950 shadow-sm scale-102"
+                    : "bg-white/50 border border-gray-200 text-gray-650 hover:border-emerald-950/40 hover:text-emerald-950 cursor-pointer"
                 }`}
               >
                 {category} ({count})
@@ -2582,11 +2734,11 @@ const AdminDashboard = () => {
               <option key={cat} value={cat} />
             ))}
           </datalist>
-          <div className="md:col-span-2 space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <div className="md:col-span-2 space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
               Select Categories (click to toggle multiple)
             </label>
-            <div className="flex flex-wrap gap-1.5 p-2.5 bg-gray-50 rounded-xl border border-gray-200 shadow-inner">
+            <div className="flex flex-wrap gap-2 p-3 bg-white/40 rounded-2xl border border-gray-200/40 shadow-inner">
               {productCategories.map((cat) => {
                 const isSelected = String(form.category || "")
                   .split(",")
@@ -2597,10 +2749,10 @@ const AdminDashboard = () => {
                     key={cat}
                     type="button"
                     onClick={() => handleToggleCategorySelection(cat)}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold tracking-wide transition cursor-pointer select-none ${
+                    className={`rounded-full px-3.5 py-1 text-xs transition cursor-pointer select-none border ${
                       isSelected
-                        ? "bg-emerald-600 text-white shadow-sm"
-                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-100"
+                        ? "bg-emerald-950 text-white border-emerald-950 shadow-sm font-semibold"
+                        : "bg-white/80 border-gray-200 text-gray-650 font-light hover:border-emerald-900/40 hover:text-emerald-900"
                     }`}
                   >
                     {isSelected ? `✓ ${cat}` : `+ ${cat}`}

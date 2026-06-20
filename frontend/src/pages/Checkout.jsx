@@ -336,15 +336,14 @@ const Checkout = () => {
       setPlacingOrder(false);
     }
   };
-
-  if (cartItems.length === 0) {
+   if (cartItems.length === 0) {
     return (
-      <section className="rounded-3xl border border-emerald-100 bg-white p-10 text-center shadow-sm">
-        <h2 className="text-2xl font-bold text-emerald-900">No items to checkout</h2>
-        <p className="mt-2 text-gray-600">Your cart is empty right now. Add gifts to continue.</p>
+      <section className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-12 text-center shadow-sm max-w-xl mx-auto">
+        <h2 className="text-2xl font-serif font-light text-gray-950">No items to checkout</h2>
+        <p className="mt-2.5 text-xs text-gray-500 font-light leading-relaxed">Your cart is empty right now. Add curated gifts to continue.</p>
         <Link
           to="/products"
-          className="mt-6 inline-flex rounded-full bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+          className="mt-6 inline-flex rounded-full bg-emerald-950 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 transition-all duration-300 shadow-sm"
         >
           Continue Shopping
         </Link>
@@ -353,68 +352,68 @@ const Checkout = () => {
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <section className="grid gap-8 lg:grid-cols-[1fr_340px] pb-16">
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm"
+        className="space-y-6 rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm"
       >
-        <div className="rounded-2xl bg-gradient-to-r from-emerald-900 to-teal-800 p-5 text-white">
-          <p className="text-xs uppercase tracking-[0.2em] text-emerald-100">Secure Checkout</p>
-          <h2 className="mt-2 text-2xl font-bold">Complete your order</h2>
-          <p className="mt-1 text-sm text-emerald-50">
-            Fast delivery, premium packaging and trusted Razorpay payments.
+        <div className="rounded-2xl bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 p-6 text-white shadow-sm">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-emerald-300">Secure Checkout</p>
+          <h2 className="mt-1.5 text-2xl font-serif font-light tracking-tight">Complete your order</h2>
+          <p className="mt-1 text-xs text-emerald-100/70 font-light">
+            Premium packaging, express delivery options, and secure Razorpay payment integrations.
           </p>
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-900">Delivery Address</h3>
+          <h3 className="text-sm font-serif font-semibold text-gray-950 border-b border-gray-100 pb-2">Delivery Address</h3>
 
           {hasSavedAddresses ? (
-            <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4">
-              <p className="mb-3 text-sm font-medium text-gray-700">Shipping to</p>
+            <div className="mt-4 rounded-2xl border border-gray-100 bg-white/60 p-4 shadow-sm">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Shipping to</p>
 
               {(() => {
                 const selectedAddr = savedAddresses.find(addr => addr._id === selectedAddressId) || savedAddresses.find(addr => addr.isDefault) || savedAddresses[0];
                 return (
-                  <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm shadow-sm">
+                  <div className="rounded-xl border border-gray-100 bg-white p-4 text-xs shadow-sm font-light text-gray-600 space-y-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-semibold text-gray-900">{selectedAddr.label}</span>
+                      <span className="font-semibold font-serif text-sm text-gray-950">{selectedAddr.label}</span>
                       {selectedAddr.isDefault && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        <span className="rounded-full bg-emerald-50 border border-emerald-100/40 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-800 tracking-wider">
                           Default
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-700 font-medium">{selectedAddr.fullName}</p>
-                    <p className="text-gray-700">{selectedAddr.line1}</p>
-                    <p className="text-gray-700">
+                    <p className="text-gray-900 font-medium">{selectedAddr.fullName}</p>
+                    <p>{selectedAddr.line1}</p>
+                    <p>
                       {selectedAddr.city}, {selectedAddr.state} {selectedAddr.postalCode}
                     </p>
-                    <p className="text-gray-700">{selectedAddr.country}</p>
-                    <p className="text-gray-700 mt-1">📞 {selectedAddr.phone}</p>
+                    <p>{selectedAddr.country}</p>
+                    <p className="text-gray-900 mt-1 font-normal">📞 {selectedAddr.phone}</p>
                   </div>
                 );
               })()}
 
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-500">
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
                   To change address, visit your{" "}
-                  <Link to="/my-profile" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                  <Link to="/my-profile" className="text-emerald-800 hover:text-emerald-950 font-bold transition-colors">
                     profile settings
                   </Link>
                 </p>
               </div>
             </div>
           ) : (
-            <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4">
-              <p className="mb-3 text-sm font-medium text-gray-800">Add delivery address</p>
-              <p className="text-sm text-gray-600 mb-3">
+            <div className="mt-4 rounded-2xl border border-gray-100 bg-white/60 p-4 shadow-sm">
+              <p className="mb-2 text-xs font-semibold text-gray-900">Add delivery address</p>
+              <p className="text-xs text-gray-500 font-light leading-relaxed mb-4">
                 No saved address found. Please add your address in profile, then return to complete order.
               </p>
               <Link
                 to="/my-profile"
                 state={{ activeTab: "addresses", openAddressForm: true, returnTo: "/checkout" }}
-                className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                className="inline-flex items-center rounded-full bg-emerald-950 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 transition-colors shadow-sm"
               >
                 Go to My Addresses
               </Link>
@@ -422,24 +421,24 @@ const Checkout = () => {
           )}
         </div>
 
-        <div className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50/50 to-emerald-100/30 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="rounded-2xl border border-amber-100/80 bg-amber-50/5 p-5 shadow-sm space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-100">
+              <svg className="w-4 h-4 text-amber-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-emerald-900">{"Coupons & offers"}</p>
-              <p className="text-xs text-emerald-700">Select an active coupon or enter a code below</p>
+              <p className="text-xs font-serif font-bold text-gray-950">{"Coupons & offers"}</p>
+              <p className="text-[10px] text-gray-400 font-light uppercase tracking-wider">Select an active coupon or enter a code below</p>
             </div>
           </div>
 
           {(couponsLoading || activeCoupons.length > 0) && (
-            <div className="mb-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-800">Active coupons</p>
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Active coupons</p>
               {couponsLoading ? (
-                <p className="text-xs text-emerald-700">Loading offers…</p>
+                <p className="text-xs text-amber-700 font-light">Loading offers…</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {activeCoupons.map((c) => {
@@ -452,27 +451,27 @@ const Checkout = () => {
                         <div
                           className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition ${
                             isApplied
-                              ? "border-emerald-400 bg-emerald-50/80"
+                              ? "border-emerald-450 bg-emerald-50/40"
                               : meetsMin
-                                ? "border-emerald-200 bg-white hover:border-emerald-300"
-                                : "border-gray-200 bg-gray-50/80"
+                                ? "border-gray-150 bg-white hover:border-amber-200/50"
+                                : "border-gray-100 bg-gray-50/50"
                           }`}
                         >
-                          <div className="min-w-0 flex-1">
-                            <p className="font-mono text-sm font-bold text-emerald-900">{c.code}</p>
-                            <p className="text-xs text-emerald-800">{formatCouponOfferLabel(c)}</p>
-                            <p className="mt-0.5 text-[11px] text-gray-600">
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <p className="font-mono text-xs font-bold text-emerald-950 tracking-wider">{c.code}</p>
+                            <p className="text-[11px] font-semibold text-emerald-800">{formatCouponOfferLabel(c)}</p>
+                            <p className="text-[10px] text-gray-400 font-light">
                               Min. order ₹{minCart}
                               {c.endDate ? ` · Valid till ${formatCouponEndDate(c.endDate)}` : ""}
                             </p>
                             {!meetsMin && !isApplied ? (
-                              <p className="mt-1 text-[11px] font-medium text-amber-700">
+                              <p className="text-[10px] font-semibold text-amber-700">
                                 Add ₹{Number(shortBy.toFixed(0))} more to use this coupon
                               </p>
                             ) : null}
                           </div>
                           {isApplied ? (
-                            <span className="shrink-0 rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold uppercase text-white">
+                            <span className="shrink-0 rounded-full bg-emerald-950 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-white">
                               Applied
                             </span>
                           ) : (
@@ -480,7 +479,7 @@ const Checkout = () => {
                               type="button"
                               onClick={() => applyCouponWithCode(c.code)}
                               disabled={applyingCoupon || !meetsMin}
-                              className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="shrink-0 rounded-full bg-emerald-950 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               Apply
                             </button>
@@ -494,80 +493,80 @@ const Checkout = () => {
             </div>
           )}
 
-          <p className="mb-2 text-xs font-medium text-emerald-800">Enter coupon code</p>
-          <div className="flex gap-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Enter coupon code</p>
+          <div className="flex gap-2">
             <input
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
               placeholder="Enter coupon code (e.g., GIFT10)"
-              className="flex-1 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm transition-all focus:border-emerald-500 focus:bg-emerald-50 focus:ring-2 focus:ring-emerald-500/20 placeholder:text-gray-400"
+              className="flex-1 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-xs transition-all focus:border-emerald-500 focus:bg-emerald-50 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
             />
             <button
               type="button"
               onClick={applyCoupon}
               disabled={applyingCoupon}
-              className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              className="rounded-full bg-emerald-950 px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-emerald-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
             >
               {applyingCoupon ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin mr-2" fill="none" viewBox="0 0 24 24">
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   Applying...
-                </>
+                </span>
               ) : (
                 "Apply"
               )}
             </button>
           </div>
           {couponError && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-red-600">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2 text-xs text-red-650 font-medium">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {couponError}
             </div>
           )}
           {info && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-emerald-700">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2 text-xs text-emerald-800 font-medium">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {info}
             </div>
           )}
           {couponData && (
-            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-100/50 p-3">
-              <div className="flex flex-wrap items-start justify-between gap-2 text-sm">
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-emerald-900">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-2 text-xs">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="font-semibold text-emerald-950">
                     {couponData.code ? (
                       <>
-                        <span className="rounded-md bg-white/90 px-2 py-0.5 font-mono text-xs tracking-wide text-emerald-900 ring-1 ring-emerald-200">
+                        <span className="rounded-md bg-white px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-emerald-900 ring-1 ring-emerald-100">
                           {couponData.code}
                         </span>
-                        <span className="ml-2 font-medium text-emerald-800">applied</span>
+                        <span className="ml-2 font-medium text-emerald-800">applied successfully</span>
                       </>
                     ) : (
                       <span className="font-medium text-emerald-800">Discount applied</span>
                     )}
                   </p>
-                  <div className="mt-1 flex items-center justify-between gap-3">
-                    <span className="text-xs text-emerald-700">{couponData.message}</span>
-                    <span className="shrink-0 font-bold text-emerald-700">-₹{couponData.discountAmount}</span>
+                  <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500 font-light">
+                    <span>{couponData.message}</span>
+                    <span className="shrink-0 font-bold text-emerald-800">-₹{couponData.discountAmount}</span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={removeCoupon}
-                  className="shrink-0 rounded-lg border border-emerald-300/80 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50"
+                  className="shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-red-500 hover:text-red-750 transition-colors"
                 >
                   Remove
                 </button>
               </div>
               {couponData.couponEndDate ? (
-                <p className="mt-2 inline-flex items-center rounded-full border border-emerald-300/80 bg-white/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
+                <p className="mt-2.5 inline-flex items-center rounded-full border border-emerald-100 bg-white px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
                   Coupon valid until {formatCouponEndDate(couponData.couponEndDate)}
                 </p>
               ) : null}
@@ -575,50 +574,50 @@ const Checkout = () => {
           )}
         </div>
 
-        {error ? <p className="text-sm text-red-500">{error}</p> : null}
-        {info ? <p className="text-sm text-emerald-700">{info}</p> : null}
+        {error ? <p className="text-xs text-red-650 font-medium">{error}</p> : null}
+        {info ? <p className="text-xs text-emerald-800 font-medium">{info}</p> : null}
 
         <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl border border-emerald-100 bg-white px-3 py-2 text-center text-xs font-medium text-emerald-800">100% Secure Payment</div>
-          <div className="rounded-xl border border-emerald-100 bg-white px-3 py-2 text-center text-xs font-medium text-emerald-800">Premium Gift Packaging</div>
-          <div className="rounded-xl border border-emerald-100 bg-white px-3 py-2 text-center text-xs font-medium text-emerald-800">Fast Delivery Support</div>
+          <div className="rounded-xl border border-gray-100 bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gray-400">100% Secure Payment</div>
+          <div className="rounded-xl border border-gray-100 bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gray-400">Premium Packaging</div>
+          <div className="rounded-xl border border-gray-100 bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gray-400">Fast Delivery Support</div>
         </div>
 
         <button
           type="submit"
           disabled={placingOrder}
-          className="w-full rounded-full bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
+          className="w-full rounded-full bg-emerald-950 px-5 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-75 transition-all duration-300 shadow-sm"
         >
-          {placingOrder ? "Processing payment..." : "Pay now"}
+          {placingOrder ? "Processing secure payment..." : "Pay now"}
         </button>
       </form>
 
-      <aside className="h-fit rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-bold text-emerald-900">Order Summary</h3>
-        <ul className="mt-3 space-y-2 text-sm text-gray-700">
+      <aside className="h-fit rounded-3xl border border-gray-200/40 bg-white/60 p-5 shadow-sm backdrop-blur-sm">
+        <h3 className="text-sm font-serif font-semibold text-gray-950 border-b border-gray-100 pb-2">Order Summary</h3>
+        <ul className="mt-3.5 space-y-2.5 text-xs text-gray-600 font-light border-b border-gray-100 pb-3.5">
           {cartItems.map((item) => (
-            <li key={item._id} className="flex items-center justify-between gap-2">
-              <span className="max-w-[180px] truncate">{item.name} x {item.quantity}</span>
-              <span className="font-medium">INR {item.price * item.quantity}</span>
+            <li key={item._id} className="flex items-center justify-between gap-3">
+              <span className="truncate max-w-[170px]">{item.name} x {item.quantity}</span>
+              <span className="font-semibold font-serif text-gray-900">INR {item.price * item.quantity}</span>
             </li>
           ))}
         </ul>
-        <div className="mt-4 space-y-2 border-t border-emerald-100 pt-3 text-sm text-gray-700">
+        <div className="mt-3.5 space-y-2.5 text-xs text-gray-500 font-light border-b border-gray-100 pb-3.5">
           <p className="flex items-center justify-between">
             <span>Subtotal</span>
-            <span>INR {subtotal}</span>
+            <span className="font-semibold text-gray-800">INR {subtotal}</span>
           </p>
           <p className="flex items-center justify-between">
             <span>Discount</span>
-            <span className="text-emerald-700">- INR {discountAmount}</span>
-          </p>
-          <p className="flex items-center justify-between text-base font-semibold text-emerald-900">
-            <span>Total</span>
-            <span>INR {finalTotal}</span>
+            <span className="text-emerald-800 font-bold">- INR {discountAmount}</span>
           </p>
         </div>
-        <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-          By proceeding, you agree to our shipping and return policy.
+        <div className="mt-3.5 flex items-center justify-between text-sm font-semibold text-gray-950">
+          <span>Total Price</span>
+          <span className="font-serif text-base">INR {finalTotal}</span>
+        </div>
+        <p className="mt-5 rounded-xl bg-gray-50/50 border border-gray-100/50 px-3 py-2.5 text-[10px] text-gray-400 leading-normal font-light">
+          By completing this checkout, you agree to our shipping, cancellation and returns policy guidelines.
         </p>
       </aside>
     </section>

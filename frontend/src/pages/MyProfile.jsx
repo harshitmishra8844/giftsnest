@@ -4,10 +4,10 @@ import api from "../services/api";
 import { clearUserAuth, getUserAuth, saveUserAuth } from "../services/userAuth";
 
 const tabClass = (active) =>
-  `rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition duration-300 ${
+  `rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition duration-300 ${
     active
-      ? "bg-emerald-700 text-white shadow-md shadow-emerald-700/10 scale-[1.02]"
-      : "bg-emerald-50/50 text-emerald-800 hover:bg-emerald-100 hover:text-emerald-900 border border-emerald-100/40"
+      ? "bg-emerald-950 text-white shadow-sm scale-[1.02]"
+      : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-gray-200"
   }`;
 
 const trackingSteps = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered"];
@@ -435,44 +435,44 @@ const MyProfile = () => {
         <div className="space-y-6">
           {/* Stats Grid */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="bg-white border border-emerald-100/40 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-300 hover:scale-[1.01]">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Total Orders</p>
-              <h3 className="mt-2 text-3xl font-bold text-gray-900">{orders.length}</h3>
-              <p className="text-xs text-gray-400 mt-1">Surprises placed to date</p>
+            <div className="rounded-3xl border border-gray-200 bg-white/70 backdrop-blur-md p-6 shadow-sm hover:shadow-md transition duration-300 hover:scale-[1.01]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Orders</p>
+              <h3 className="mt-2 text-3xl font-serif font-light text-gray-900">{orders.length}</h3>
+              <p className="text-[10px] text-gray-400 mt-1">Surprises placed to date</p>
             </div>
-            <div className="bg-white border border-emerald-100/40 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-300 hover:scale-[1.01]">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Active Orders</p>
-              <h3 className="mt-2 text-3xl font-bold text-emerald-700">{activeOrdersCount}</h3>
-              <p className="text-xs text-gray-400 mt-1">Preparing & on their way</p>
+            <div className="rounded-3xl border border-gray-200 bg-white/70 backdrop-blur-md p-6 shadow-sm hover:shadow-md transition duration-300 hover:scale-[1.01]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Orders</p>
+              <h3 className="mt-2 text-3xl font-serif font-light text-emerald-800">{activeOrdersCount}</h3>
+              <p className="text-[10px] text-gray-400 mt-1">Preparing & on their way</p>
             </div>
-            <div className="bg-white border border-emerald-100/40 rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-300 hover:scale-[1.01]">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Saved Addresses</p>
-              <h3 className="mt-2 text-3xl font-bold text-gray-900">{addresses.length}</h3>
-              <p className="text-xs text-gray-400 mt-1">Registered delivery options</p>
+            <div className="rounded-3xl border border-gray-200 bg-white/70 backdrop-blur-md p-6 shadow-sm hover:shadow-md transition duration-300 hover:scale-[1.01]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Saved Addresses</p>
+              <h3 className="mt-2 text-3xl font-serif font-light text-gray-900">{addresses.length}</h3>
+              <p className="text-[10px] text-gray-400 mt-1">Registered delivery options</p>
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             {/* Recent Activity Card */}
-            <div className="bg-white border border-emerald-100/40 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div className="rounded-3xl border border-gray-200 bg-white/70 backdrop-blur-md p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300">
               <div>
-                <h3 className="text-lg font-bold text-emerald-950 mb-3">Recent Activity</h3>
+                <h3 className="text-base font-serif font-semibold text-gray-950 mb-3">Recent Activity</h3>
                 {latestOrder ? (
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-gray-900">Order #{getOrderDisplayId(latestOrder)}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(latestOrder.status)}`}>
+                      <span className="text-sm font-bold text-gray-950">Order #{getOrderDisplayId(latestOrder)}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${getStatusColor(latestOrder.status)}`}>
                         {latestOrder.status}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-600">Total Price: <span className="font-semibold text-gray-800">INR {latestOrder.totalPrice}</span></p>
-                    <p className="text-xs text-gray-500">Placed on {new Date(latestOrder.createdAt).toLocaleDateString("en-IN")}</p>
+                    <p className="text-xs text-gray-500 font-light">Total Price: <span className="font-semibold font-serif text-gray-900">INR {latestOrder.totalPrice}</span></p>
+                    <p className="text-[10px] text-gray-400 font-light">Placed on {new Date(latestOrder.createdAt).toLocaleDateString("en-IN")}</p>
                     
                     {/* Tiny Progress Tracker */}
                     <div className="pt-2">
                       <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className="h-1.5 bg-emerald-600 rounded-full"
+                          className="h-1.5 bg-emerald-950 rounded-full"
                           style={{
                             width:
                               latestOrder.status === "Cancelled" ? "100%" :
@@ -486,63 +486,64 @@ const MyProfile = () => {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600">No orders placed yet. Explore our curated catalog to make some memories!</p>
+                  <p className="text-xs text-gray-500 font-light leading-relaxed">No orders placed yet. Explore our catalog to make memories!</p>
                 )}
               </div>
               <button
                 onClick={() => setActiveTab("orders")}
-                className="mt-6 text-sm font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1.5 w-fit bg-transparent border-0 cursor-pointer"
+                className="mt-6 text-xs font-bold uppercase tracking-widest text-emerald-800 hover:text-emerald-950 inline-flex items-center gap-1.5 w-fit bg-transparent border-0 cursor-pointer"
               >
                 View all orders &rarr;
-                       {/* Default Address Card */}
-            <div className="bg-white border border-emerald-100 p-6 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-emerald-50/20 via-white to-white">
+              </button>
+            </div>
+
+            {/* Default Address Card */}
+            <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300 relative overflow-hidden bg-gradient-to-br from-emerald-50/5 via-white to-white">
               <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
               <div>
-                <h3 className="text-lg font-bold text-emerald-955 mb-4 flex items-center gap-2">
-                  <span>📍</span> Default Shipping Address
+                <h3 className="text-base font-serif font-semibold text-gray-950 mb-3 flex items-center gap-2">
+                  <span>📍</span> Shipping Destination
                 </h3>
                 {defaultAddress ? (
-                  <div className="space-y-3 text-sm text-gray-600">
+                  <div className="space-y-3 text-xs text-gray-500 font-light">
                     <div className="flex items-center gap-2 mb-1">
                       {(() => {
                         const opt = addressLabelOptions.find((o) => o.label === defaultAddress.label) || { icon: "📍", color: "bg-emerald-50 text-emerald-800 border-emerald-100" };
                         return (
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${opt.color}`}>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase border tracking-wider ${opt.color}`}>
                             <span>{opt.icon}</span>
                             <span>{defaultAddress.label}</span>
                           </span>
                         );
                       })()}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-sm border border-emerald-500 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-950 text-white shadow-sm border border-emerald-900 uppercase tracking-wider">
                         ✨ Default
                       </span>
                     </div>
-                    <p className="font-bold text-gray-900 text-base leading-tight">{defaultAddress.fullName}</p>
+                    <p className="font-bold text-gray-950 text-sm leading-tight font-serif">{defaultAddress.fullName}</p>
                     <div className="flex items-start gap-1.5 pt-0.5">
-                      <span className="text-gray-400 mt-0.5">📍</span>
                       <div className="leading-relaxed">
-                        <p className="text-gray-700">{defaultAddress.line1}</p>
-                        <p className="font-semibold text-gray-800 mt-0.5">
-                          {defaultAddress.city}, {defaultAddress.state} - <span className="font-extrabold text-gray-900">{defaultAddress.postalCode}</span>
+                        <p>{defaultAddress.line1}</p>
+                        <p className="font-semibold text-gray-700 mt-0.5">
+                          {defaultAddress.city}, {defaultAddress.state} - <span className="font-extrabold text-gray-900 font-sans">{defaultAddress.postalCode}</span>
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 pt-2 border-t border-gray-50 text-gray-850">
-                      <span className="text-gray-400">📞</span>
-                      <span className="font-bold text-sm">{defaultAddress.phone}</span>
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100/50 text-gray-800 font-normal">
+                      <span>📞</span>
+                      <span className="font-bold">{defaultAddress.phone}</span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600">No default shipping address set. Save a shipping address for faster ordering.</p>
+                  <p className="text-xs text-gray-500 font-light leading-relaxed">No default shipping address set. Save a shipping address for faster ordering.</p>
                 )}
               </div>
               <button
                 onClick={() => setActiveTab("addresses")}
-                className="mt-6 text-sm font-bold text-emerald-700 hover:text-emerald-850 inline-flex items-center gap-1.5 w-fit bg-transparent border-0 cursor-pointer hover:underline"
+                className="mt-6 text-xs font-bold uppercase tracking-widest text-emerald-800 hover:text-emerald-950 inline-flex items-center gap-1.5 w-fit bg-transparent border-0 cursor-pointer"
               >
                 Manage addresses &rarr;
               </button>
-            </div>        </button>
             </div>
           </div>
         </div>
@@ -735,7 +736,7 @@ const MyProfile = () => {
               </div>
 
               <form onSubmit={handleSaveAddress} className="space-y-6">
-                <div className="rounded-2xl border border-gray-150 bg-gray-50/30 p-5 space-y-4">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/30 p-5 space-y-4">
                   <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Select Address Type</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                     {addressLabelOptions.map((option) => (
@@ -769,7 +770,7 @@ const MyProfile = () => {
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-gray-150 bg-gray-50/30 p-5 space-y-4">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/30 p-5 space-y-4">
                   <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Contact Information</h3>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
@@ -801,7 +802,7 @@ const MyProfile = () => {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-gray-150 bg-gray-50/30 p-5 space-y-4">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/30 p-5 space-y-4">
                   <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Address Details</h3>
                   <div className="space-y-4">
                     <div>
@@ -874,7 +875,7 @@ const MyProfile = () => {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-gray-150 bg-gray-50/30 p-5">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/30 p-5">
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
@@ -992,7 +993,7 @@ const MyProfile = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteAddress(address._id)}
-                      className="inline-flex items-center justify-center rounded-xl border border-red-250 bg-red-50 p-2.5 text-red-650 transition hover:bg-red-100 hover:text-red-750 cursor-pointer"
+                      className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 p-2.5 text-red-600 transition hover:bg-red-100 hover:text-red-700 cursor-pointer"
                     >
                       <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1009,7 +1010,7 @@ const MyProfile = () => {
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-3xl">
                 📍
               </div>
-              <h3 className="text-lg font-bold text-emerald-955 mb-1">No delivery addresses saved</h3>
+              <h3 className="text-lg font-bold text-emerald-950 mb-1">No delivery addresses saved</h3>
               <p className="text-sm text-gray-600 mb-6">Create your first shipping details to save time on your next checkout.</p>
               <button
                 onClick={handleAddAddress}
@@ -1265,7 +1266,7 @@ const MyProfile = () => {
           {/* FAQs Accordion */}
           <div className="bg-white border border-emerald-100/40 p-6 md:p-8 rounded-3xl shadow-sm">
             <h3 className="text-lg font-bold text-emerald-950 mb-4">Frequently Asked Questions</h3>
-            <div className="divide-y divide-gray-150">
+            <div className="divide-y divide-gray-200">
               {faqs.map((faq, idx) => {
                 const isOpen = openFaqIndex === idx;
                 return (
