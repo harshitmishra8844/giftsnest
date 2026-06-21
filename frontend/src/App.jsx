@@ -136,6 +136,19 @@ function App() {
     };
   }, [mobileMenuOpen]);
 
+  // Reset mobile menu state on window resize (e.g. orientation change)
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#faf8f5]">
       <header className="sticky top-0 z-20 backdrop-blur-md bg-white/75 border-b border-gray-200/40 shadow-sm transition-all duration-300">
@@ -234,93 +247,98 @@ function App() {
             </div>
 
           </div>
-          {mobileMenuOpen ? (
-            <>
-              {/* Backdrop overlay */}
-              <div
-                onClick={() => setMobileMenuOpen(false)}
-                className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm animate-fade-in-backdrop md:hidden"
-              />
-              {/* Slide-in drawer */}
-              <div
-                className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-[#faf8f5] shadow-2xl p-6 md:hidden flex flex-col justify-between animate-slide-in-right border-l border-emerald-100/20"
-              >
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-gray-200/40 pb-4">
-                    <span className="text-lg font-serif font-bold tracking-wider text-emerald-950">Menu</span>
-                    <button
-                      type="button"
-                      onClick={() => setMobileMenuOpen(false)}
-                      aria-label="Close menu"
-                      className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  
-                  <nav className="flex flex-col gap-3">
-                    <NavLink
-                      to="/"
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
-                          isActive
-                            ? "bg-emerald-900 text-white shadow-sm"
-                            : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
-                        }`
-                      }
-                    >
-                      Home
-                    </NavLink>
-                    <NavLink
-                      to="/products"
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
-                          isActive
-                            ? "bg-emerald-900 text-white shadow-sm"
-                            : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
-                        }`
-                      }
-                    >
-                      Products
-                    </NavLink>
-                    <NavLink
-                      to="/about"
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
-                          isActive
-                            ? "bg-emerald-900 text-white shadow-sm"
-                            : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
-                        }`
-                      }
-                    >
-                      About Us
-                    </NavLink>
-                    <NavLink
-                      to="/my-profile"
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
-                          isActive
-                            ? "bg-emerald-900 text-white shadow-sm"
-                            : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
-                        }`
-                      }
-                    >
-                      My Profile
-                    </NavLink>
-                  </nav>
-                </div>
-
-                <div className="border-t border-gray-200/40 pt-4 text-center">
-                  <p className="text-[10px] uppercase tracking-wider text-emerald-800 font-bold">Niyora Gifts</p>
-                  <p className="text-[9px] text-gray-400 mt-1">Curated with love</p>
-                </div>
-              </div>
-            </>
-          ) : null}
         </div>
       </header>
+
+      {mobileMenuOpen ? (
+        <>
+          {/* Backdrop overlay */}
+          <div
+            onClick={() => setMobileMenuOpen(false)}
+            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm animate-fade-in-backdrop md:hidden"
+          />
+          {/* Slide-in drawer */}
+          <div
+            className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-[#faf8f5] shadow-2xl p-6 md:hidden flex flex-col justify-between animate-slide-in-right border-l border-emerald-100/20"
+          >
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-gray-200/40 pb-4">
+                <span className="text-lg font-serif font-bold tracking-wider text-emerald-950">Menu</span>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <nav className="flex flex-col gap-3">
+                <NavLink
+                  to="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
+                      isActive
+                        ? "bg-emerald-900 text-white shadow-sm"
+                        : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
+                    }`
+                  }
+                >
+                  Home
+                </NavLink>
+                <NavLink
+                  to="/products"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
+                      isActive
+                        ? "bg-emerald-900 text-white shadow-sm"
+                        : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
+                    }`
+                  }
+                >
+                  Products
+                </NavLink>
+                <NavLink
+                  to="/about"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
+                      isActive
+                        ? "bg-emerald-900 text-white shadow-sm"
+                        : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
+                    }`
+                  }
+                >
+                  About Us
+                </NavLink>
+                <NavLink
+                  to="/my-profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
+                      isActive
+                        ? "bg-emerald-900 text-white shadow-sm"
+                        : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
+                    }`
+                  }
+                >
+                  My Profile
+                </NavLink>
+              </nav>
+            </div>
+
+            <div className="border-t border-gray-200/40 pt-4 text-center">
+              <p className="text-[10px] uppercase tracking-wider text-emerald-800 font-bold">Niyora Gifts</p>
+              <p className="text-[9px] text-gray-400 mt-1">Curated with love</p>
+            </div>
+          </div>
+        </>
+      ) : null}
 
       <main className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-10 page-enter">
         <Routes>
