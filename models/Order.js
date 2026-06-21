@@ -86,6 +86,11 @@ const orderSchema = new mongoose.Schema(
       enum: ["Pending", "Paid", "Failed"],
       default: "Pending",
     },
+    paymentMethod: {
+      type: String,
+      enum: ["Online", "COD"],
+      default: "Online",
+    },
     trackingId: {
       type: String,
       default: "",

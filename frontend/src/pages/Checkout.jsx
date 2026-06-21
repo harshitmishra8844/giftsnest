@@ -53,6 +53,7 @@ const Checkout = () => {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [activeCoupons, setActiveCoupons] = useState([]);
   const [couponsLoading, setCouponsLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("Online");
   const userAuth = getUserAuth();
 
   useEffect(() => {
@@ -242,10 +243,23 @@ const Checkout = () => {
         totalPrice: finalTotal,
         couponCode,
         address: orderAddress,
+        paymentMethod,
       };
 
       const { data } = await api.post("/orders", payload);
       const appOrder = data.order;
+
+      if (paymentMethod === "COD") {
+        clearCart();
+        navigate("/cart", {
+          state: {
+            orderSuccess: `Order placed successfully (Cash on Delivery). Order ID: ${getOrderDisplayId(appOrder)}`,
+          },
+        });
+        setPlacingOrder(false);
+        return;
+      }
+
       setInfo("Order created. Opening secure payment...");
 
       const scriptLoaded = await loadRazorpayScript();
@@ -421,6 +435,52 @@ const Checkout = () => {
           )}
         </div>
 
+        <div className="rounded-3xl border border-gray-200/40 bg-white/70 p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-3 border-b border-gray-100 pb-2.5">
+            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center border border-emerald-100/40">
+              <svg className="w-4 h-4 text-emerald-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-serif font-semibold text-gray-950">Payment Method</h3>
+              <p className="text-[10px] text-gray-400 font-light uppercase tracking-wider">Choose your preferred checkout mode</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all duration-300 ${paymentMethod === "Online" ? "border-emerald-500 bg-emerald-50/15 shadow-sm ring-2 ring-emerald-500/10" : "border-gray-150 bg-white hover:border-emerald-300/40 hover:bg-gray-50/40"}`}>
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="Online"
+                checked={paymentMethod === "Online"}
+                onChange={() => setPaymentMethod("Online")}
+                className="mt-0.5 accent-emerald-950"
+              />
+              <div className="text-left">
+                <p className="text-xs font-semibold text-gray-950">Online Payment</p>
+                <p className="text-[10px] text-gray-400 font-light leading-relaxed mt-1">Pay securely via UPI, Card, NetBanking or Wallets using Razorpay.</p>
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all duration-300 ${paymentMethod === "COD" ? "border-emerald-500 bg-emerald-50/15 shadow-sm ring-2 ring-emerald-500/10" : "border-gray-150 bg-white hover:border-emerald-300/40 hover:bg-gray-50/40"}`}>
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="COD"
+                checked={paymentMethod === "COD"}
+                onChange={() => setPaymentMethod("COD")}
+                className="mt-0.5 accent-emerald-950"
+              />
+              <div className="text-left">
+                <p className="text-xs font-semibold text-gray-950">Cash on Delivery (COD)</p>
+                <p className="text-[10px] text-gray-400 font-light leading-relaxed mt-1">Place order now and pay with cash or digital options at the time of delivery.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-amber-100/80 bg-amber-50/5 p-5 shadow-sm space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-100">
@@ -588,7 +648,10 @@ const Checkout = () => {
           disabled={placingOrder}
           className="w-full rounded-full bg-emerald-950 px-5 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-75 transition-all duration-300 shadow-sm"
         >
-          {placingOrder ? "Processing secure payment..." : "Pay now"}
+          {placingOrder 
+            ? (paymentMethod === "COD" ? "Placing your order..." : "Processing secure payment...") 
+            : (paymentMethod === "COD" ? `Place COD Order (INR ${finalTotal})` : "Pay now")
+          }
         </button>
       </form>
 

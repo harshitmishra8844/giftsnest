@@ -171,7 +171,7 @@ const applyCoupon = async (req, res) => {
 
 const createOrder = async (req, res) => {
   try {
-    const { products, address, couponCode } = req.body;
+    const { products, address, couponCode, paymentMethod = "Online" } = req.body;
     const userId = req.user?._id;
     if (!userId) {
       return res.status(401).json({ message: "Login required to place order" });
@@ -234,7 +234,8 @@ const createOrder = async (req, res) => {
           couponCode: couponSummary.code,
           totalPrice: couponSummary.finalTotal,
           address,
-          status: "Pending",
+          status: paymentMethod === "COD" ? "Order Confirmed" : "Pending",
+          paymentMethod,
         });
       } catch (dbError) {
         // Retry only if orderCode uniqueness collides.
@@ -246,6 +247,16 @@ const createOrder = async (req, res) => {
 
     if (!order) {
       return res.status(500).json({ message: "Failed to generate a unique order ID" });
+    }
+
+    if (paymentMethod === "COD") {
+      const { decrementStockForPaidOrder } = require("../services/inventoryService");
+      const { sendOrderNotificationToAdmin } = require("../services/orderEmail");
+      
+      await decrementStockForPaidOrder(order);
+      sendOrderNotificationToAdmin(order).catch((mailErr) => {
+        console.error("[email] Failed to send admin order notification email for COD order:", mailErr);
+      });
     }
 
     return res.status(201).json({
