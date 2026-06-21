@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const razorpay = require("../config/razorpay");
 const Order = require("../models/Order");
 const { decrementStockForPaidOrder } = require("../services/inventoryService");
+const { sendOrderNotificationToAdmin } = require("../services/orderEmail");
 
 const isRazorpayDemoMode = () => {
   if (process.env.NODE_ENV === "production") return false;
@@ -107,6 +108,9 @@ const completeDemoPayment = async (req, res) => {
 
     if (!wasAlreadyPaid) {
       await decrementStockForPaidOrder(updatedOrder);
+      sendOrderNotificationToAdmin(updatedOrder).catch((mailErr) => {
+        console.error("[email] Failed to send admin order notification email in completeDemoPayment:", mailErr);
+      });
     }
 
     return res.status(200).json({ message: "Demo payment completed", order: updatedOrder });
@@ -166,6 +170,9 @@ const verifyPayment = async (req, res) => {
 
     if (!wasAlreadyPaid) {
       await decrementStockForPaidOrder(updatedOrder);
+      sendOrderNotificationToAdmin(updatedOrder).catch((mailErr) => {
+        console.error("[email] Failed to send admin order notification email in verifyPayment:", mailErr);
+      });
     }
 
     return res.status(200).json({ message: "Payment verified successfully", order: updatedOrder });
