@@ -210,7 +210,7 @@ Apply this code at checkout. Thank you for shopping with us!
 </html>`;
 
   return {
-    subject: `Your Niyora Gifts coupon: ${code}`,
+    subject: `Your ${activeStoreName} coupon`,
     text,
     html,
   };
