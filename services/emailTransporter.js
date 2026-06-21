@@ -256,7 +256,8 @@ const sendViaResend = async (mailOptions, config) => {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = new Error(`Resend send failed: ${response.status} ${response.statusText}`);
+    const detail = data && data.message ? ` - ${data.message}` : "";
+    const error = new Error(`Resend send failed: ${response.status} ${response.statusText}${detail}`);
     error.code = "RESEND_SEND_FAILED";
     error.response = data;
     throw error;
