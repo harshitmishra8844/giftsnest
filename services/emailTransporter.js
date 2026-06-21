@@ -226,8 +226,25 @@ const sendViaResend = async (mailOptions, config) => {
   }
 
   const fromEmail = config.resendFrom || config.from || `no-reply@${String(process.env.DOMAIN || "example.com").trim()}`;
+  
+  let displayName = "Niyora Gifts";
+  if (mailOptions.from) {
+    const match = String(mailOptions.from).match(/^"([^"]+)"/);
+    if (match) {
+      displayName = match[1];
+    } else {
+      const matchNoQuotes = String(mailOptions.from).match(/^([^<@]+)/);
+      if (matchNoQuotes) {
+        const trimmed = matchNoQuotes[1].trim();
+        if (trimmed) {
+          displayName = trimmed;
+        }
+      }
+    }
+  }
+
   const body = {
-    from: fromEmail,
+    from: `"${displayName}" <${fromEmail}>`,
     to: mailOptions.to,
     subject: mailOptions.subject,
   };
