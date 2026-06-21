@@ -139,8 +139,19 @@ const generateSpecialCoupon = async (req, res) => {
           emailSent = true;
         } catch (mailErr) {
           console.error("Special coupon email error:", mailErr);
-          emailWarning =
-            `Coupon was created but the email could not be sent: ${mailErr.message || mailErr}. Use "Email customer" in Manage coupons to try again.`;
+          if (mailErr && mailErr.code === "EMAIL_NOT_CONFIGURED") {
+            emailWarning =
+              "Coupon was created but the email was not sent because email delivery is not configured. Configure SMTP, Resend, or Brevo in the backend and retry using Email customer.";
+          } else if (mailErr && mailErr.code === "RESEND_SEND_FAILED") {
+            emailWarning =
+              `Coupon was created but customer email delivery failed via Resend: ${mailErr.message || "Unknown error"}. Use \"Email customer\" in Manage coupons to try again.`;
+          } else if (mailErr && mailErr.code === "BREVO_SEND_FAILED") {
+            emailWarning =
+              `Coupon was created but customer email delivery failed via Brevo: ${mailErr.message || "Unknown error"}. Use \"Email customer\" in Manage coupons to try again.`;
+          } else {
+            emailWarning =
+              `Coupon was created but the email could not be sent: ${mailErr.message || mailErr}. Use \"Email customer\" in Manage coupons to try again.`;
+          }
         }
       }
     }

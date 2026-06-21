@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const StoreSetting = require("../models/StoreSetting");
 const { generateToken } = require("./authController");
-const { getSmtpConfig, isSmtpConfigured, verifyEmailTransporter } = require("../services/emailTransporter");
+const { getSmtpConfig, isSmtpConfigured, isEmailConfigured, verifyEmailTransporter } = require("../services/emailTransporter");
 
 const defaultOffers = [
   {
@@ -173,8 +173,11 @@ const updateStoreInfo = async (req, res) => {
 const getEmailDiagnostics = async (req, res) => {
   try {
     const smtpConfig = getSmtpConfig();
+    const emailConfigured = isEmailConfigured();
     const smtpConfigured = isSmtpConfigured();
     const diagnostics = {
+      emailConfigured,
+      emailProvider: smtpConfig.provider || null,
       smtpConfigured,
       smtpHost: smtpConfig.host || null,
       smtpPort: smtpConfig.port,
@@ -182,6 +185,8 @@ const getEmailDiagnostics = async (req, res) => {
       smtpUserLoaded: Boolean(smtpConfig.user),
       smtpPassLoaded: Boolean(smtpConfig.pass),
       smtpFrom: smtpConfig.from || null,
+      resendConfigured: smtpConfig.resendConfigured,
+      brevoConfigured: smtpConfig.brevoConfigured,
       smtpConnectionTimeoutMs: smtpConfig.connectionTimeout,
       smtpGreetingTimeoutMs: smtpConfig.greetingTimeout,
       smtpSocketTimeoutMs: smtpConfig.socketTimeout,
@@ -191,9 +196,9 @@ const getEmailDiagnostics = async (req, res) => {
       environment: process.env.NODE_ENV || "<unset>",
     };
 
-    if (!smtpConfigured) {
+    if (!emailConfigured) {
       return res.status(200).json({
-        message: "SMTP settings are not fully configured.",
+        message: "Email provider is not configured. Configure SMTP, Resend, or Brevo.",
         diagnostics,
       });
     }

@@ -58,14 +58,15 @@ const logSmtpStartupInfo = () => {
     host: smtpConfig.host || "<missing>",
     port: smtpConfig.port,
     secure: smtpConfig.secure,
-    credentialsLoaded: smtpConfig.credentialsLoaded,
+    hasCredentials: smtpConfig.hasCredentials,
+    provider: smtpConfig.provider || "<none>",
     isGmail: smtpConfig.isGmail,
     connectionTimeout: smtpConfig.connectionTimeout,
     greetingTimeout: smtpConfig.greetingTimeout,
     socketTimeout: smtpConfig.socketTimeout,
   });
-  if (!smtpConfig.credentialsLoaded) {
-    console.warn("[startup] SMTP credentials are not fully configured. Email sending will be disabled in production.");
+  if (!smtpConfig.hasCredentials && !smtpConfig.resendConfigured && !smtpConfig.brevoConfigured) {
+    console.warn("[startup] Email provider is not configured in production. Configure SMTP, Resend, or Brevo.");
   }
 };
 

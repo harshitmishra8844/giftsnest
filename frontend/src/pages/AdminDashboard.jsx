@@ -50,7 +50,7 @@ const emptySpecialCouponForm = {
   endDate: "",
   active: true,
   maxRedemptions: "",
-  maxRedemptionsPerUser: "1",
+  maxRedemptionsPerUser: "",
   customerEmail: "",
   customerName: "",
   emailMessage: "",

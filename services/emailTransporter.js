@@ -437,10 +437,16 @@ const isSmtpConfigured = () => {
   return config.hasCredentials;
 };
 
+const isEmailConfigured = () => {
+  const config = getSmtpConfig();
+  return Boolean(config.provider);
+};
+
 module.exports = {
   getTransporter,
   verifyEmailTransporter,
   sendMailWithRetries,
   isSmtpConfigured,
+  isEmailConfigured,
   getSmtpConfig,
 };
