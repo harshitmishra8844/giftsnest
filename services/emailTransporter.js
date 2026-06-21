@@ -1,4 +1,6 @@
 const nodemailer = require("nodemailer");
+let smtpFailedVerification = false;
+
 
 const getEnvValue = (...names) => {
   for (const name of names) {
@@ -77,8 +79,9 @@ const getSmtpConfig = () => {
     invalidPort,
     hasCredentials: Boolean(host && user && pass && !invalidPort),
     isGmail: smtpHostIsGmail,
-    provider: Boolean(host && user && pass && !invalidPort) ? "smtp" : Boolean(resendApiKey && resendFrom) ? "resend" : Boolean(brevoApiKey) ? "brevo" : undefined,
+    provider: (Boolean(host && user && pass && !invalidPort) && !smtpFailedVerification) ? "smtp" : Boolean(resendApiKey && resendFrom) ? "resend" : Boolean(brevoApiKey) ? "brevo" : undefined,
   };
+
 };
 
 let sharedTransporter = null;
@@ -148,7 +151,7 @@ const createTestTransporter = async () => {
 const getTransporter = async () => {
   if (sharedTransporter) return sharedTransporter;
   const config = getSmtpConfig();
-  if (config.hasCredentials) {
+  if (config.hasCredentials && !smtpFailedVerification) {
     sharedTransporter = await createSmtpTransporter(config);
     return sharedTransporter;
   }
@@ -181,14 +184,20 @@ const verifyEmailTransporter = async () => {
   }
 
   console.info("[email] Verifying SMTP transporter connection...");
-  const result = await transporter.verify();
-  console.info("[email] SMTP transporter verification succeeded", { verified: result });
+  try {
+    const result = await transporter.verify();
+    console.info("[email] SMTP transporter verification succeeded", { verified: result });
 
-  if (config.isGmail) {
-    console.warn("[email] Gmail SMTP detected. For Render production, Gmail SMTP is fragile and may time out. Consider Resend, Brevo, or a dedicated SMTP relay provider.");
+    if (config.isGmail) {
+      console.warn("[email] Gmail SMTP detected. For Render production, Gmail SMTP is fragile and may time out. Consider Resend, Brevo, or a dedicated SMTP relay provider.");
+    }
+
+    return result;
+  } catch (error) {
+    smtpFailedVerification = true;
+    sharedTransporter = null;
+    throw error;
   }
-
-  return result;
 };
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
