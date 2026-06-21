@@ -227,7 +227,7 @@ const sendViaResend = async (mailOptions, config) => {
 
   const fromEmail = config.resendFrom || config.from || `no-reply@${String(process.env.DOMAIN || "example.com").trim()}`;
   
-  let displayName = "Niyora Gifts";
+  let displayName = "NiyoraGifts";
   if (mailOptions.from) {
     const match = String(mailOptions.from).match(/^"([^"]+)"/);
     if (match) {

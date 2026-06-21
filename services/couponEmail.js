@@ -250,7 +250,7 @@ const sendCouponEmailToCustomer = async (coupon, { to, customerName, personalNot
   const from = fromAddress || defaultFrom;
 
   const mailOptions = {
-    from: `"Niyora Gifts" <${from}>`,
+    from: `"NiyoraGifts" <${from}>`,
     to: String(to).trim(),
     subject,
     text,
