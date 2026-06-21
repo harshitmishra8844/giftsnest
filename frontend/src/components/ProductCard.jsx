@@ -82,11 +82,11 @@ const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
         </div>
       </button>
 
-      <div className="grid grid-cols-2 gap-2 border-t border-gray-100 bg-gray-50/30 p-4 mt-auto">
+      <div className="grid grid-cols-2 gap-2 border-t border-gray-100 bg-gray-50/30 p-3 mt-auto">
         <button
           type="button"
           onClick={openDetails}
-          className="rounded-full border border-gray-200 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+          className="rounded-full border border-gray-200 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 truncate"
         >
           Explore
         </button>
@@ -107,7 +107,7 @@ const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
             type="button"
             onClick={handleAdd}
             disabled={outOfStock}
-            className="rounded-full bg-emerald-950 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition-all duration-200 hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
+            className="rounded-full bg-emerald-950 px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-white transition-all duration-200 hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm truncate"
           >
             {outOfStock ? "Sold out" : recentlyAdded ? "Added ✓" : "Add to Cart"}
           </button>

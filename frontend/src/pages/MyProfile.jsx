@@ -4,7 +4,7 @@ import api from "../services/api";
 import { clearUserAuth, getUserAuth, saveUserAuth } from "../services/userAuth";
 
 const tabClass = (active) =>
-  `rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition duration-300 ${
+  `shrink-0 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition duration-300 ${
     active
       ? "bg-emerald-950 text-white shadow-sm scale-[1.02]"
       : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-gray-200"
@@ -394,7 +394,7 @@ const MyProfile = () => {
       </div>
 
       {/* Tabs Menu */}
-      <div className="bg-white/60 backdrop-blur-md p-1.5 rounded-full border border-emerald-100/50 shadow-sm flex flex-wrap gap-1 w-fit">
+      <div className="bg-white/60 backdrop-blur-md p-1.5 rounded-3xl md:rounded-full border border-emerald-100/50 shadow-sm flex overflow-x-auto md:flex-wrap gap-1 w-full md:w-fit no-scrollbar whitespace-nowrap scroll-smooth">
         <button onClick={() => setActiveTab("overview")} className={tabClass(activeTab === "overview")}>Overview</button>
         <button onClick={() => setActiveTab("orders")} className={tabClass(activeTab === "orders")}>My Orders</button>
         <button onClick={() => setActiveTab("addresses")} className={tabClass(activeTab === "addresses")}>My Addresses</button>

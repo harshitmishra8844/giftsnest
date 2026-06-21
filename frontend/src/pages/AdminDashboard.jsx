@@ -2815,7 +2815,7 @@ const AdminDashboard = () => {
       <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
         <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Catalog Categories</h3>
         <p className="mt-1 text-xs text-gray-500 font-light mb-4">Filter visible products below or set default category configuration for new entries.</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1 whitespace-nowrap scroll-smooth w-full">
           <button
             type="button"
             onClick={() => {
@@ -2824,7 +2824,7 @@ const AdminDashboard = () => {
                 setForm((prev) => ({ ...prev, category: "" }));
               }
             }}
-            className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+            className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
               selectedCategory === "All"
                 ? "bg-emerald-950 text-white border border-emerald-950 shadow-sm scale-102"
                 : "bg-white/50 border border-gray-200 text-gray-650 hover:border-emerald-950/40 hover:text-emerald-950 cursor-pointer"
@@ -2849,7 +2849,7 @@ const AdminDashboard = () => {
                     setForm((prev) => ({ ...prev, category }));
                   }
                 }}
-                className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                   selectedCategory === category
                     ? "bg-emerald-950 text-white border border-emerald-950 shadow-sm scale-102"
                     : "bg-white/50 border border-gray-200 text-gray-650 hover:border-emerald-950/40 hover:text-emerald-950 cursor-pointer"
@@ -3226,13 +3226,13 @@ const AdminDashboard = () => {
 
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
         <h3 className="text-lg font-semibold text-gray-900">Manage Orders</h3>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex overflow-x-auto items-center gap-2 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
           {["all", "active", "archived"].map((view) => (
             <button
               key={view}
               type="button"
               onClick={() => setOrderViewFilter(view)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
                 orderViewFilter === view
                   ? "bg-emerald-600 text-white"
                   : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
@@ -3248,7 +3248,7 @@ const AdminDashboard = () => {
           <select
             value={orderStatusFilter}
             onChange={(e) => setOrderStatusFilter(e.target.value)}
-            className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800"
+            className="shrink-0 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800"
             aria-label="Filter orders by status"
             title="Filter orders by status"
           >

@@ -231,15 +231,15 @@ const Home = () => {
           <div className="w-12 h-0.5 bg-amber-400 mx-auto mt-3 rounded" />
         </div>
 
-        <div className="mt-10 flex flex-wrap justify-center gap-6 md:gap-8">
+        <div className="mt-10 flex overflow-x-auto gap-4 no-scrollbar pb-4 -mx-4 px-4 md:grid md:grid-cols-6 md:justify-center md:gap-6 lg:gap-8 md:mx-0 md:px-0 scroll-smooth">
           {quickCategories.map((category) => (
             <Link
               key={category.name}
               to={`/products?category=${encodeURIComponent(category.name)}`}
-              className="group flex flex-col items-center gap-3 transition"
+              className="group flex flex-col items-center gap-3 transition shrink-0"
             >
               <div 
-                className="relative w-[130px] h-[130px] md:w-[150px] md:h-[150px] overflow-hidden rounded-full shadow-md border-4 border-white group-hover:border-amber-300 shadow-gray-200/80 transition-all duration-500 hover:-translate-y-1"
+                className="relative w-[110px] h-[110px] sm:w-[130px] sm:h-[130px] md:w-full md:aspect-square overflow-hidden rounded-full shadow-md border-4 border-white group-hover:border-amber-300 shadow-gray-200/80 transition-all duration-500 hover:-translate-y-1"
                 style={{ backgroundImage: `url(${category.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
               >
                 <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors duration-300" />

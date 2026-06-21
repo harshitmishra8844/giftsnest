@@ -1041,7 +1041,7 @@ const ProductDetails = () => {
         `}
       </style>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-100 bg-white/95 backdrop-blur-md p-3.5 shadow-lg md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-100 bg-white/95 backdrop-blur-md p-3.5 shadow-lg hidden sm:block md:hidden">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold font-serif text-gray-950">INR {product.price}</p>
@@ -1083,6 +1083,39 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Sticky Bottom Actions for Mobile viewports */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200/50 bg-white/95 backdrop-blur-md px-4 py-3.5 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] flex gap-3 sm:hidden">
+        {!product.isPersonalized && cartQuantity > 0 ? (
+          <QuantityStepper
+            quantity={cartQuantity}
+            onDecrease={handleDecreaseQty}
+            onIncrease={handleIncreaseQty}
+            increaseDisabled={outOfStock || reachedMaxStock}
+            decreaseAriaLabel={`Decrease ${product.name} quantity`}
+            increaseAriaLabel={`Increase ${product.name} quantity`}
+            className="rounded-full border-gray-200 bg-white flex-1"
+          />
+        ) : (
+          <button
+            type="button"
+            disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
+            onClick={handleAddToCart}
+            className="flex-1 rounded-full bg-amber-600 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 truncate"
+          >
+            {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
+          onClick={handleBuyNow}
+          className="flex-1 rounded-full bg-emerald-950 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 truncate"
+        >
+          Buy Now
+        </button>
+      </div>
+
       <CartToast message={toastMessage} onClose={() => setToastMessage("")} />
     </section>
   );

@@ -150,7 +150,7 @@ const Products = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex overflow-x-auto gap-2.5 no-scrollbar pb-3 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap whitespace-nowrap scroll-smooth">
         {categoryChips.map((chip) => {
           const isSelected = selectedCategory === chip;
           return (
@@ -166,7 +166,7 @@ const Products = () => {
                 }
                 navigate({ search: params.toString() }, { replace: true });
               }}
-              className={`rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition duration-300 cursor-pointer ${
+              className={`rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition duration-300 cursor-pointer shrink-0 ${
                 isSelected
                   ? "bg-emerald-950 text-white shadow-md"
                   : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
