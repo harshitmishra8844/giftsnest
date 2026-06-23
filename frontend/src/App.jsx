@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { NavLink, Route, Routes, Link, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -20,6 +20,7 @@ import { getUserAuth } from "./services/userAuth";
 import SearchBar from "./components/search/SearchBar";
 import { mockGiftProducts, trendingSearches } from "./data/mockGiftProducts";
 import api from "./services/api";
+import SEO from "./components/SEO";
 
 
 const UserProtectedRoute = ({ children }) => {
@@ -38,6 +39,78 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Centralized SEO default mappings
+  const seoData = useMemo(() => {
+    const path = location.pathname;
+    const searchParams = new URLSearchParams(location.search);
+    
+    // Default fallback
+    let title = "Niyora Gifts | Luxury Curated Gifting";
+    let description = "Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful, lasting memory.";
+    
+    if (path === "/") {
+      title = "Home | Niyora Gifts";
+      description = "Niyora Gifts is India's leading luxury curated gifting portal. Buy premium personalized gifts, anniversary gifts, flowers, cakes, and plants.";
+    } else if (path === "/about") {
+      title = "About Us | Niyora Gifts";
+      description = "Discover the story of Niyora Gifts. Learn about our commitment to luxury curated gifting, premium quality, and personalized celebrations.";
+    } else if (path === "/products") {
+      const category = searchParams.get("category");
+      if (category) {
+        const formattedCat = category
+          .split("-")
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+        title = `${formattedCat} Gifts | Niyora Gifts`;
+        description = `Browse our exclusive collection of luxury ${formattedCat.toLowerCase()} and curated items for celebrations.`;
+      } else {
+        title = "Curated Gifts Collection | Niyora Gifts";
+        description = "Browse our exclusive collection of luxury flowers, cakes, personalized mugs, and curated gifts for every celebration.";
+      }
+    } else if (path === "/cart") {
+      title = "Cart | Niyora Gifts";
+      description = "Review your luxury curated gifts, select personalization options, and prepare to place your order on Niyora Gifts.";
+    } else if (path === "/checkout") {
+      title = "Checkout | Niyora Gifts";
+      description = "Complete your purchase securely. Enter shipping address, payment details, and complete order fulfillment at Niyora Gifts.";
+    } else if (path === "/login") {
+      title = "Login | Niyora Gifts";
+      description = "Access your account on Niyora Gifts to manage orders, customize products, track delivery status, and view special offers.";
+    } else if (path === "/my-profile") {
+      title = "My Account | Niyora Gifts";
+      description = "Manage your profile, check order status history, submit returns, and chat with the help concierge.";
+    } else if (path === "/track-order") {
+      title = "Order Tracking | Niyora Gifts";
+      description = "Enter your order code or tracking ID to check the shipping status, dispatch times, and courier details of your gift.";
+    } else if (path === "/shipping-policy") {
+      title = "Shipping Policy | Niyora Gifts";
+      description = "Read about Niyora Gifts' delivery times, priority prep services, midnight deliveries, and shipping rates across cities.";
+    } else if (path === "/returns-refunds") {
+      title = "Returns & Refunds | Niyora Gifts";
+      description = "Review our policy on returns, refunds, damaged product checks, and custom gift replacements at Niyora Gifts.";
+    } else if (path === "/personalized-mug") {
+      title = "Personalized Mug | Niyora Gifts";
+      description = "Create a custom personalized ceramic mug. Upload photos, add bespoke text, and choose premium gift packaging.";
+    } else if (path === "/add-product") {
+      title = "Add Product | Niyora Gifts";
+      description = "Inventory item creation form for catalog management.";
+    } else if (path === "/niyora-admin-portal-2026/login") {
+      title = "Admin Login | Niyora Gifts Admin";
+      description = "Secure executive login portal to access Niyora Gifts administrative controls.";
+    }
+    
+    return { title, description };
+  }, [location.pathname, location.search]);
+
+  const isDynamicRoute = useMemo(() => {
+    const path = location.pathname;
+    return (
+      (path.startsWith("/products/") && path !== "/products") ||
+      path.startsWith("/niyora-admin-portal-2026/dashboard")
+    );
+  }, [location.pathname]);
+  const isAdminRoute = location.pathname.startsWith("/niyora-admin-portal-2026") || location.pathname.startsWith("/admin");
 
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [subStatus, setSubStatus] = useState("idle"); // idle, loading, success, error
@@ -150,8 +223,10 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-ivory">
-      <header className="sticky top-0 z-20 backdrop-blur-lg bg-white/85 border-b border-champagne/40 shadow-xs transition-all duration-300">
+    <div className={isAdminRoute ? "min-h-screen bg-[#FAF7F2] font-sans" : "min-h-screen bg-ivory"}>
+      {!isDynamicRoute && <SEO title={seoData.title} description={seoData.description} />}
+      {!isAdminRoute && (
+        <header className="sticky top-0 z-20 backdrop-blur-lg bg-white/85 border-b border-champagne/40 shadow-xs transition-all duration-300">
         <div className="mx-auto w-full max-w-7xl px-4 py-3 md:px-8">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between lg:gap-6">
             <div className="flex items-center justify-between min-w-[150px] shrink-0">
@@ -249,8 +324,9 @@ function App() {
           </div>
         </div>
       </header>
+      )}
 
-      {mobileMenuOpen ? (
+      {!isAdminRoute && mobileMenuOpen ? (
         <>
           {/* Backdrop overlay */}
           <div
@@ -340,7 +416,7 @@ function App() {
         </>
       ) : null}
 
-      <main className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-10 page-enter">
+      <main className={isAdminRoute ? "min-h-screen w-full bg-[#FAF7F2]" : "mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-10 page-enter"}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -365,8 +441,12 @@ function App() {
             }
           />
           <Route path="/add-product" element={<AddProduct />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
+          <Route path="/admin/login" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
+          <Route path="/admin/dashboard" element={<Navigate to="/niyora-admin-portal-2026/dashboard" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
+          <Route path="/niyora-admin-portal-2026/login" element={<AdminLogin />} />
+          <Route path="/niyora-admin-portal-2026/dashboard" element={<AdminDashboard />} />
           <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/shipping-policy" element={<ShippingPolicy />} />
           <Route path="/returns-refunds" element={<ReturnsRefunds />} />
@@ -374,7 +454,8 @@ function App() {
         </Routes>
       </main>
 
-      <footer className="mt-16 bg-luxury-black text-gray-300 border-t border-gold-500/20">
+      {!isAdminRoute && (
+        <footer className="mt-16 bg-luxury-black text-gray-300 border-t border-gold-500/20">
         <div className="mx-auto w-full max-w-7xl px-4 py-16 md:px-8">
           <div className="grid gap-10 md:grid-cols-12">
             <div className="md:col-span-4 space-y-4">
@@ -410,7 +491,6 @@ function App() {
                 <li><Link to="/products" className="hover:text-gold-500 transition">Products</Link></li>
                 <li><Link to="/cart" className="hover:text-gold-500 transition">Cart</Link></li>
                 <li><Link to="/my-profile" className="hover:text-gold-500 transition">My Profile</Link></li>
-                <li><Link to="/admin/login" className="hover:text-gold-500 transition">Admin Login</Link></li>
               </ul>
             </div>
 
@@ -476,6 +556,7 @@ function App() {
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 }

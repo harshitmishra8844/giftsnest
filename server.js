@@ -20,17 +20,23 @@ const roleRoutes = require("./routes/roleRoutes");
 const departmentRoutes = require("./routes/departmentRoutes");
 const logRoutes = require("./routes/logRoutes");
 const ticketRoutes = require("./routes/ticketRoutes");
+const returnRoutes = require("./routes/returnRoutes");
+const emailRoutes = require("./routes/emailRoutes");
 const { getStoreInfo } = require("./controllers/adminController");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { verifyEmailTransporter, getSmtpConfig } = require("./services/emailTransporter");
 
 const app = express();
 
+const { securityHeaders, csrfProtection } = require("./middleware/securityMiddleware");
 
 // ✅ FINAL CORS FIX (WORKS 100%)
 app.use(cors({
   origin: "*",
 }));
+
+app.use(securityHeaders);
+app.use(csrfProtection);
 
 
 app.use(express.json({ limit: '10mb' }));
@@ -56,6 +62,9 @@ app.use("/api/admin/logs", logRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/tickets", ticketRoutes);
+app.use("/api/returns", returnRoutes);
+app.use("/api/admin/emails", emailRoutes);
+
 
 app.use(notFound);
 app.use(errorHandler);
@@ -85,6 +94,8 @@ const startServer = async () => {
     await connectDB();
     const { seedDB } = require("./services/seedService");
     await seedDB();
+    const { startEmailWorker } = require("./services/emailService");
+    startEmailWorker();
     logSmtpStartupInfo();
 
     if (process.env.NODE_ENV === "production") {

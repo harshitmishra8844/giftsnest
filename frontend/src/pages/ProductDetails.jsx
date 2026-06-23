@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import api from "../services/api";
+import api, { resolveMediaUrl } from "../services/api";
 import { useCart } from "../context/CartContext";
 import { getUserAuth } from "../services/userAuth";
 import QuantityStepper from "../components/QuantityStepper";
 import CartToast from "../components/CartToast";
+import SEO from "../components/SEO";
 
 const ProductDetails = () => {
   const { idOrSlug } = useParams();
@@ -460,6 +461,11 @@ const ProductDetails = () => {
 
   return (
     <section className="space-y-8 pb-24 md:pb-0">
+      <SEO
+        title={`${product?.name || "Product Details"} | Niyora Gifts`}
+        description={product?.description || "Curated premium gifting collections."}
+        image={resolveMediaUrl(product?.image)}
+      />
       <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs md:p-10">
         <div className="mb-6 text-[10px] font-extrabold uppercase tracking-[0.25em] text-text-secondary">
           <Link to="/products" className="hover:text-gold-600 transition-colors">Products</Link>
@@ -494,7 +500,7 @@ const ProductDetails = () => {
               onTouchEnd={handleImageTouchEnd}
             >
               <img
-                src={activeImage || "https://via.placeholder.com/900x700?text=Niyora+Gifts"}
+                src={resolveMediaUrl(activeImage) || "https://via.placeholder.com/900x700?text=Niyora+Gifts"}
                 alt={product.name}
                 className="max-h-full max-w-full cursor-zoom-in rounded-xl object-contain transition-all duration-500 ease-out group-hover:scale-[1.05]"
                 style={{ transformOrigin: zoomOrigin }}
@@ -542,7 +548,7 @@ const ProductDetails = () => {
                         : "border-champagne hover:scale-[1.01] hover:border-gold-300"
                     }`}
                   >
-                    <img src={imageUrl} alt={product.name} className="max-h-full max-w-full object-contain transition duration-200 hover:brightness-105" />
+                    <img src={resolveMediaUrl(imageUrl)} alt={product.name} className="max-h-full max-w-full object-contain transition duration-200 hover:brightness-105" />
                   </button>
                 ))}
               </div>
@@ -672,7 +678,7 @@ const ProductDetails = () => {
                             </div>
                           ) : (
                             <>
-                              <img src={customImage} alt="Custom Preview" className="max-h-full max-w-full object-contain rounded-lg" />
+                              <img src={resolveMediaUrl(customImage)} alt="Custom Preview" className="max-h-full max-w-full object-contain rounded-lg" />
                               <button
                                 type="button"
                                 onClick={() => setCustomImage("")}
@@ -897,7 +903,7 @@ const ProductDetails = () => {
           <h2 className="text-lg font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-3">Related Products</h2>
           <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {relatedProducts.map((item) => {
-              const cardImage = item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=Niyora+Gifts";
+              const cardImage = resolveMediaUrl(item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=Niyora+Gifts");
               const itemQuantity = cartQuantityById[item._id] || 0;
               return (
                 <article key={item._id} className="group rounded-2xl border border-champagne/45 bg-white p-3 shadow-xs hover:shadow-md hover:border-gold-300/40 transition-all duration-300 flex flex-col justify-between">
@@ -947,7 +953,7 @@ const ProductDetails = () => {
           <h2 className="text-lg font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-3">Recently Viewed</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {recentlyViewedProducts.map((item) => {
-              const cardImage = item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=Niyora+Gifts";
+              const cardImage = resolveMediaUrl(item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=Niyora+Gifts");
               const itemQuantity = cartQuantityById[item._id] || 0;
               return (
                 <article key={item._id} className="group rounded-2xl border border-champagne/45 bg-white p-3 shadow-xs hover:shadow-md hover:border-gold-300/40 transition-all duration-300 flex flex-col justify-between">

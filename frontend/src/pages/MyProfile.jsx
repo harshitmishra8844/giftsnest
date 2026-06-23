@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import api from "../services/api";
+import api, { resolveMediaUrl } from "../services/api";
 import { clearUserAuth, getUserAuth, saveUserAuth } from "../services/userAuth";
 
 const tabClass = (active) =>
@@ -115,6 +115,39 @@ const MyProfile = () => {
   const [replyMessage, setReplyMessage] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
 
+  // Return request states
+  const [returnsList, setReturnsList] = useState([]);
+  const [loadingReturns, setLoadingReturns] = useState(false);
+  const [selectedReturn, setSelectedReturn] = useState(null);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnOrder, setReturnOrder] = useState(null);
+  const [selectedReturnItems, setSelectedReturnItems] = useState({}); // { productId: true/false }
+  const [returnItemQuantities, setReturnItemQuantities] = useState({}); // { productId: qty }
+  const [returnReason, setReturnReason] = useState("");
+  const [returnDescription, setReturnDescription] = useState("");
+  const [returnResolution, setReturnResolution] = useState("Refund");
+  const [returnImages, setReturnImages] = useState([]); // [ { url, publicId } ]
+  const [returnVideo, setReturnVideo] = useState(null); // { url, publicId }
+  const [returnPolicyChecked, setReturnPolicyChecked] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  // Chat attachment states
+  const [chatAttachment, setChatAttachment] = useState(null); // { name, url, fileType }
+  const [uploadingChatAttachment, setUploadingChatAttachment] = useState(false);
+
+  const fetchReturns = async () => {
+    try {
+      setLoadingReturns(true);
+      setError("");
+      const { data } = await api.get("/returns/my");
+      setReturnsList(data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load returns.");
+    } finally {
+      setLoadingReturns(false);
+    }
+  };
+
   const fetchTickets = async () => {
     try {
       setLoadingTickets(true);
@@ -181,12 +214,17 @@ const MyProfile = () => {
     try {
       setSendingReply(true);
       setError("");
-      const { data } = await api.post(`/tickets/my/${selectedTicket._id}/messages`, {
+      const payload = {
         message: replyMessage,
-      });
+      };
+      if (chatAttachment) {
+        payload.attachments = [chatAttachment];
+      }
+      const { data } = await api.post(`/tickets/my/${selectedTicket._id}/messages`, payload);
       setSelectedTicket(data);
       setTickets((prev) => prev.map((t) => (t._id === data._id ? data : t)));
       setReplyMessage("");
+      setChatAttachment(null);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to send message.");
     } finally {
@@ -194,9 +232,154 @@ const MyProfile = () => {
     }
   };
 
+  const openReturnModal = (order) => {
+    setReturnOrder(order);
+    setReturnReason("");
+    setReturnDescription("");
+    setReturnResolution("Refund");
+    setReturnImages([]);
+    setReturnVideo(null);
+    setReturnPolicyChecked(false);
+    setError("");
+    setSuccessMessage("");
+    
+    // Select all items by default
+    const itemsSelection = {};
+    const itemsQtys = {};
+    order.products.forEach((p) => {
+      const key = p.productId || p._id;
+      itemsSelection[key] = true;
+      itemsQtys[key] = p.quantity || 1;
+    });
+    setSelectedReturnItems(itemsSelection);
+    setReturnItemQuantities(itemsQtys);
+    
+    setReturnModalOpen(true);
+  };
+
+  const handleReturnFileUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    
+    const formData = new FormData();
+    setUploadingFiles(true);
+    setError("");
+
+    const isVideo = e.target.name === "video";
+    if (isVideo) {
+      formData.append("video", files[0]);
+    } else {
+      for (let i = 0; i < files.length; i++) {
+        formData.append("images", files[i]);
+      }
+    }
+
+    try {
+      const { data } = await api.post("/returns/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (isVideo) {
+        setReturnVideo(data.video);
+      } else {
+        setReturnImages((prev) => [...prev, ...data.images]);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "File upload failed.");
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const handleChatAttachmentUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("attachment", file);
+    setUploadingChatAttachment(true);
+    setError("");
+
+    try {
+      const { data } = await api.post("/returns/upload-attachment", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setChatAttachment({
+        name: data.name,
+        url: data.url,
+        fileType: data.fileType,
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || "Attachment upload failed.");
+    } finally {
+      setUploadingChatAttachment(false);
+    }
+  };
+
+  const handleReturnSubmit = async (e) => {
+    e.preventDefault();
+    if (!returnReason) {
+      setError("Please select a return reason.");
+      return;
+    }
+    if (!returnDescription.trim()) {
+      setError("Please provide a detailed description.");
+      return;
+    }
+    if (!returnPolicyChecked) {
+      setError("You must agree to the Return Policy.");
+      return;
+    }
+
+    const selectedItems = returnOrder.products.filter(p => selectedReturnItems[p.productId || p._id]);
+    if (selectedItems.length === 0) {
+      setError("Please select at least one item to return.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+      setSuccessMessage("");
+      
+      const payload = {
+        orderId: returnOrder._id,
+        items: selectedItems.map(p => {
+          const key = p.productId || p._id;
+          return {
+            productId: key,
+            name: p.name,
+            price: p.price,
+            quantity: returnItemQuantities[key] || 1,
+            image: p.image || "",
+          };
+        }),
+        reason: returnReason,
+        description: returnDescription.trim(),
+        images: returnImages,
+        video: returnVideo || undefined,
+        preferredResolution: returnResolution,
+      };
+
+      const { data } = await api.post("/returns", payload);
+      setSuccessMessage(data.message || "Return request submitted successfully!");
+      setReturnModalOpen(false);
+      setReturnOrder(null);
+      
+      // Refresh lists
+      await Promise.all([fetchReturns(), fetchTickets(), api.get("/orders/my").then(res => setOrders(res.data))]);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to submit return request.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === "help" && auth?.token) {
       fetchTickets();
+    }
+    if (activeTab === "returns" && auth?.token) {
+      fetchReturns();
     }
   }, [activeTab, auth]);
 
@@ -219,6 +402,31 @@ const MyProfile = () => {
     if (["Shipped", "Delivered", "Cancelled"].includes(order.status)) return false;
     if (order.cancellationRequest?.status === "Pending") return false;
     return true;
+  };
+
+  const canRequestReturn = (order) => {
+    if (!order) return false;
+    if (order.status !== "Delivered") return false;
+    
+    // Check if there is already a return request for this order
+    const hasExisting = returnsList.some((ret) => {
+      const orderId = ret.order?._id || ret.order;
+      return orderId === order._id;
+    });
+    if (hasExisting) return false;
+    
+    // Check 7-day return window from updatedAt
+    const deliveryDate = new Date(order.updatedAt);
+    const diffTime = Math.abs(new Date() - deliveryDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  };
+
+  const getOrderReturn = (orderId) => {
+    return returnsList.find((ret) => {
+      const oid = ret.order?._id || ret.order;
+      return oid === orderId;
+    });
   };
 
   const openCancelModal = (order) => {
@@ -284,12 +492,14 @@ const MyProfile = () => {
         setLoading(true);
         setError("");
         setSuccessMessage("");
-        const [ordersRes, addressesRes] = await Promise.all([
+        const [ordersRes, addressesRes, returnsRes] = await Promise.all([
           api.get("/orders/my"),
           api.get("/user/addresses"),
+          api.get("/returns/my"),
         ]);
         setOrders(ordersRes.data);
         setAddresses(addressesRes.data);
+        setReturnsList(returnsRes.data);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load your profile data");
       } finally {
@@ -463,6 +673,590 @@ const MyProfile = () => {
     }
   };
 
+  const getReturnStatusColor = (status) => {
+    switch (status) {
+      case "Return Requested":
+        return "bg-amber-50 text-amber-800 border-amber-200/40";
+      case "Under Review":
+        return "bg-blue-50 text-blue-800 border-blue-200/40";
+      case "Approved":
+      case "Refunded":
+      case "Completed":
+        return "bg-gold-50 text-gold-800 border-gold-200/45";
+      case "Pickup Scheduled":
+      case "Product Received":
+      case "Refund Processing":
+      case "Replacement Shipped":
+        return "bg-purple-50 text-purple-800 border-purple-200/40";
+      case "Rejected":
+        return "bg-red-50 text-red-800 border-red-200/40";
+      default:
+        return "bg-gray-50 text-gray-800 border-gray-200/40";
+    }
+  };
+
+  const renderReturnModal = () => {
+    if (!returnModalOpen || !returnOrder) return null;
+
+    const selectedCount = returnOrder.products.filter(p => selectedReturnItems[p.productId || p._id]).length;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/60 p-4 backdrop-blur-md overflow-y-auto animate-fade-in">
+        <div className="w-full max-w-2xl rounded-3xl bg-white border border-gold-300/20 p-6 md:p-8 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto no-scrollbar">
+          <div className="flex items-start justify-between gap-3 border-b border-champagne/30 pb-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gold-600">Return Request Portal</p>
+              <h3 className="mt-1.5 text-xl font-serif font-light text-luxury-black">
+                Order #{returnOrder.orderCode || returnOrder._id.slice(-8)}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setReturnModalOpen(false);
+                setReturnOrder(null);
+              }}
+              className="text-text-secondary hover:text-luxury-black text-2xl font-light cursor-pointer"
+              aria-label="Close Return Modal"
+            >
+              &times;
+            </button>
+          </div>
+
+          <form onSubmit={handleReturnSubmit} className="space-y-5">
+            {/* Products Selection */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block">
+                Select Items to Return *
+              </label>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1 border border-champagne/30 rounded-2xl p-2 bg-gold-50/5">
+                {returnOrder.products.map((product) => {
+                  const key = product.productId || product._id;
+                  const isChecked = !!selectedReturnItems[key];
+                  const maxQty = product.quantity || 1;
+                  const selectedQty = returnItemQuantities[key] || 1;
+
+                  return (
+                    <div key={key} className="flex items-center justify-between p-2.5 rounded-xl border border-champagne/20 bg-white hover:border-gold-200/40 transition duration-200">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            setSelectedReturnItems(prev => ({ ...prev, [key]: e.target.checked }));
+                          }}
+                          className="h-4.5 w-4.5 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer"
+                        />
+                        {product.image && (
+                          <img
+                            src={resolveMediaUrl(product.image)}
+                            alt={product.name}
+                            className="w-10 h-10 object-cover rounded-lg border border-champagne/25"
+                          />
+                        )}
+                        <div>
+                          <p className="text-xs font-semibold text-luxury-black line-clamp-1">{product.name}</p>
+                          <p className="text-[10px] text-text-secondary">INR {product.price} &bull; Qty Ordered: {maxQty}</p>
+                        </div>
+                      </div>
+
+                      {isChecked && maxQty > 1 && (
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-[9px] text-text-secondary font-bold uppercase">Qty:</label>
+                          <select
+                            value={selectedQty}
+                            onChange={(e) => {
+                              setReturnItemQuantities(prev => ({ ...prev, [key]: Number(e.target.value) }));
+                            }}
+                            className="rounded-lg border border-champagne bg-white px-2 py-1 text-xs outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20 cursor-pointer"
+                          >
+                            {[...Array(maxQty).keys()].map((q) => (
+                              <option key={q + 1} value={q + 1}>
+                                {q + 1}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Return Details */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">
+                  Reason for Return *
+                </label>
+                <select
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  required
+                  className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none cursor-pointer"
+                >
+                  <option value="">Select a reason</option>
+                  <option value="Damaged Product">Damaged Product</option>
+                  <option value="Wrong Product Received">Wrong Product Received</option>
+                  <option value="Product Not As Expected">Product Not As Expected</option>
+                  <option value="Missing Item">Missing Item</option>
+                  <option value="Quality Issue">Quality Issue</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">
+                  Preferred Resolution *
+                </label>
+                <select
+                  value={returnResolution}
+                  onChange={(e) => setReturnResolution(e.target.value)}
+                  required
+                  className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none cursor-pointer"
+                >
+                  <option value="Refund">Refund (Original Source)</option>
+                  <option value="Store Credit">Store Credit (Gift Wallet)</option>
+                  <option value="Replacement">Product Replacement</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">
+                Detailed Description *
+              </label>
+              <textarea
+                value={returnDescription}
+                onChange={(e) => setReturnDescription(e.target.value)}
+                placeholder="Please describe the issue in detail. If it is damaged or wrong product, detail the condition..."
+                rows={3}
+                required
+                className="w-full rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none resize-none"
+              />
+            </div>
+
+            {/* File Uploads */}
+            <div className="grid gap-4 sm:grid-cols-2 bg-gold-50/10 border border-gold-200/20 p-4 rounded-2xl">
+              <div>
+                <label className="text-[10px] font-bold text-luxury-black uppercase tracking-wider block mb-1">
+                  Product Images (Min 1, Max 5) *
+                </label>
+                <p className="text-[9px] text-text-secondary mb-2">Upload pictures of product condition</p>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleReturnFileUpload}
+                  disabled={uploadingFiles}
+                  className="text-xs text-text-secondary file:mr-3 file:py-1.5 file:px-4.5 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-gold-500 file:text-white hover:file:bg-gold-600 file:cursor-pointer"
+                />
+
+                {/* Previews */}
+                {returnImages.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    {returnImages.map((img, i) => (
+                      <div key={i} className="relative w-12 h-12 rounded-lg border border-champagne overflow-hidden group">
+                        <img src={resolveMediaUrl(img.url)} alt="preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setReturnImages(prev => prev.filter((_, idx) => idx !== i))}
+                          className="absolute inset-0 bg-black/40 text-white font-bold flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition duration-150 cursor-pointer"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-luxury-black uppercase tracking-wider block mb-1">
+                  Unboxing Video (Optional)
+                </label>
+                <p className="text-[9px] text-text-secondary mb-2">Help verify shipping box status</p>
+                <input
+                  type="file"
+                  name="video"
+                  accept="video/*"
+                  onChange={handleReturnFileUpload}
+                  disabled={uploadingFiles}
+                  className="text-xs text-text-secondary file:mr-3 file:py-1.5 file:px-4.5 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-gold-500 file:text-white hover:file:bg-gold-600 file:cursor-pointer"
+                />
+
+                {returnVideo && (
+                  <div className="flex items-center justify-between gap-2 mt-2.5 p-1.5 rounded-lg border border-champagne bg-white text-[10px] text-luxury-black">
+                    <span className="truncate">📹 Video Uploaded</span>
+                    <button
+                      type="button"
+                      onClick={() => setReturnVideo(null)}
+                      className="text-red-500 font-bold text-sm bg-transparent border-0 cursor-pointer px-1"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {uploadingFiles && (
+                <div className="sm:col-span-2 text-center text-[10px] text-gold-700 font-bold animate-pulse">
+                  Uploading files to database storage, please wait...
+                </div>
+              )}
+            </div>
+
+            {/* Policy Consent */}
+            <label className="flex items-start gap-2.5 rounded-2xl border border-champagne bg-white/60 px-4 py-3.5 text-xs text-text-secondary cursor-pointer leading-normal select-none">
+              <input
+                type="checkbox"
+                checked={returnPolicyChecked}
+                onChange={(e) => setReturnPolicyChecked(e.target.checked)}
+                className="mt-0.5 h-4.5 w-4.5 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer"
+              />
+              <span>I confirm that the products selected are returnable, in their received status, and that my unboxing evidence is genuine. I agree to the Niyora Gifts Return Policy.</span>
+            </label>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-3">
+              <button
+                type="submit"
+                disabled={loading || uploadingFiles || selectedCount === 0}
+                className="flex-1 rounded-full bg-gold-500 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-gold-600 disabled:cursor-not-allowed disabled:opacity-60 transition cursor-pointer shadow-xs"
+              >
+                {loading ? "Submitting Request..." : "Submit Return Claim"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setReturnModalOpen(false);
+                  setReturnOrder(null);
+                }}
+                className="rounded-full border border-champagne bg-white px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const renderReturnsTab = () => {
+    return (
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column: Returns list */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-5 rounded-3xl shadow-xs">
+            <h2 className="text-base font-serif font-semibold text-luxury-black">Returns History</h2>
+            <p className="text-[10px] text-text-secondary mt-0.5 font-light">Track status pipelines of submitted product return claims.</p>
+          </div>
+
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 no-scrollbar">
+            {loadingReturns ? (
+              <div className="py-8 text-center text-xs text-text-secondary animate-pulse">Loading return database records...</div>
+            ) : returnsList.length > 0 ? (
+              returnsList.map((ret) => {
+                const isSelected = selectedReturn?._id === ret._id;
+                const orderCode = ret.order?.orderCode || "N/A";
+                return (
+                  <div
+                    key={ret._id}
+                    onClick={() => {
+                      setSelectedReturn(ret);
+                      if (ret.ticket) {
+                        fetchTicketDetails(ret.ticket._id || ret.ticket);
+                      }
+                    }}
+                    className={`rounded-3xl border p-4.5 cursor-pointer transition-all duration-300 ${
+                      isSelected
+                        ? "border-gold-500 bg-gold-100/10 shadow-xs scale-[1.01]"
+                        : "border-champagne/45 bg-white hover:border-gold-300/40"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 border-b border-champagne/10 pb-2">
+                      <span className="font-mono text-xs font-bold text-luxury-black">{ret.returnCode}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border ${getReturnStatusColor(ret.status)}`}>
+                        {ret.status}
+                      </span>
+                    </div>
+                    <div className="mt-2.5 text-[11px] text-text-secondary font-light space-y-1">
+                      <p>Order Code: <span className="font-semibold text-luxury-black">{orderCode}</span></p>
+                      <p>Refund Resolution: <span className="font-semibold text-luxury-black">{ret.preferredResolution}</span></p>
+                      <p>Placed on {new Date(ret.createdAt).toLocaleDateString("en-IN")}</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-white/50 border border-champagne/40 text-center py-10 rounded-3xl">
+                <p className="text-xs text-text-secondary font-light">No return claims submitted yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Return Details & Ticket Chat */}
+        <div className="lg:col-span-2 space-y-6">
+          {selectedReturn ? (
+            <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs flex flex-col space-y-6 animate-fade-in">
+              {/* Detail Header */}
+              <div className="border-b border-champagne/30 pb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-serif font-semibold text-luxury-black flex items-center gap-2">
+                    Claim {selectedReturn.returnCode}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2.5 mt-1.5 text-[10px] text-text-secondary font-light">
+                    <span>Order #{selectedReturn.order?.orderCode || "N/A"}</span>
+                    <span>&bull;</span>
+                    <span>Created {new Date(selectedReturn.createdAt).toLocaleDateString("en-IN")}</span>
+                    {selectedReturn.assignedSupportAgent && (
+                      <>
+                        <span>&bull;</span>
+                        <span>Concierge: <strong>{selectedReturn.assignedSupportAgent.name}</strong></span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <span className={`rounded-full px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${getReturnStatusColor(selectedReturn.status)}`}>
+                  {selectedReturn.status}
+                </span>
+              </div>
+
+              {/* Status Timeline */}
+              <div className="rounded-2xl border border-gold-200/25 bg-gold-50/5 p-4 space-y-3.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">Return Process Tracker</h4>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { label: "Request Submitted", test: ["Return Requested", "Under Review", "Approved", "Pickup Scheduled", "Product Received", "Refund Processing", "Refunded", "Completed", "Replacement Shipped"] },
+                    { label: "QA Assessment", test: ["Under Review", "Approved", "Pickup Scheduled", "Product Received", "Refund Processing", "Refunded", "Completed", "Replacement Shipped"] },
+                    { label: "Pickup Scheduled", test: ["Pickup Scheduled", "Product Received", "Refund Processing", "Refunded", "Completed", "Replacement Shipped"] },
+                    { label: "Refund / Shipped", test: ["Refunded", "Completed", "Replacement Shipped"] }
+                  ].map((step, idx) => {
+                    const reached = step.test.includes(selectedReturn.status) && selectedReturn.status !== "Rejected";
+                    const isRejected = selectedReturn.status === "Rejected";
+                    return (
+                      <div key={idx} className="flex flex-col items-center text-center">
+                        <div className={`mb-1.5 h-6.5 w-6.5 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
+                          reached ? "border-gold-500 bg-gold-500 text-white" :
+                          isRejected && idx === 1 ? "border-red-500 bg-red-500 text-white" :
+                          "border-champagne bg-white text-gray-400"
+                        }`}>
+                          {isRejected && idx === 1 ? "×" : idx + 1}
+                        </div>
+                        <p className={`text-[9px] font-bold leading-tight ${
+                          reached ? "text-gold-800" :
+                          isRejected && idx === 1 ? "text-red-500" : "text-text-secondary"
+                        }`}>{step.label}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Latest Status Note */}
+                {selectedReturn.statusHistory?.length > 0 && (
+                  <div className="mt-3 text-[11px] text-text-secondary font-light bg-white p-2.5 rounded-xl border border-champagne/20">
+                    <span className="font-bold text-luxury-black uppercase tracking-wider text-[9px] block mb-0.5">Fulfillment Note:</span>
+                    {selectedReturn.statusHistory[selectedReturn.statusHistory.length - 1].note || "Status updated."}
+                    <span className="block mt-1 text-[9px] text-gray-400">
+                      Last Updated: {new Date(selectedReturn.statusHistory[selectedReturn.statusHistory.length - 1].updatedAt).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Items returning list */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black mb-2.5">Items in Return Claim</h4>
+                <div className="divide-y divide-champagne/15 bg-white border border-champagne/30 rounded-2xl overflow-hidden p-2">
+                  {selectedReturn.items?.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 py-2 px-1">
+                      {item.image && (
+                        <img src={resolveMediaUrl(item.image)} alt={item.name} className="w-10 h-10 object-cover rounded-lg border border-champagne/20" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-luxury-black truncate">{item.name}</p>
+                        <p className="text-[10px] text-text-secondary mt-0.5">Returning Qty: <strong>{item.quantity}</strong> &bull; Value: INR {item.price}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Details sections (Refund/Pickup) */}
+              <div className="grid gap-4 sm:grid-cols-2 text-xs text-text-secondary font-light">
+                <div className="rounded-2xl border border-champagne/35 p-3.5 bg-white space-y-1.5">
+                  <h5 className="font-bold text-luxury-black uppercase tracking-widest text-[9px] border-b border-champagne/15 pb-1">Claim Resolution</h5>
+                  <p>Preference: <strong className="text-gold-800">{selectedReturn.preferredResolution}</strong></p>
+                  
+                  {selectedReturn.refundDetails?.refundStatus && selectedReturn.refundDetails.refundStatus !== "None" && (
+                    <div className="mt-2 text-[10px]">
+                      <p>Refund Status: <strong className="text-emerald-700">{selectedReturn.refundDetails.refundStatus}</strong></p>
+                      <p>Refund Method: <strong>{selectedReturn.refundDetails.refundMethod}</strong></p>
+                      <p>Amount: <strong className="font-serif">INR {selectedReturn.refundDetails.refundAmount}</strong></p>
+                      {selectedReturn.refundDetails.transactionReference && (
+                        <p className="truncate">Txn Ref: <code className="bg-gray-50 px-1 py-0.5 rounded">{selectedReturn.refundDetails.transactionReference}</code></p>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedReturn.replacementOrder && (
+                    <div className="mt-2 text-[10px] bg-gold-50/20 border border-gold-200/30 p-2 rounded-xl">
+                      <p>Replacement Created: <strong>Order #{selectedReturn.replacementOrder.orderCode || selectedReturn.replacementOrder._id.slice(-8)}</strong></p>
+                      <p>Fulfillment Status: <strong>{selectedReturn.replacementOrder.status}</strong></p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedReturn.pickupDetails?.trackingId && (
+                  <div className="rounded-2xl border border-champagne/35 p-3.5 bg-white space-y-1.5">
+                    <h5 className="font-bold text-luxury-black uppercase tracking-widest text-[9px] border-b border-champagne/15 pb-1">Pickup Logistics</h5>
+                    <p>Courier: <strong>{selectedReturn.pickupDetails.courier || "Registered Partner"}</strong></p>
+                    <p>AWB Tracking ID: <strong>{selectedReturn.pickupDetails.trackingId}</strong></p>
+                    {selectedReturn.pickupDetails.pickupDate && (
+                      <p>Pickup Date: <strong>{new Date(selectedReturn.pickupDetails.pickupDate).toLocaleDateString("en-IN")}</strong></p>
+                    )}
+                    {selectedReturn.pickupDetails.note && (
+                      <p className="text-[10px] text-gray-400">Note: {selectedReturn.pickupDetails.note}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Thread */}
+              {selectedTicket && (
+                <div className="border-t border-champagne/30 pt-6 space-y-4 flex-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black flex items-center justify-between">
+                    <span>Chat thread with Support</span>
+                    <span className="font-mono text-[10px] font-medium text-gray-400">Ticket #{selectedTicket.ticketCode}</span>
+                  </h4>
+
+                  {/* Messages */}
+                  <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
+                    {selectedTicket.messages?.map((msg, index) => {
+                      const isSystem = msg.senderName === "System Note";
+                      if (isSystem) {
+                        return (
+                          <div key={index} className="rounded-lg bg-gray-50 border border-gray-150 py-1.5 px-3 text-[10px] text-center max-w-sm mx-auto text-text-secondary font-light">
+                            {msg.message}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={index} className={`flex flex-col ${msg.isAdmin ? "items-start" : "items-end"}`}>
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[9px] font-bold text-luxury-black font-serif">{msg.senderName}</span>
+                            <span className="text-[8px] text-text-secondary font-light">
+                              {new Date(msg.createdAt).toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <div className={`rounded-2xl p-2.5 text-xs leading-relaxed max-w-sm ${
+                            msg.isAdmin ? "bg-cream border border-champagne text-luxury-black rounded-tl-none" : "bg-gold-500 text-white rounded-tr-none"
+                          }`}>
+                            {msg.message}
+
+                            {/* Render Attachments in message bubble */}
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div className="mt-2.5 pt-2 border-t border-black/10 text-[10px] space-y-1">
+                                {msg.attachments.map((attach, idx) => {
+                                  const isImg = attach.fileType === "image" || /\.(jpg|jpeg|png|webp|gif)$/i.test(attach.url);
+                                  return (
+                                    <div key={idx} className="flex items-center gap-1.5 bg-black/5 p-1 rounded-lg">
+                                      {isImg ? (
+                                        <a href={resolveMediaUrl(attach.url)} target="_blank" rel="noreferrer" className="block max-w-[100px] rounded overflow-hidden">
+                                          <img src={resolveMediaUrl(attach.url)} alt="attached file" className="w-16 h-16 object-cover" />
+                                        </a>
+                                      ) : (
+                                        <a href={resolveMediaUrl(attach.url)} target="_blank" rel="noreferrer" className="underline font-bold text-white flex items-center gap-1">
+                                          <span>📄</span>
+                                          <span className="truncate max-w-[120px]">{attach.name || "Download Document"}</span>
+                                        </a>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Send Reply */}
+                  {selectedTicket.status !== "Resolved" ? (
+                    <form onSubmit={handleSendReply} className="border-t border-champagne/30 pt-3 flex flex-col gap-2">
+                      {chatAttachment && (
+                        <div className="flex items-center justify-between bg-gold-50/30 border border-gold-200/30 px-3 py-1.5 rounded-xl text-[10px] text-luxury-black max-w-xs">
+                          <span className="truncate">📎 Pending attachment: <strong>{chatAttachment.name}</strong></span>
+                          <button
+                            type="button"
+                            onClick={() => setChatAttachment(null)}
+                            className="text-red-500 font-bold bg-transparent border-0 cursor-pointer text-sm"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      )}
+                      <div className="flex items-end gap-2.5">
+                        {/* Paperclip upload button */}
+                        <div className="relative shrink-0">
+                          <input
+                            type="file"
+                            onChange={handleChatAttachmentUpload}
+                            disabled={uploadingChatAttachment}
+                            id="chat-file-input"
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="chat-file-input"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-champagne bg-white hover:bg-gold-50 transition cursor-pointer text-sm select-none"
+                            title="Attach images or documents"
+                          >
+                            📎
+                          </label>
+                        </div>
+
+                        <textarea
+                          value={replyMessage}
+                          onChange={(e) => setReplyMessage(e.target.value)}
+                          placeholder={uploadingChatAttachment ? "Uploading attachment..." : "Send a message to support agents..."}
+                          disabled={uploadingChatAttachment}
+                          rows={1}
+                          className="flex-1 rounded-2xl border border-champagne bg-white px-4 py-2 text-xs focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none resize-none h-9 flex items-center py-2.5"
+                          required
+                        />
+                        <button
+                          type="submit"
+                          disabled={sendingReply || uploadingChatAttachment || !replyMessage.trim()}
+                          className="rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-2 text-xs font-bold uppercase tracking-widest text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs shrink-0 cursor-pointer h-9"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="text-center text-[10px] text-gray-400 bg-gray-50 border p-3 rounded-2xl">
+                      This return ticket has been marked as Resolved. Send a message to reopen if you need further help.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-champagne bg-white/50 p-12 text-center max-w-lg mx-auto shadow-xs flex flex-col justify-center items-center h-64">
+              <span className="text-3xl mb-2">🔄</span>
+              <h4 className="text-sm font-serif font-semibold text-luxury-black">Select Return Claim</h4>
+              <p className="text-[11px] text-text-secondary mt-1 max-w-xs font-light">Choose a return from the history list to view progress timelines, courier details, and chat directly with support.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section className="space-y-6 max-w-7xl mx-auto">
       {/* Header Banner */}
@@ -494,6 +1288,7 @@ const MyProfile = () => {
       <div className="bg-white/60 backdrop-blur-md p-1.5 rounded-3xl md:rounded-full border border-champagne/45 shadow-xs flex overflow-x-auto md:flex-wrap gap-1 w-full md:w-fit no-scrollbar whitespace-nowrap scroll-smooth">
         <button onClick={() => setActiveTab("overview")} className={tabClass(activeTab === "overview")}>Overview</button>
         <button onClick={() => setActiveTab("orders")} className={tabClass(activeTab === "orders")}>My Orders</button>
+        <button onClick={() => setActiveTab("returns")} className={tabClass(activeTab === "returns")}>My Returns</button>
         <button onClick={() => setActiveTab("addresses")} className={tabClass(activeTab === "addresses")}>My Addresses</button>
         <button onClick={() => setActiveTab("tracking")} className={tabClass(activeTab === "tracking")}>Order Tracking</button>
         <button onClick={() => setActiveTab("settings")} className={tabClass(activeTab === "settings")}>Settings</button>
@@ -696,7 +1491,7 @@ const MyProfile = () => {
                     </div>
                   ) : null}
                 </div>
-                <div className="pt-2">
+                <div className="pt-2 flex flex-wrap gap-2">
                   {canRequestCancellation(order) ? (
                     <button
                       type="button"
@@ -704,6 +1499,28 @@ const MyProfile = () => {
                       className="rounded-full border border-red-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 hover:scale-[1.01] transition cursor-pointer"
                     >
                       Request Cancellation
+                    </button>
+                  ) : null}
+                  {canRequestReturn(order) ? (
+                    <button
+                      type="button"
+                      onClick={() => openReturnModal(order)}
+                      className="rounded-full border border-gold-450 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gold-750 hover:bg-gold-50 hover:scale-[1.01] transition cursor-pointer"
+                    >
+                      Return Order
+                    </button>
+                  ) : null}
+                  {getOrderReturn(order._id) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ret = getOrderReturn(order._id);
+                        setSelectedReturn(ret);
+                        setActiveTab("returns");
+                      }}
+                      className="rounded-full border border-gold-500 bg-gold-100/60 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gold-900 hover:bg-gold-200/50 hover:scale-[1.01] transition cursor-pointer"
+                    >
+                      Track Return: {getOrderReturn(order._id).status}
                     </button>
                   ) : null}
                 </div>
@@ -1674,6 +2491,12 @@ const MyProfile = () => {
           </div>
         </div>
       ) : null}
+
+      {/* RETURNS TAB */}
+      {activeTab === "returns" && !loading ? renderReturnsTab() : null}
+
+      {/* RETURN MODAL */}
+      {renderReturnModal()}
     </section>
   );
 };

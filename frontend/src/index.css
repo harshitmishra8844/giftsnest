@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+
 @theme {
   --color-gold-50: #FCF9F2;
   --color-gold-100: #FAF4E5;
@@ -12,6 +15,12 @@
   --color-gold-700: #9E7B21;
   --color-gold-800: #785D19;
   --color-gold-900: #544111;
+
+  --color-gold-hover: #C49A2C;
+  --color-success-lux: #2E7D32;
+  --color-warning-lux: #F59E0B;
+  --color-danger-lux: #DC2626;
+  --color-gray-lux: #6B6B6B;
 
   --color-ivory: #FAF7F2;
   --color-cream: #F5EFE6;

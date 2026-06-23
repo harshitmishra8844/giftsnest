@@ -30,20 +30,11 @@ const checkPermission = (requiredPermissionOrPermissions) => {
         return res.status(403).json({ message: "Access denied. No roles assigned to this account." });
       }
 
-      // Fetch user's roles and collect permissions
-      const rolesDocs = await Role.find({ _id: { $in: req.user.roles } }).lean();
-      const permissionsSet = new Set();
-      for (const role of rolesDocs) {
-        if (role.permissions) {
-          role.permissions.forEach(p => permissionsSet.add(p));
-        }
-      }
-
       const reqPerms = Array.isArray(requiredPermissionOrPermissions)
         ? requiredPermissionOrPermissions
         : [requiredPermissionOrPermissions];
 
-      const hasAny = reqPerms.some(p => permissionsSet.has(p));
+      const hasAny = reqPerms.some(p => req.user.permissions && (req.user.permissions.includes(p) || req.user.permissions.includes("ALL")));
 
       if (!hasAny) {
         return res.status(403).json({ 

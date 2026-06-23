@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 
@@ -11,6 +11,34 @@ const TrackOrder = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const orderIdParam = params.get("orderId") || params.get("id");
+    const emailParam = params.get("email");
+    if (orderIdParam && emailParam) {
+      setFormData({ orderId: orderIdParam, email: emailParam });
+      const autoTrack = async () => {
+        setLoading(true);
+        setError("");
+        setOrderDetails(null);
+        setSuccess(false);
+        try {
+          const response = await api.post("/orders/track", {
+            orderId: orderIdParam,
+            email: emailParam,
+          });
+          setOrderDetails(response.data.order);
+          setSuccess(true);
+        } catch (err) {
+          setError(err.response?.data?.message || "Failed to track order. Please try again.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      autoTrack();
+    }
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

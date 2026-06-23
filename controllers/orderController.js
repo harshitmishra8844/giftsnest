@@ -309,14 +309,17 @@ const createOrder = async (req, res) => {
 
     if (paymentMethod === "COD") {
       const { decrementStockForPaidOrder } = require("../services/inventoryService");
-      const { sendOrderNotificationToAdmin, sendOrderConfirmationToCustomer } = require("../services/orderEmail");
+      const { sendCustomerOrderConfirmation, sendAdminNewOrderAlert, sendSupportNotification } = require("../services/emailService");
       
       await decrementStockForPaidOrder(order);
-      sendOrderNotificationToAdmin(order).catch((mailErr) => {
-        console.error("[email] Failed to send admin order notification email for COD order:", mailErr);
-      });
-      sendOrderConfirmationToCustomer(order).catch((mailErr) => {
+      sendCustomerOrderConfirmation(order).catch((mailErr) => {
         console.error("[email] Failed to send customer order confirmation email for COD order:", mailErr);
+      });
+      sendAdminNewOrderAlert(order).catch((mailErr) => {
+        console.error("[email] Failed to send admin new order alert for COD order:", mailErr);
+      });
+      sendSupportNotification("New Order", order).catch((mailErr) => {
+        console.error("[email] Failed to send support new order notification for COD order:", mailErr);
       });
     }
 
@@ -383,11 +386,24 @@ const updateOrderStatus = async (req, res) => {
 
     if (status === "Cancelled" && previousOrder.status !== "Cancelled") {
       const { incrementStockForCancelledOrder } = require("../services/inventoryService");
-      const { sendCancellationStatusNotificationToCustomer } = require("../services/orderEmail");
+      const { sendCustomerOrderCancelled, sendSupportNotification } = require("../services/emailService");
       
       await incrementStockForCancelledOrder(order);
-      sendCancellationStatusNotificationToCustomer(order, "Approved", "Updated by administrator").catch((mailErr) => {
+      sendCustomerOrderCancelled(order, "Updated by administrator").catch((mailErr) => {
         console.error("[email] Failed to send cancellation email to customer:", mailErr);
+      });
+      sendSupportNotification("Cancellation Request", order).catch((mailErr) => {
+        console.error("[email] Failed to send support cancellation alert:", mailErr);
+      });
+    } else if (status === "Shipped" && previousOrder.status !== "Shipped") {
+      const { sendCustomerOrderShipped } = require("../services/emailService");
+      sendCustomerOrderShipped(order).catch((mailErr) => {
+        console.error("[email] Failed to send shipment email to customer:", mailErr);
+      });
+    } else if (status === "Delivered" && previousOrder.status !== "Delivered") {
+      const { sendCustomerOrderDelivered } = require("../services/emailService");
+      sendCustomerOrderDelivered(order).catch((mailErr) => {
+        console.error("[email] Failed to send delivery email to customer:", mailErr);
       });
     }
 
@@ -432,6 +448,12 @@ const updateTrackingId = async (req, res) => {
     order.trackingId = trackingId;
     order.trackingCarrier = trackingCarrier;
     await order.save();
+
+    const { sendCustomerOrderShipped } = require("../services/emailService");
+    sendCustomerOrderShipped(order).catch((mailErr) => {
+      console.error("[email] Failed to send tracking shipment email:", mailErr);
+    });
+
     return res.status(200).json({ message: "Tracking ID updated successfully", order });
   } catch (error) {
     console.error("Update tracking ID error:", error.message);
@@ -475,9 +497,12 @@ const requestOrderCancellation = async (req, res) => {
     };
     await order.save();
 
-    const { sendCancellationRequestNotificationToAdmin } = require("../services/orderEmail");
-    sendCancellationRequestNotificationToAdmin(order).catch((mailErr) => {
-      console.error("[email] Failed to send cancellation request email to admin:", mailErr);
+    const { sendAdminCancelRequestAlert, sendSupportNotification } = require("../services/emailService");
+    sendAdminCancelRequestAlert(order).catch((mailErr) => {
+      console.error("[email] Failed to send cancellation request alert to admin:", mailErr);
+    });
+    sendSupportNotification("Cancellation Request", order).catch((mailErr) => {
+      console.error("[email] Failed to send cancellation request notification to support:", mailErr);
     });
 
     return res.status(200).json({ message: "Cancellation request submitted.", order });
@@ -518,11 +543,19 @@ const reviewOrderCancellation = async (req, res) => {
       await order.save();
 
       const { incrementStockForCancelledOrder } = require("../services/inventoryService");
-      const { sendCancellationStatusNotificationToCustomer } = require("../services/orderEmail");
+      const { sendCustomerCancellationReview, sendSupportNotification } = require("../services/emailService");
 
       await incrementStockForCancelledOrder(order);
-      sendCancellationStatusNotificationToCustomer(order, "Approved", adminNote).catch((mailErr) => {
+      sendCustomerCancellationReview(order, true, adminNote).catch((mailErr) => {
         console.error("[email] Failed to send cancellation approval email to customer:", mailErr);
+      });
+      sendSupportNotification("Refund Process", {
+        returnId: order._id,
+        amount: order.totalPrice,
+        method: "Original Payment Source",
+        transactionReference: order.razorpayPaymentId || "Refund Initiated",
+      }).catch((mailErr) => {
+        console.error("[email] Failed to send refund support notice:", mailErr);
       });
 
       if (req.user) {
@@ -543,8 +576,8 @@ const reviewOrderCancellation = async (req, res) => {
     order.cancellationRequest.adminNote = adminNote;
     await order.save();
 
-    const { sendCancellationStatusNotificationToCustomer } = require("../services/orderEmail");
-    sendCancellationStatusNotificationToCustomer(order, "Rejected", adminNote).catch((mailErr) => {
+    const { sendCustomerCancellationReview } = require("../services/emailService");
+    sendCustomerCancellationReview(order, false, adminNote).catch((mailErr) => {
       console.error("[email] Failed to send cancellation rejection email to customer:", mailErr);
     });
 
@@ -571,9 +604,6 @@ const deleteOrder = async (req, res) => {
     const order = await Order.findById(id);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
-    }
-    if (order.status !== "Cancelled") {
-      return res.status(400).json({ message: "Only cancelled orders can be deleted" });
     }
     await Order.findByIdAndDelete(id);
     return res.status(200).json({ message: "Order deleted successfully" });

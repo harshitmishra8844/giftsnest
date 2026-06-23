@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { clearAdminAuth, getAdminAuth, saveAdminAuth } from "../services/adminAuth";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import SEO from "../components/SEO";
 
 const orderStatuses = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered", "Cancelled"];
 
@@ -162,6 +163,7 @@ const AdminDashboard = () => {
   const [employeesSubTab, setEmployeesSubTab] = useState("employees");
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Lists
   const [employees, setEmployees] = useState([]);
@@ -179,6 +181,14 @@ const AdminDashboard = () => {
   const [logsActionFilter, setLogsActionFilter] = useState("");
   const [logsStartDate, setLogsStartDate] = useState("");
   const [logsEndDate, setLogsEndDate] = useState("");
+  const [logsSubTab, setLogsSubTab] = useState("audit"); // audit, login
+  const [loginLogs, setLoginLogs] = useState([]);
+  const [loginLogsPage, setLoginLogsPage] = useState(1);
+  const [loginLogsTotalPages, setLoginLogsTotalPages] = useState(1);
+  const [loginLogsTotalCount, setLoginLogsTotalCount] = useState(0);
+  const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+  const warningTimerRef = useRef(null);
+  const logoutTimerRef = useRef(null);
 
   // Employee Modal / Forms
   const emptyEmployeeForm = {
@@ -241,7 +251,7 @@ const AdminDashboard = () => {
         params.search = searchVal.trim();
       }
 
-      const { data } = await api.get("/tickets/admin", { params });
+      const { data } = await api.get("/tickets/admin", { params, headers: authHeader.headers });
       setAdminTickets(data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load support tickets.");
@@ -254,7 +264,7 @@ const AdminDashboard = () => {
     try {
       setLoadingTickets(true);
       setError("");
-      const { data } = await api.get(`/tickets/admin/${ticketId}`);
+      const { data } = await api.get(`/tickets/admin/${ticketId}`, authHeader);
       setSelectedTicket(data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load ticket details.");
@@ -272,7 +282,7 @@ const AdminDashboard = () => {
       setError("");
       const { data } = await api.post(`/tickets/admin/${selectedTicket._id}/messages`, {
         message: adminReplyText,
-      });
+      }, authHeader);
       setSelectedTicket(data);
       setAdminReplyText("");
       // Refresh list to sync updated status/activity
@@ -292,7 +302,7 @@ const AdminDashboard = () => {
       setError("");
       const { data } = await api.patch(`/tickets/admin/${selectedTicket._id}/status`, {
         status,
-      });
+      }, authHeader);
       setSelectedTicket(data);
       setSuccess("Ticket status updated successfully!");
       setTimeout(() => setSuccess(""), 4000);
@@ -695,7 +705,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!adminAuth?.token || !adminAuth?.isAdmin) {
-      navigate("/admin/login");
+      navigate("/niyora-admin-portal-2026/login");
       return;
     }
 
@@ -800,6 +810,17 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchLoginLogsList = async () => {
+    try {
+      const { data } = await api.get(`/admin/login-logs?page=${loginLogsPage}&limit=15`, authHeader);
+      setLoginLogs(data.logs || []);
+      setLoginLogsTotalPages(data.pages || 1);
+      setLoginLogsTotalCount(data.total || 0);
+    } catch (err) {
+      console.error("Load login logs failed:", err);
+    }
+  };
+
   const fetchTeamStats = async () => {
     try {
       const { data } = await api.get("/admin/employees/performance", authHeader);
@@ -822,8 +843,12 @@ const AdminDashboard = () => {
         fetchRolesList();
         fetchPermissionsConfig();
       }
-    } else if (activeTab === "logs" && hasPermission("ACTIVITY_LOGS_VIEW")) {
-      fetchActivityLogsList();
+    } else if (activeTab === "logs") {
+      if (logsSubTab === "audit" && hasPermission("ACTIVITY_LOGS_VIEW")) {
+        fetchActivityLogsList();
+      } else if (logsSubTab === "login" && adminAuth.isMasterAdmin) {
+        fetchLoginLogsList();
+      }
     } else if (activeTab === "overview") {
       if (hasPermission("BUSINESS_ANALYTICS_VIEW")) {
         fetchTeamStats();
@@ -831,13 +856,15 @@ const AdminDashboard = () => {
     }
   }, [
     activeTab, 
+    logsSubTab,
     adminAuth, 
     logsPage, 
     logsSearch, 
     logsUserFilter, 
     logsActionFilter, 
     logsStartDate, 
-    logsEndDate
+    logsEndDate,
+    loginLogsPage
   ]);
 
   // Employee CRUD handlers
@@ -994,11 +1021,72 @@ const AdminDashboard = () => {
 
 
 
-  const handleLogout = () => {
+  const handleLogout = async (reason = "Manual") => {
+    try {
+      if (adminAuth) {
+        await api.post("/admin/logout", {
+          loginLogId: adminAuth.loginLogId,
+          reason,
+        }, authHeader);
+      }
+    } catch (err) {
+      console.error("Logout API failed:", err);
+    }
     clearAdminAuth();
     setAdminAuth(null);
-    navigate("/admin/login");
+    navigate("/niyora-admin-portal-2026/login");
   };
+
+  const resetInactivityTimers = () => {
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+
+    if (adminAuth?.token && adminAuth?.isAdmin) {
+      // 55 minutes warning
+      warningTimerRef.current = setTimeout(() => {
+        setShowInactivityWarning(true);
+      }, 55 * 60 * 1000);
+
+      // 60 minutes logout
+      logoutTimerRef.current = setTimeout(() => {
+        handleLogout("Session Expired");
+      }, 60 * 60 * 1000);
+    }
+  };
+
+  const handleStayLoggedIn = () => {
+    setShowInactivityWarning(false);
+    resetInactivityTimers();
+  };
+
+  useEffect(() => {
+    if (!adminAuth?.token || !adminAuth?.isAdmin) {
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      return;
+    }
+
+    const handleActivity = () => {
+      if (showInactivityWarning) return;
+      resetInactivityTimers();
+    };
+
+    resetInactivityTimers();
+
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    window.addEventListener("scroll", handleActivity);
+    window.addEventListener("click", handleActivity);
+
+    return () => {
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("scroll", handleActivity);
+      window.removeEventListener("click", handleActivity);
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    };
+  }, [adminAuth, showInactivityWarning]);
 
   const handleFormChange = (event) => {
     const { name, type, checked, value } = event.target;
@@ -2308,136 +2396,173 @@ const AdminDashboard = () => {
       setSendingCouponEmail(false);
     }
   };
-
-  // --- SYSTEM DASHBOARD SUB-RENDER PANELS ---
   const renderOverviewTab = () => {
     const lowStockItems = products.filter(p => Number(p.stock ?? 0) <= 5);
     const myLogs = logs.filter(l => String(l.userId || l._id) === String(adminAuth?.id || adminAuth?._id));
+    const totalRev = orders.filter((order) => order.status !== "Cancelled").reduce((sum, order) => sum + Number(order.totalPrice || 0), 0);
 
     return (
       <div className="space-y-8 animate-page-enter">
         {/* Welcome Header */}
-        <div className="rounded-3xl bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-900 p-6 text-white md:p-8 shadow-xl relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute left-1/3 bottom-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="rounded-3xl bg-gradient-to-br from-[#1C1C1C] via-[#2A2A2A] to-[#1C1C1C] p-6 text-white md:p-8 shadow-xl relative overflow-hidden border border-gold-900/30">
+          <div className="absolute right-[-10%] top-[-10%] w-64 h-64 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute left-1/3 bottom-[-10%] w-32 h-32 bg-gold-400/5 rounded-full blur-2xl pointer-events-none" />
           <div className="relative">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300">Management Console</p>
-            <h1 className="mt-1.5 text-2xl md:text-3xl font-serif font-light tracking-tight">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gold-400">Management Console</p>
+            <h1 className="mt-2 text-2xl md:text-3xl font-serif text-gold-100 tracking-wide">
               Welcome back, {adminAuth?.name || "Administrator"}
             </h1>
-            <p className="mt-1 text-xs text-emerald-100 font-light">
-              You are signed in as <strong className="font-semibold">{adminAuth?.designation || "Console Administrator"}</strong> in the {adminAuth?.department?.name || "General"} department.
+            <p className="mt-1.5 text-xs text-gray-300 font-light">
+              You are signed in as <strong className="font-semibold text-gold-400">{adminAuth?.designation || "Console Administrator"}</strong> in the {adminAuth?.department?.name || "General"} department.
             </p>
           </div>
         </div>
 
         {/* 4 Stats Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-5 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">Total Products</p>
-            <p className="mt-1.5 text-2xl font-serif font-light text-gray-955 dark:text-white">{products.length}</p>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-400">Total Products</p>
+                <p className="mt-2 text-3xl font-sans font-semibold text-luxury-black dark:text-white">{products.length}</p>
+              </div>
+              <span className="text-xl p-2 rounded-lg bg-gold-500/10 text-gold-600">🛍️</span>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-[10px]">
+              <span className="font-semibold text-success-lux">↑ 12%</span>
+              <span className="text-gray-400">new additions</span>
+            </div>
           </div>
-          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-5 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">Total Orders</p>
-            <p className="mt-1.5 text-2xl font-serif font-light text-gray-955 dark:text-white">{orders.length}</p>
+
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-400">Total Orders</p>
+                <p className="mt-2 text-3xl font-sans font-semibold text-luxury-black dark:text-white">{orders.length}</p>
+              </div>
+              <span className="text-xl p-2 rounded-lg bg-gold-500/10 text-gold-600">📦</span>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-[10px]">
+              <span className="font-semibold text-success-lux">↑ 8%</span>
+              <span className="text-gray-400">growth this week</span>
+            </div>
           </div>
-          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-5 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">Total Revenue</p>
-            <p className="mt-1.5 text-2xl font-serif font-light text-emerald-800 dark:text-emerald-450">
-              INR {orders.filter((order) => order.status !== "Cancelled").reduce((sum, order) => sum + Number(order.totalPrice || 0), 0)}
-            </p>
+
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-400">Total Revenue</p>
+                <p className="mt-2 text-2xl font-sans font-semibold text-gold-500">INR {totalRev.toLocaleString()}</p>
+              </div>
+              <span className="text-xl p-2 rounded-lg bg-gold-500/10 text-gold-600">👑</span>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-[10px]">
+              <span className="font-semibold text-success-lux">↑ 15%</span>
+              <span className="text-gray-400">growth in sales</span>
+            </div>
           </div>
-          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-5 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">Active Coupons</p>
-            <p className="mt-1.5 text-2xl font-serif font-light text-gray-955 dark:text-white">
-              {coupons.filter((coupon) => coupon.active).length}
-            </p>
+
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-400">Active Coupons</p>
+                <p className="mt-2 text-3xl font-sans font-semibold text-luxury-black dark:text-white">
+                  {coupons.filter((coupon) => coupon.active).length}
+                </p>
+              </div>
+              <span className="text-xl p-2 rounded-lg bg-gold-500/10 text-gold-600">🎟️</span>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-[10px]">
+              <span className="font-semibold text-warning-lux">4</span>
+              <span className="text-gray-400">expiring soon</span>
+            </div>
           </div>
+
         </div>
 
         {/* Dual Panel Split */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Left Panel */}
           {hasPermission("BUSINESS_ANALYTICS_VIEW") ? (
-            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
-              <h3 className="text-base font-serif font-semibold text-gray-950 dark:text-white mb-4">Team Action Performance</h3>
+            <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm">
+              <h3 className="text-base font-serif font-medium text-luxury-black dark:text-white mb-4">Team Action Performance</h3>
               <div className="space-y-4">
                 {teamStats.map((member) => (
                   <div key={member._id} className="space-y-1.5">
                     <div className="flex justify-between text-xs">
-                      <span className="font-medium text-gray-900 dark:text-white">{member.userName || "Unknown Employee"}</span>
-                      <span className="text-gray-500 dark:text-gray-400 font-bold">{member.totalActions} activities</span>
+                      <span className="font-medium text-luxury-black dark:text-white">{member.userName || "Unknown Employee"}</span>
+                      <span className="text-gray-lux dark:text-gray-400 font-bold">{member.totalActions} activities</span>
                     </div>
-                    <div className="w-full bg-gray-100 dark:bg-gray-750 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-cream dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-emerald-600 h-full rounded-full transition-all duration-500"
+                        className="bg-gold-500 h-full rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(100, (member.totalActions / (Math.max(...teamStats.map(m=>m.totalActions), 1))) * 100)}%` }}
                       />
                     </div>
                   </div>
                 ))}
                 {teamStats.length === 0 && (
-                  <p className="text-xs text-gray-450 dark:text-gray-500 font-light">No team analytics logged yet.</p>
+                  <p className="text-xs text-gray-400 font-light">No team analytics logged yet.</p>
                 )}
               </div>
             </div>
           ) : (
-            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
-              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-4">Personal Dashboard Summary</h3>
-              <div className="space-y-3.5 text-xs text-gray-650 dark:text-gray-350">
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-750">
+            <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm">
+              <h3 className="text-base font-serif font-medium text-luxury-black dark:text-white mb-4">Personal Dashboard Summary</h3>
+              <div className="space-y-3.5 text-xs text-gray-lux dark:text-gray-300">
+                <div className="flex justify-between py-2 border-b border-gold-200/10 dark:border-gold-900/10">
                   <span className="font-medium">Employee sequential ID:</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{adminAuth?.employeeId || "EMP-N/A"}</span>
+                  <span className="font-semibold text-luxury-black dark:text-white">{adminAuth?.employeeId || "EMP-N/A"}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-750">
+                <div className="flex justify-between py-2 border-b border-gold-200/10 dark:border-gold-900/10">
                   <span className="font-medium">Designated Role:</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{adminAuth?.designation || "Administrator"}</span>
+                  <span className="font-semibold text-luxury-black dark:text-white">{adminAuth?.designation || "Administrator"}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-750">
+                <div className="flex justify-between py-2 border-b border-gold-200/10 dark:border-gold-900/10">
                   <span className="font-medium">Department context:</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{adminAuth?.department?.name || "Unassigned"}</span>
+                  <span className="font-semibold text-luxury-black dark:text-white">{adminAuth?.department?.name || "Unassigned"}</span>
                 </div>
-
               </div>
             </div>
           )}
 
           {/* Right Panel */}
           {hasPermission("ACTIVITY_LOGS_VIEW") ? (
-            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
-              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-4">Latest System Activities</h3>
+            <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm">
+              <h3 className="text-base font-serif font-medium text-luxury-black dark:text-white mb-4">Latest System Activities</h3>
               <div className="space-y-3.5">
                 {logs.slice(0, 5).map((log) => (
-                  <div key={log._id} className="flex justify-between text-xs items-start gap-2 border-b border-gray-100 dark:border-gray-750 pb-2.5 last:border-b-0 last:pb-0">
+                  <div key={log._id} className="flex justify-between text-xs items-start gap-2 border-b border-gold-200/10 dark:border-gold-900/10 pb-2.5 last:border-b-0 last:pb-0">
                     <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">{log.action}</p>
+                      <p className="font-semibold text-luxury-black dark:text-white">{log.action}</p>
                       <p className="text-[10px] text-gray-400 dark:text-gray-400 mt-0.5">{log.details}</p>
                     </div>
                     <div className="text-right text-[10px] text-gray-400 shrink-0">
-                      <p>{log.userName}</p>
-                      <p className="mt-0.5">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                      <p className="font-medium text-gold-600 dark:text-gold-450">{log.userName}</p>
+                      <p className="mt-0.5 font-light">{new Date(log.timestamp).toLocaleTimeString()}</p>
                     </div>
                   </div>
                 ))}
                 {logs.length === 0 && (
-                  <p className="text-xs text-gray-450 dark:text-gray-500 font-light">No activity records recorded.</p>
+                  <p className="text-xs text-gray-400 font-light">No activity records recorded.</p>
                 )}
               </div>
             </div>
           ) : (
-            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
-              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-4">Stock Alerts & Warnings</h3>
+            <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm">
+              <h3 className="text-base font-serif font-medium text-luxury-black dark:text-white mb-4">Stock Alerts & Warnings</h3>
               <div className="space-y-2.5">
                 {lowStockItems.slice(0, 5).map((p) => (
-                  <div key={p._id} className="flex justify-between items-center text-xs py-1 border-b border-gray-100 dark:border-gray-750 last:border-b-0">
-                    <span className="font-medium text-gray-900 dark:text-white truncate pr-2">{p.name}</span>
-                    <span className={`font-bold shrink-0 ${p.stock <= 0 ? "text-red-650" : "text-amber-800"}`}>
+                  <div key={p._id} className="flex justify-between items-center text-xs py-1 border-b border-gold-200/10 dark:border-gold-900/10 last:border-b-0">
+                    <span className="font-medium text-luxury-black dark:text-white truncate pr-2">{p.name}</span>
+                    <span className={`font-semibold shrink-0 text-xs px-2 py-0.5 rounded-full ${p.stock <= 0 ? "bg-danger-lux/10 text-danger-lux border border-danger-lux/20" : "bg-warning-lux/10 text-warning-lux border border-warning-lux/20"}`}>
                       {p.stock <= 0 ? "OUT OF STOCK" : `${p.stock} units`}
                     </span>
                   </div>
                 ))}
                 {lowStockItems.length === 0 && (
-                  <div className="py-6 text-center text-xs text-emerald-800 dark:text-emerald-400 font-semibold">
+                  <div className="py-6 text-center text-xs text-success-lux font-semibold">
                     ✨ No stock warnings. All inventories are healthy!
                   </div>
                 )}
@@ -2445,7 +2570,6 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
-   
       </div>
     );
   };
@@ -2459,30 +2583,50 @@ const AdminDashboard = () => {
 
     return (
       <div className="space-y-6 animate-page-enter">
-        <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
-          <h3 className="text-xl font-serif font-light text-gray-955 dark:text-white mb-2">Customer Support Ticket Center</h3>
-          <p className="text-xs text-gray-500 mb-4 font-light">
+        <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm">
+          <h3 className="text-xl font-serif font-light text-luxury-black dark:text-white mb-2">Customer Support Ticket Center</h3>
+          <p className="text-xs text-gray-lux dark:text-gray-400 mb-4 font-light">
             Respond to customer queries, resolve order issues, and maintain communication threads.
           </p>
         </div>
 
         {/* Stats Row */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-gray-205/30 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-4">
-            <span className="text-[10px] uppercase font-bold text-gray-400">Total Tickets</span>
-            <h4 className="text-2xl font-serif font-light mt-1 text-gray-900 dark:text-white">{totalCount}</h4>
+        <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-400">Total Tickets</p>
+                <p className="mt-2 text-3xl font-sans font-semibold text-luxury-black dark:text-white">{totalCount}</p>
+              </div>
+              <span className="text-xl p-2 rounded-lg bg-gold-500/10 text-gold-600">💬</span>
+            </div>
           </div>
-          <div className="rounded-2xl border border-gray-205/30 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-4">
-            <span className="text-[10px] uppercase font-bold text-amber-500">Open Queries</span>
-            <h4 className="text-2xl font-serif font-light mt-1 text-amber-600 dark:text-amber-400">{openCount}</h4>
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-warning-lux">Open Queries</p>
+                <p className="mt-2 text-3xl font-sans font-semibold text-warning-lux">{openCount}</p>
+              </div>
+              <span className="text-xl p-2 rounded-lg bg-warning-lux/10 text-warning-lux">⚠️</span>
+            </div>
           </div>
-          <div className="rounded-2xl border border-gray-205/30 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-4">
-            <span className="text-[10px] uppercase font-bold text-blue-500">In Progress</span>
-            <h4 className="text-2xl font-serif font-light mt-1 text-blue-600 dark:text-blue-400">{progressCount}</h4>
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gold-500">In Progress</p>
+                <p className="mt-2 text-3xl font-sans font-semibold text-gold-500">{progressCount}</p>
+              </div>
+              <span className="text-xl p-2 rounded-lg bg-gold-500/10 text-gold-600">⏳</span>
+            </div>
           </div>
-          <div className="rounded-2xl border border-gray-205/30 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-4">
-            <span className="text-[10px] uppercase font-bold text-gray-500">Resolved</span>
-            <h4 className="text-2xl font-serif font-light mt-1 text-gray-600 dark:text-gray-400">{resolvedCount}</h4>
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-success-lux">Resolved</p>
+                <p className="mt-2 text-3xl font-sans font-semibold text-success-lux">{resolvedCount}</p>
+              </div>
+              <span className="text-xl p-2 rounded-lg bg-success-lux/10 text-success-lux">✓</span>
+            </div>
           </div>
         </div>
 
@@ -2491,11 +2635,11 @@ const AdminDashboard = () => {
           
           {/* Tickets List Column */}
           <div className={`${selectedTicket ? "lg:col-span-1" : "lg:col-span-3"} space-y-4`}>
-            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 p-5 shadow-sm space-y-4">
+            <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-5 shadow-sm space-y-4">
               
               {/* Header search & filters */}
               <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center">
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {["All", "Open", "In Progress", "Resolved"].map((filter) => (
                     <button
                       key={filter}
@@ -2504,10 +2648,10 @@ const AdminDashboard = () => {
                         setTicketStatusFilter(filter);
                         fetchAdminTickets(filter, ticketSearchQuery);
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
                         ticketStatusFilter === filter
-                          ? "bg-emerald-600 text-white"
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-250 dark:hover:bg-gray-600"
+                          ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
+                          : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500"
                       }`}
                     >
                       {filter}
@@ -2523,13 +2667,13 @@ const AdminDashboard = () => {
                     setTicketSearchQuery(e.target.value);
                     fetchAdminTickets(ticketStatusFilter, e.target.value);
                   }}
-                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-1.5 text-xs text-gray-900 dark:text-white"
+                  className="rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-1.5 text-xs text-luxury-black dark:text-white transition focus:border-gold-500 outline-none"
                 />
               </div>
 
               {/* Tickets Table / List */}
               {loadingTickets && adminTickets.length === 0 ? (
-                <div className="py-12 text-center text-xs text-gray-500 dark:text-gray-400">Loading tickets...</div>
+                <div className="py-12 text-center text-xs text-gray-lux dark:text-gray-400">Loading tickets...</div>
               ) : adminTickets.length > 0 ? (
                 <div className="overflow-x-auto">
                   {selectedTicket ? (
@@ -2539,24 +2683,24 @@ const AdminDashboard = () => {
                         <div
                           key={t._id}
                           onClick={() => fetchAdminTicketDetails(t._id)}
-                          className={`p-3 rounded-2xl border transition duration-200 cursor-pointer ${
+                          className={`p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
                             selectedTicket._id === t._id
-                              ? "border-emerald-500 bg-emerald-50/15 dark:bg-emerald-950/10"
-                              : "border-gray-150/45 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-750/30"
+                              ? "border-gold-500 bg-gold-500/5 dark:bg-gold-500/10 shadow-sm shadow-gold-500/5"
+                              : "border-gold-200/10 dark:border-gold-900/10 hover:border-gold-500 bg-[#FAF7F2]/50 dark:bg-white/5"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-[10px] font-bold text-gray-900 dark:text-white">{t.ticketCode}</span>
+                            <span className="font-mono text-[10px] font-bold text-luxury-black dark:text-white">{t.ticketCode}</span>
                             <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${
-                              t.status === "Open" ? "bg-amber-50 text-amber-800 border-amber-200/50" :
-                              t.status === "In Progress" ? "bg-blue-50 text-blue-800 border-blue-200/50" :
-                              "bg-gray-50 text-gray-650 border-gray-200/50"
+                              t.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
+                              t.status === "In Progress" ? "bg-gold-500/10 border-gold-500/20 text-gold-600" :
+                              "bg-success-lux/10 border-success-lux/20 text-success-lux"
                             }`}>
                               {t.status}
                             </span>
                           </div>
-                          <h4 className="text-xs font-semibold mt-1 truncate text-gray-900 dark:text-white">{t.subject}</h4>
-                          <p className="text-[10px] text-gray-405 truncate font-light">By {t.user?.name || "Customer"}</p>
+                          <h4 className="text-xs font-semibold mt-1 truncate text-luxury-black dark:text-white">{t.subject}</h4>
+                          <p className="text-[10px] text-gray-lux truncate font-light">By {t.user?.name || "Customer"}</p>
                           <p className="text-[9px] text-gray-400 text-right mt-1">Updated {new Date(t.updatedAt).toLocaleDateString("en-IN")}</p>
                         </div>
                       ))}
@@ -2565,43 +2709,43 @@ const AdminDashboard = () => {
                     /* Large detailed table */
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-gray-150 dark:border-gray-700 text-xs text-gray-455 font-bold uppercase tracking-wider">
-                          <th className="py-3 px-4">Code</th>
-                          <th className="py-3 px-4">Customer</th>
-                          <th className="py-3 px-4">Subject</th>
-                          <th className="py-3 px-4">Associated Order</th>
-                          <th className="py-3 px-4">Status</th>
-                          <th className="py-3 px-4">Created Date</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
+                        <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-xs text-gray-lux dark:text-gray-400 font-bold uppercase tracking-wider">
+                          <th className="py-3 px-4 font-sans">Code</th>
+                          <th className="py-3 px-4 font-sans">Customer</th>
+                          <th className="py-3 px-4 font-sans">Subject</th>
+                          <th className="py-3 px-4 font-sans">Associated Order</th>
+                          <th className="py-3 px-4 font-sans">Status</th>
+                          <th className="py-3 px-4 font-sans">Created Date</th>
+                          <th className="py-3 px-4 text-right font-sans">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-xs">
+                      <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-xs">
                         {adminTickets.map((t) => (
-                          <tr key={t._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition">
-                            <td className="py-3.5 px-4 font-mono font-bold text-gray-900 dark:text-white">{t.ticketCode}</td>
+                          <tr key={t._id} className="hover:bg-gold-500/5 transition-colors">
+                            <td className="py-3.5 px-4 font-mono font-bold text-luxury-black dark:text-white">{t.ticketCode}</td>
                             <td className="py-3.5 px-4">
-                              <p className="font-semibold text-gray-900 dark:text-white">{t.user?.name || "Unknown User"}</p>
-                              <p className="text-[10px] text-gray-450 font-light">{t.user?.email || ""}</p>
+                              <p className="font-semibold text-luxury-black dark:text-white">{t.user?.name || "Unknown User"}</p>
+                              <p className="text-[10px] text-gray-lux font-light">{t.user?.email || ""}</p>
                             </td>
-                            <td className="py-3.5 px-4 font-medium text-gray-900 dark:text-white max-w-xs truncate">{t.subject}</td>
+                            <td className="py-3.5 px-4 font-medium text-luxury-black dark:text-white max-w-xs truncate">{t.subject}</td>
                             <td className="py-3.5 px-4 font-mono text-[10px]">
                               {t.order ? `ORD-${t.order.orderCode || t.order._id?.slice(-8)}` : <span className="text-gray-400">&mdash;</span>}
                             </td>
                             <td className="py-3.5 px-4">
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                                t.status === "Open" ? "bg-amber-50 text-amber-800 border-amber-200/50 dark:bg-amber-950/20 dark:text-amber-400" :
-                                t.status === "In Progress" ? "bg-blue-50 text-blue-800 border-blue-200/50 dark:bg-blue-950/20 dark:text-blue-400" :
-                                "bg-gray-50 text-gray-650 border-gray-200/50 dark:bg-gray-850 dark:text-gray-400"
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                                t.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
+                                t.status === "In Progress" ? "bg-gold-500/10 border-gold-500/20 text-gold-600" :
+                                "bg-success-lux/10 border-success-lux/20 text-success-lux"
                               }`}>
                                 {t.status}
                               </span>
                             </td>
-                            <td className="py-3.5 px-4 text-gray-450 font-light">{new Date(t.createdAt).toLocaleDateString("en-IN")}</td>
+                            <td className="py-3.5 px-4 text-gray-lux font-light">{new Date(t.createdAt).toLocaleDateString("en-IN")}</td>
                             <td className="py-3.5 px-4 text-right">
                               <button
                                 type="button"
                                 onClick={() => fetchAdminTicketDetails(t._id)}
-                                className="px-3.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 font-bold hover:bg-gray-50 dark:hover:bg-gray-750 transition cursor-pointer text-[10px] text-gray-900 dark:text-white"
+                                className="px-3.5 py-1.5 rounded-full border border-gold-500/30 bg-gold-500/5 hover:bg-gold-500 text-gold-700 hover:text-white transition-all duration-300 cursor-pointer text-[10px] font-bold uppercase tracking-wider"
                               >
                                 View Chat &rarr;
                               </button>
@@ -2613,7 +2757,7 @@ const AdminDashboard = () => {
                   )}
                 </div>
               ) : (
-                <div className="py-12 text-center text-gray-450 text-xs font-light">
+                <div className="py-12 text-center text-gray-lux text-xs font-light">
                   No support tickets found matching the selected filter.
                 </div>
               )}
@@ -2623,19 +2767,19 @@ const AdminDashboard = () => {
           {/* Ticket Detail & Messaging Console */}
           {selectedTicket && (
             <div className="lg:col-span-2 space-y-4">
-              <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 p-5 shadow-sm flex flex-col min-h-[550px]">
+              <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm flex flex-col min-h-[550px]">
                 
                 {/* Header info */}
-                <div className="border-b border-gray-150 dark:border-gray-755 pb-4 mb-4 flex flex-wrap justify-between items-start gap-4 text-gray-900 dark:text-white">
+                <div className="border-b border-gold-200/10 dark:border-gold-900/10 pb-4 mb-4 flex flex-wrap justify-between items-start gap-4 text-luxury-black dark:text-white">
                   <div>
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="font-mono text-xs font-bold bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                      <span className="font-mono text-xs font-bold bg-gold-500/10 px-2 py-0.5 rounded text-gold-600 border border-gold-500/20">
                         {selectedTicket.ticketCode}
                       </span>
                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                        selectedTicket.status === "Open" ? "bg-amber-50 text-amber-800 border-amber-200/50" :
-                        selectedTicket.status === "In Progress" ? "bg-blue-50 text-blue-800 border-blue-200/50" :
-                        "bg-gray-50 text-gray-650 border-gray-200/50"
+                        selectedTicket.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
+                        selectedTicket.status === "In Progress" ? "bg-gold-500/10 border-gold-500/20 text-gold-600" :
+                        "bg-success-lux/10 border-success-lux/20 text-success-lux"
                       }`}>
                         {selectedTicket.status}
                       </span>
@@ -2643,13 +2787,13 @@ const AdminDashboard = () => {
                     <h3 className="text-base font-semibold">{selectedTicket.subject}</h3>
                     
                     {/* User profile info */}
-                    <div className="mt-2 text-[10px] text-gray-550 dark:text-gray-400 font-light space-y-1">
+                    <div className="mt-2 text-[10px] text-gray-lux dark:text-gray-400 font-light space-y-1">
                       <p>
-                        <span className="font-bold text-gray-700 dark:text-gray-300">Customer:</span> {selectedTicket.user?.name} ({selectedTicket.user?.email})
+                        <span className="font-bold text-luxury-black dark:text-gray-300">Customer:</span> {selectedTicket.user?.name} ({selectedTicket.user?.email})
                       </p>
                       {selectedTicket.order && (
                         <p>
-                          <span className="font-bold text-gray-700 dark:text-gray-300">Associated Order:</span> Order #{selectedTicket.order.orderCode} (INR {selectedTicket.order.totalPrice}) - {selectedTicket.order.status}
+                          <span className="font-bold text-luxury-black dark:text-gray-300">Associated Order:</span> Order #{selectedTicket.order.orderCode} (INR {selectedTicket.order.totalPrice}) - {selectedTicket.order.status}
                         </p>
                       )}
                     </div>
@@ -2662,7 +2806,7 @@ const AdminDashboard = () => {
                         type="button"
                         onClick={() => handleUpdateTicketStatus("Resolved")}
                         disabled={updatingTicketStatus}
-                        className="px-3 py-1.5 rounded-xl bg-gray-800 dark:bg-slate-700 hover:bg-gray-900 dark:hover:bg-slate-650 text-white font-bold text-[10px] uppercase tracking-wider shadow-xs transition cursor-pointer"
+                        className="px-4 py-2 rounded-full bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover text-white dark:text-black font-bold text-[10px] uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-sm"
                       >
                         Resolve Ticket
                       </button>
@@ -2672,7 +2816,7 @@ const AdminDashboard = () => {
                         type="button"
                         onClick={() => handleUpdateTicketStatus("Open")}
                         disabled={updatingTicketStatus}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] uppercase tracking-wider shadow-xs transition cursor-pointer"
+                        className="px-4 py-2 rounded-full bg-gold-500 hover:bg-gold-hover text-white font-bold text-[10px] uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-sm"
                       >
                         Reopen Ticket
                       </button>
@@ -2680,7 +2824,7 @@ const AdminDashboard = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedTicket(null)}
-                      className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-200 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
+                      className="px-4 py-2 rounded-full border border-gold-200/50 hover:bg-gold-500/10 text-gray-lux dark:text-gray-300 font-bold text-[10px] uppercase tracking-wider transition-all duration-300 cursor-pointer"
                     >
                       Close Pane
                     </button>
@@ -2693,7 +2837,7 @@ const AdminDashboard = () => {
                     const isSystem = msg.senderName === "System Note";
                     if (isSystem) {
                       return (
-                        <div key={index} className="rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-150 dark:border-gray-750 py-1.5 px-3 text-[10px] text-center max-w-md mx-auto text-gray-500 dark:text-gray-400 font-light">
+                        <div key={index} className="rounded-full bg-gold-500/5 border border-gold-500/15 py-1.5 px-4 text-[10px] text-center max-w-md mx-auto text-gold-700 dark:text-gold-450 font-light">
                           {msg.message}
                         </div>
                       );
@@ -2703,8 +2847,8 @@ const AdminDashboard = () => {
                         key={index}
                         className={`flex flex-col ${msg.isAdmin ? "items-end" : "items-start"}`}
                       >
-                        <div className="flex items-center gap-2 mb-1 text-[9px] text-gray-500 dark:text-gray-400 font-light">
-                          <span className="font-bold text-gray-700 dark:text-gray-300">
+                        <div className="flex items-center gap-2 mb-1 text-[9px] text-gray-lux dark:text-gray-400 font-light">
+                          <span className="font-bold text-luxury-black dark:text-gray-300">
                             {msg.senderName} {msg.isAdmin ? "(Admin/Staff)" : "(Customer)"}
                           </span>
                           <span>&bull;</span>
@@ -2715,8 +2859,8 @@ const AdminDashboard = () => {
                         <div
                           className={`rounded-2xl p-3 text-xs leading-relaxed max-w-lg ${
                             msg.isAdmin
-                              ? "bg-emerald-600 text-white rounded-tr-none shadow-xs"
-                              : "bg-gray-100 dark:bg-gray-750 text-gray-900 dark:text-gray-250 border border-gray-200/50 dark:border-gray-700/50 rounded-tl-none"
+                              ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black rounded-tr-none shadow-sm border border-gold-900/10"
+                              : "bg-cream/40 dark:bg-white/5 text-luxury-black dark:text-gray-250 border border-gold-200/15 dark:border-gold-900/10 rounded-tl-none"
                           }`}
                         >
                           {msg.message}
@@ -2728,27 +2872,27 @@ const AdminDashboard = () => {
 
                 {/* Admin Reply Input */}
                 {selectedTicket.status !== "Resolved" ? (
-                  <form onSubmit={handleSendAdminReply} className="border-t border-gray-150 dark:border-gray-750 pt-4 mt-auto">
+                  <form onSubmit={handleSendAdminReply} className="border-t border-gold-200/10 dark:border-gold-900/10 pt-4 mt-auto">
                     <div className="flex items-end gap-3">
                       <textarea
                         value={adminReplyText}
                         onChange={(e) => setAdminReplyText(e.target.value)}
                         placeholder="Type response to customer..."
                         rows={2}
-                        className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-750 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs text-gray-900 dark:text-white transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 outline-none resize-none"
+                        className="flex-1 rounded-2xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-4 py-2.5 text-xs text-luxury-black dark:text-white transition focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20 outline-none resize-none"
                         required
                       />
                       <button
                         type="submit"
                         disabled={sendingAdminReply || !adminReplyText.trim()}
-                        className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs shrink-0 cursor-pointer"
+                        className="rounded-xl bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover text-white dark:text-black px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shrink-0 cursor-pointer"
                       >
                         {sendingAdminReply ? "Sending..." : "Send Reply"}
                       </button>
                     </div>
                   </form>
                 ) : (
-                  <div className="border-t border-gray-150 dark:border-gray-750 pt-4 mt-auto text-center text-xs text-gray-500 dark:text-gray-400 font-light">
+                  <div className="border-t border-gold-200/10 dark:border-gold-900/10 pt-4 mt-auto text-center text-xs text-gray-lux dark:text-gray-400 font-light">
                     This ticket is resolved. Reopen the ticket first to reply.
                   </div>
                 )}
@@ -2756,101 +2900,62 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
-
         </div>
       </div>
     );
   };
 
-  const renderLogsTab = () => {
+  const renderLoginLogsTable = () => {
     return (
-      <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm animate-page-enter">
-        <h3 className="text-xl font-serif font-light text-gray-955 dark:text-white mb-2">System Audit Logs</h3>
-        <p className="text-xs text-gray-500 mb-6 font-light">Trace employee actions, configuration revisions, and security actions.</p>
-        
-        {/* Filters */}
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 mb-6 text-gray-900 dark:text-white">
-          <input
-            type="text"
-            placeholder="Search details..."
-            value={logsSearch}
-            onChange={(e) => { setLogsSearch(e.target.value); setLogsPage(1); }}
-            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs"
-          />
-          <select
-            value={logsUserFilter}
-            onChange={(e) => { setLogsUserFilter(e.target.value); setLogsPage(1); }}
-            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs"
-          >
-            <option value="">All Employees</option>
-            {employees.map(e => (
-              <option key={e._id} value={e._id}>{e.name} ({e.employeeId})</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            placeholder="Start Date"
-            value={logsStartDate}
-            onChange={(e) => { setLogsStartDate(e.target.value); setLogsPage(1); }}
-            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs"
-          />
-          <input
-            type="date"
-            placeholder="End Date"
-            value={logsEndDate}
-            onChange={(e) => { setLogsEndDate(e.target.value); setLogsPage(1); }}
-            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setLogsSearch("");
-              setLogsUserFilter("");
-              setLogsActionFilter("");
-              setLogsStartDate("");
-              setLogsEndDate("");
-              setLogsPage(1);
-            }}
-            className="rounded-xl border border-gray-250 dark:border-gray-600 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
-          >
-            Clear Filters
-          </button>
-        </div>
+      <>
+        <h3 className="text-xl font-serif font-light text-luxury-black dark:text-white mb-2">Login History Logs</h3>
+        <p className="text-xs text-gray-lux dark:text-gray-400 mb-6 font-light">Trace admin and employee login attempts, session durations, and IP origins.</p>
 
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-gray-150/40 dark:border-gray-700 text-gray-400">
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Timestamp</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Employee</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Action</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Details</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">IP & Device</th>
+              <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-lux dark:text-gray-400">
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Login Time</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Employee / Email</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">IP Address</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Device & Browser</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Logout Time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
-              {logs.map((log) => (
-                <tr key={log._id} className="hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition-colors">
-                  <td className="py-3 text-gray-500 font-light">{new Date(log.timestamp).toLocaleString()}</td>
-                  <td className="py-3 font-medium text-gray-900 dark:text-white">{log.userName}</td>
+            <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
+              {loginLogs.map((log) => (
+                <tr key={log._id} className="hover:bg-gold-500/5 transition-colors">
+                  <td className="py-3 text-gray-lux dark:text-gray-400 font-light">{new Date(log.loginTime || log.createdAt).toLocaleString()}</td>
+                  <td className="py-3 font-medium">
+                    <div className="text-luxury-black dark:text-white">{log.userName}</div>
+                    <div className="text-[10px] text-gray-lux dark:text-gray-400 font-light">{log.email}</div>
+                  </td>
+                  <td className="py-3 text-luxury-black dark:text-gray-300 font-light">{log.ipAddress || "Unknown"}</td>
+                  <td className="py-3 text-gray-lux dark:text-gray-400 font-light">
+                    <div>{log.device || "Unknown Device"}</div>
+                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{log.browser || "Unknown Browser"}</div>
+                  </td>
                   <td className="py-3">
-                    <span className="inline-flex rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                      {log.action}
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
+                      log.status === "Success"
+                        ? "bg-success-lux/10 border-success-lux/20 text-success-lux"
+                        : log.status === "Failed"
+                        ? "bg-danger-lux/10 border-danger-lux/20 text-danger-lux"
+                        : "bg-warning-lux/10 border-warning-lux/20 text-warning-lux"
+                    }`}>
+                      {log.status}
                     </span>
                   </td>
-                  <td className="py-3 text-gray-600 dark:text-gray-300 font-light max-w-[320px] truncate" title={log.details}>
-                    {log.details}
-                  </td>
-                  <td className="py-3 text-gray-400 dark:text-gray-400 font-light text-[10px]">
-                    <div>{log.ipAddress || "N/A"}</div>
-                    <div className="truncate max-w-[200px] mt-0.5" title={log.userAgent}>{log.device || log.userAgent || "N/A"}</div>
+                  <td className="py-3 text-gray-lux dark:text-gray-400 font-light">
+                    {log.logoutTime ? new Date(log.logoutTime).toLocaleString() : (log.status === "Success" ? "Active Session" : "-")}
                   </td>
                 </tr>
               ))}
-              {logs.length === 0 ? (
+              {loginLogs.length === 0 ? (
                 <tr>
-                  <td className="py-8 text-center text-gray-400 font-light" colSpan={5}>No activity logs found.</td>
+                  <td className="py-8 text-center text-gray-lux font-light" colSpan={6}>No login history logs found.</td>
                 </tr>
               ) : null}
             </tbody>
@@ -2858,28 +2963,184 @@ const AdminDashboard = () => {
         </div>
 
         {/* Pagination */}
-        {logsTotalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-4 mt-4 text-xs text-gray-500">
-            <span className="font-light">Page {logsPage} of {logsTotalPages} ({logsTotalCount} total logs)</span>
+        {loginLogsTotalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gold-200/10 dark:border-gold-900/10 pt-4 mt-4 text-xs text-gray-lux">
+            <span className="font-light">Page {loginLogsPage} of {loginLogsTotalPages} ({loginLogsTotalCount} total logs)</span>
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={logsPage <= 1}
-                onClick={() => setLogsPage(p => Math.max(1, p - 1))}
-                className="rounded-full border border-gray-250 dark:border-gray-600 bg-white dark:bg-gray-800 px-3.5 py-1.5 font-bold text-gray-750 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                disabled={loginLogsPage <= 1}
+                onClick={() => setLoginLogsPage(p => Math.max(1, p - 1))}
+                className="rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-gold-700 dark:text-gray-300 hover:border-gold-500 cursor-pointer transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
               <button
                 type="button"
-                disabled={logsPage >= logsTotalPages}
-                onClick={() => setLogsPage(p => Math.min(logsTotalPages, p + 1))}
-                className="rounded-full border border-gray-250 dark:border-gray-600 bg-white dark:bg-gray-800 px-3.5 py-1.5 font-bold text-gray-750 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                disabled={loginLogsPage >= loginLogsTotalPages}
+                onClick={() => setLoginLogsPage(p => Math.min(loginLogsTotalPages, p + 1))}
+                className="rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-gold-700 dark:text-gray-300 hover:border-gold-500 cursor-pointer transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
             </div>
           </div>
+        )}
+      </>
+    );
+  };
+
+  const renderLogsTab = () => {
+    return (
+      <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm animate-page-enter">
+        {adminAuth?.isMasterAdmin && (
+          <div className="flex border-b border-gold-200/20 dark:border-gold-900/20 mb-6">
+            <button
+              type="button"
+              onClick={() => setLogsSubTab("audit")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+                logsSubTab === "audit"
+                  ? "border-gold-500 text-gold-500 font-bold"
+                  : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+              }`}
+            >
+              System Audit Logs
+            </button>
+            <button
+              type="button"
+              onClick={() => setLogsSubTab("login")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+                logsSubTab === "login"
+                  ? "border-gold-500 text-gold-500 font-bold"
+                  : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+              }`}
+            >
+              Login History Logs
+            </button>
+          </div>
+        )}
+
+        {logsSubTab === "audit" || !adminAuth?.isMasterAdmin ? (
+          <>
+            <h3 className="text-xl font-serif font-light text-luxury-black dark:text-white mb-2">System Audit Logs</h3>
+            <p className="text-xs text-gray-lux dark:text-gray-400 mb-6 font-light">Trace employee actions, configuration revisions, and security actions.</p>
+            
+            {/* Filters */}
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 mb-6 text-luxury-black dark:text-white">
+              <input
+                type="text"
+                placeholder="Search details..."
+                value={logsSearch}
+                onChange={(e) => { setLogsSearch(e.target.value); setLogsPage(1); }}
+                className="rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
+              />
+              <select
+                value={logsUserFilter}
+                onChange={(e) => { setLogsUserFilter(e.target.value); setLogsPage(1); }}
+                className="rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20 font-sans"
+              >
+                <option value="">All Employees</option>
+                {employees.map(e => (
+                  <option key={e._id} value={e._id}>{e.name} ({e.employeeId})</option>
+                ))}
+              </select>
+              <input
+                type="date"
+                placeholder="Start Date"
+                value={logsStartDate}
+                onChange={(e) => { setLogsStartDate(e.target.value); setLogsPage(1); }}
+                className="rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
+              />
+              <input
+                type="date"
+                placeholder="End Date"
+                value={logsEndDate}
+                onChange={(e) => { setLogsEndDate(e.target.value); setLogsPage(1); }}
+                className="rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setLogsSearch("");
+                  setLogsUserFilter("");
+                  setLogsActionFilter("");
+                  setLogsStartDate("");
+                  setLogsEndDate("");
+                  setLogsPage(1);
+                }}
+                className="rounded-xl border border-gold-500/30 bg-gold-500/5 hover:bg-gold-500 hover:text-white px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-gold-700 transition-all duration-300 cursor-pointer shadow-2xs"
+              >
+                Clear Filters
+              </button>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px] text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-lux dark:text-gray-400">
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Timestamp</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Employee</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Action</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Details</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">IP & Device</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
+                  {logs.map((log) => (
+                    <tr key={log._id} className="hover:bg-gold-500/5 transition-colors">
+                      <td className="py-3 text-gray-lux dark:text-gray-400 font-light">{new Date(log.timestamp).toLocaleString()}</td>
+                      <td className="py-3 font-medium text-luxury-black dark:text-white">{log.userName}</td>
+                      <td className="py-3">
+                        <span className="inline-flex rounded-full bg-gold-500/10 border border-gold-500/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-600">
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="py-3 text-gray-lux dark:text-gray-300 font-light max-w-[320px] truncate" title={log.details}>
+                        {log.details}
+                      </td>
+                      <td className="py-3 text-gray-400 dark:text-gray-500 font-light text-[10px]">
+                        <div>{log.ipAddress || "N/A"}</div>
+                        <div className="truncate max-w-[200px] mt-0.5" title={log.userAgent}>{log.device || log.userAgent || "N/A"}</div>
+                      </td>
+                    </tr>
+                  ))}
+                  {logs.length === 0 ? (
+                    <tr>
+                      <td className="py-8 text-center text-gray-lux font-light" colSpan={5}>No activity logs found.</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {logsTotalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-gold-200/10 dark:border-gold-900/10 pt-4 mt-4 text-xs text-gray-lux">
+                <span className="font-light">Page {logsPage} of {logsTotalPages} ({logsTotalCount} total logs)</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={logsPage <= 1}
+                    onClick={() => setLogsPage(p => Math.max(1, p - 1))}
+                    className="rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-gold-700 dark:text-gray-300 hover:border-gold-500 cursor-pointer transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={logsPage >= logsTotalPages}
+                    onClick={() => setLogsPage(p => Math.min(logsTotalPages, p + 1))}
+                    className="rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-gold-700 dark:text-gray-300 hover:border-gold-500 cursor-pointer transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          renderLoginLogsTable()
         )}
       </div>
     );
@@ -2904,14 +3165,14 @@ const AdminDashboard = () => {
     return (
       <div className="space-y-6 animate-page-enter">
         {/* Sub Navigation */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <div className="flex border-b border-gold-200/20 dark:border-gold-900/20">
           <button
             type="button"
             onClick={() => setEmployeesSubTab("employees")}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
               employeesSubTab === "employees"
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
             }`}
           >
             Employees List
@@ -2921,8 +3182,8 @@ const AdminDashboard = () => {
             onClick={() => setEmployeesSubTab("roles")}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
               employeesSubTab === "roles"
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
             }`}
           >
             Custom Roles Matrix
@@ -2932,8 +3193,8 @@ const AdminDashboard = () => {
             onClick={() => setEmployeesSubTab("departments")}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
               employeesSubTab === "departments"
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
             }`}
           >
             Departments
@@ -2941,11 +3202,11 @@ const AdminDashboard = () => {
         </div>
 
         {employeesSubTab === "employees" && (
-          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-6">
+          <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm space-y-6">
             <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
-                <h3 className="text-lg font-serif font-light text-gray-955 dark:text-white">Admin Employee Accounts</h3>
-                <p className="text-xs text-gray-500 font-light">Create, edit, suspend or delete console manager accounts.</p>
+                <h3 className="text-lg font-serif font-light text-luxury-black dark:text-white">Admin Employee Accounts</h3>
+                <p className="text-xs text-gray-lux dark:text-gray-400 font-light">Create, edit, suspend or delete console manager accounts.</p>
               </div>
               <button
                 type="button"
@@ -2954,7 +3215,7 @@ const AdminDashboard = () => {
                   setEmployeeForm(emptyEmployeeForm);
                   setShowEmployeeModal(true);
                 }}
-                className="rounded-full bg-emerald-950 dark:bg-emerald-600 hover:bg-emerald-900 dark:hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
+                className="rounded-full bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover px-4 py-2 text-xs font-bold text-white dark:text-black shadow-sm transition-all duration-300 cursor-pointer"
               >
                 Add Employee Account
               </button>
@@ -2963,7 +3224,7 @@ const AdminDashboard = () => {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-150/40 dark:border-gray-700 text-gray-400">
+                  <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-lux dark:text-gray-400">
                     <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Employee</th>
                     <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Designation / Dept</th>
                     <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Roles</th>
@@ -2971,42 +3232,42 @@ const AdminDashboard = () => {
                     <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-gray-900 dark:text-white">
+                <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
                   {employees.map((emp) => (
-                    <tr key={emp._id} className="hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition-colors">
+                    <tr key={emp._id} className="hover:bg-gold-500/5 transition-colors">
                       <td className="py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold text-xs">
+                          <div className="h-8 w-8 rounded-full bg-gold-500/10 text-gold-600 border border-gold-500/20 flex items-center justify-center font-bold text-xs select-none">
                             {emp.name?.[0].toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-semibold">{emp.name} {emp.isMasterAdmin && <span className="text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-bold ml-1 uppercase">Master</span>}</p>
-                            <p className="text-[10px] text-gray-400 font-light mt-0.5">{emp.email} · ID: {emp.employeeId || "N/A"}</p>
+                            <p className="font-semibold text-luxury-black dark:text-white">{emp.name} {emp.isMasterAdmin && <span className="text-[9px] bg-gold-500/10 text-gold-600 px-1.5 py-0.5 rounded font-bold ml-1 uppercase border border-gold-500/20">Master</span>}</p>
+                            <p className="text-[10px] text-gray-lux dark:text-gray-400 font-light mt-0.5">{emp.email} · ID: {emp.employeeId || "N/A"}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-3">
-                        <p className="font-medium">{emp.designation || "Executive"}</p>
-                        <p className="text-[10px] text-gray-400 font-light mt-0.5">{emp.department?.name || "General/Unassigned"}</p>
+                        <p className="font-medium text-luxury-black dark:text-white">{emp.designation || "Executive"}</p>
+                        <p className="text-[10px] text-gray-lux dark:text-gray-400 font-light mt-0.5">{emp.department?.name || "General/Unassigned"}</p>
                       </td>
                       <td className="py-3 max-w-[200px] truncate" title={emp.roles?.map(r=>r.name).join(", ")}>
                         {emp.roles?.map(r => (
-                          <span key={r._id} className="inline-block bg-slate-100 dark:bg-slate-700 text-slate-850 dark:text-slate-200 px-2 py-0.5 rounded text-[9px] font-medium mr-1 mb-1">
+                          <span key={r._id} className="inline-block bg-[#FAF7F2] dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 px-2 py-0.5 rounded text-[9px] font-medium mr-1 mb-1">
                             {r.name}
                           </span>
                         ))}
                         {(!emp.roles || emp.roles.length === 0) && <span className="text-gray-400">—</span>}
                       </td>
                       <td className="py-3">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${emp.status === "Active" ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400" : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"}`}>
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${emp.status === "Active" ? "bg-success-lux/10 border-success-lux/20 text-success-lux" : "bg-danger-lux/10 border-danger-lux/20 text-danger-lux"}`}>
                           {emp.status}
                         </span>
                       </td>
-                      <td className="py-3 text-right space-x-2">
+                      <td className="py-3 text-right space-x-3">
                         <button
                           type="button"
                           onClick={() => startEditEmployee(emp)}
-                          className="text-xs font-semibold text-emerald-700 hover:text-emerald-950 dark:text-emerald-400 dark:hover:text-emerald-300 transition cursor-pointer"
+                          className="text-xs font-semibold text-gold-600 hover:text-gold-700 hover:underline transition cursor-pointer"
                         >
                           Edit
                         </button>
@@ -3015,14 +3276,14 @@ const AdminDashboard = () => {
                             <button
                               type="button"
                               onClick={() => handleToggleEmployeeStatus(emp)}
-                              className={`text-xs font-semibold transition cursor-pointer ${emp.status === "Active" ? "text-amber-700 hover:text-amber-900" : "text-emerald-700 hover:text-emerald-950"}`}
+                              className={`text-xs font-semibold transition cursor-pointer ${emp.status === "Active" ? "text-warning-lux hover:underline" : "text-gold-600 hover:underline"}`}
                             >
                               {emp.status === "Active" ? "Suspend" : "Activate"}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteEmployee(emp._id)}
-                              className="text-xs font-semibold text-red-650 hover:text-red-800 transition cursor-pointer"
+                              className="text-xs font-semibold text-danger-lux hover:underline transition cursor-pointer"
                             >
                               Delete
                             </button>
@@ -3040,10 +3301,10 @@ const AdminDashboard = () => {
         {employeesSubTab === "roles" && (
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Roles List */}
-            <div className="lg:col-span-1 rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-4 h-fit">
+            <div className="lg:col-span-1 rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm space-y-4 h-fit">
               <div>
-                <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white">Security Roles</h3>
-                <p className="text-[11px] text-gray-500 font-light">Customizable matrices map permissions to employee tasks.</p>
+                <h3 className="text-base font-serif font-semibold text-luxury-black dark:text-white">Security Roles</h3>
+                <p className="text-[11px] text-gray-lux dark:text-gray-400 font-light">Customizable matrices map permissions to employee tasks.</p>
               </div>
               <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
                 {roles.map((r) => (
@@ -3052,17 +3313,17 @@ const AdminDashboard = () => {
                     onClick={() => startEditRole(r)}
                     className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                       editingRoleId === r._id
-                        ? "border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/10"
-                        : "border-gray-100 hover:bg-gray-50 dark:border-gray-750 dark:hover:bg-gray-800/50"
+                        ? "border-gold-500 bg-gold-500/5 dark:bg-gold-500/10 shadow-sm"
+                        : "border-gold-200/10 dark:border-gold-900/10 hover:border-gold-500 bg-[#FAF7F2]/50 dark:bg-white/5"
                     }`}
                   >
                     <div className="flex justify-between items-start text-xs">
-                      <span className="font-bold text-gray-900 dark:text-white">{r.name}</span>
-                      {!r.isCustom && <span className="text-[8px] bg-slate-100 dark:bg-slate-700 text-gray-500 px-1 py-0.5 rounded uppercase font-semibold">System</span>}
+                      <span className="font-bold text-luxury-black dark:text-white">{r.name}</span>
+                      {!r.isCustom && <span className="text-[8px] bg-gold-500/10 border border-gold-500/20 text-gold-600 px-1 py-0.5 rounded uppercase font-semibold">System</span>}
                     </div>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-400 mt-1 font-light line-clamp-2">{r.description || "No description provided."}</p>
+                    <p className="text-[10px] text-gray-lux dark:text-gray-400 mt-1 font-light line-clamp-2">{r.description || "No description provided."}</p>
                     <div className="flex justify-between items-center mt-2.5">
-                      <span className="text-[9px] font-semibold text-emerald-800 dark:text-emerald-450 uppercase">{r.permissions?.length || 0} permissions</span>
+                      <span className="text-[9px] font-semibold text-gold-600 uppercase">{r.permissions?.length || 0} permissions</span>
                       {r.isCustom && (
                         <button
                           type="button"
@@ -3070,7 +3331,7 @@ const AdminDashboard = () => {
                             e.stopPropagation();
                             handleDeleteRole(r._id);
                           }}
-                          className="text-[9px] font-bold text-red-650 hover:underline cursor-pointer"
+                          className="text-[9px] font-bold text-danger-lux hover:underline cursor-pointer"
                         >
                           Delete
                         </button>
@@ -3082,11 +3343,11 @@ const AdminDashboard = () => {
             </div>
 
             {/* Custom Role Builder Form */}
-            <div className="lg:col-span-2 rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
-              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-1">
+            <div className="lg:col-span-2 rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm">
+              <h3 className="text-base font-serif font-semibold text-luxury-black dark:text-white mb-1">
                 {editingRoleId ? `Edit Custom Permissions Matrix: ${roleForm.name}` : "Create Custom Security Role"}
               </h3>
-              <p className="text-xs text-gray-500 mb-4 font-light">Toggle granular access capabilities across features.</p>
+              <p className="text-xs text-gray-lux dark:text-gray-400 mb-4 font-light">Toggle granular access capabilities across features.</p>
               
               <form onSubmit={handleSaveRole} className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -3097,33 +3358,33 @@ const AdminDashboard = () => {
                     value={roleForm.name}
                     onChange={(e) => setRoleForm(p => ({ ...p, name: e.target.value }))}
                     placeholder="Role Name (e.g. Stock Lead)"
-                    className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white"
+                    className="rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                   />
                   <input
                     type="text"
                     value={roleForm.description}
                     onChange={(e) => setRoleForm(p => ({ ...p, description: e.target.value }))}
                     placeholder="Brief Role Description"
-                    className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white"
+                    className="rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                   />
                 </div>
 
-                <div className="border-t border-gray-100 dark:border-gray-750 pt-4 space-y-4 max-h-[350px] overflow-y-auto text-gray-900 dark:text-white pr-2">
+                <div className="border-t border-gold-200/10 dark:border-gold-900/10 pt-4 space-y-4 max-h-[350px] overflow-y-auto text-luxury-black dark:text-white pr-2">
                   {Object.keys(groupedPermissions).map((groupName) => (
                     <div key={groupName} className="space-y-2">
-                      <h4 className="text-xs font-semibold text-emerald-800 dark:text-emerald-450 tracking-wider uppercase">{groupName}</h4>
+                      <h4 className="text-xs font-semibold text-gold-600 tracking-wider uppercase">{groupName}</h4>
                       <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 text-[11px]">
                         {groupedPermissions[groupName].map((perm) => (
-                          <label key={perm.code} className="flex items-start gap-2.5 p-2 rounded-lg border border-gray-100 hover:bg-gray-50/50 dark:border-gray-750 dark:hover:bg-gray-850/50 cursor-pointer select-none">
+                          <label key={perm.code} className="flex items-start gap-2.5 p-2 rounded-lg border border-gold-200/10 dark:border-gold-900/10 hover:bg-gold-505/5 cursor-pointer select-none">
                             <input
                               type="checkbox"
                               checked={roleForm.permissions.includes(perm.code)}
                               onChange={() => handleTogglePermissionInForm(perm.code)}
-                              className="rounded text-emerald-600 focus:ring-emerald-600 cursor-pointer h-4 w-4 shrink-0 mt-0.5"
+                              className="rounded text-gold-505 focus:ring-gold-500 cursor-pointer h-4 w-4 shrink-0 mt-0.5"
                             />
                             <div>
-                              <p className="font-semibold">{perm.name}</p>
-                              <p className="text-[9px] text-gray-400 mt-0.5">{perm.code}</p>
+                              <p className="font-semibold text-luxury-black dark:text-white">{perm.name}</p>
+                              <p className="text-[9px] text-gray-lux dark:text-gray-500 mt-0.5">{perm.code}</p>
                             </div>
                           </label>
                         ))}
@@ -3132,7 +3393,7 @@ const AdminDashboard = () => {
                   ))}
                 </div>
 
-                <div className="flex gap-3 justify-end pt-3 border-t border-gray-100 dark:border-gray-750">
+                <div className="flex gap-3 justify-end pt-3 border-t border-gold-200/10 dark:border-gold-900/10">
                   {editingRoleId && (
                     <button
                       type="button"
@@ -3140,14 +3401,14 @@ const AdminDashboard = () => {
                         setEditingRoleId("");
                         setRoleForm(emptyRoleForm);
                       }}
-                      className="rounded-full border border-gray-250 dark:border-gray-600 px-4 py-2 text-xs font-semibold text-gray-700 dark:text-white"
+                      className="rounded-full border border-gold-200/50 dark:border-gold-900/30 px-4 py-2 text-xs font-semibold text-gray-lux dark:text-white"
                     >
                       Clear Selection
                     </button>
                   )}
                   <button
                     type="submit"
-                    className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-semibold shadow-sm cursor-pointer font-sans"
+                    className="rounded-full bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover text-white dark:text-black px-5 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer"
                   >
                     {editingRoleId ? "Update Role Matrix" : "Save Role"}
                   </button>
@@ -3160,31 +3421,31 @@ const AdminDashboard = () => {
         {employeesSubTab === "departments" && (
           <div className="grid gap-6 md:grid-cols-3">
             {/* Dept List */}
-            <div className="md:col-span-2 rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-4">
+            <div className="md:col-span-2 rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm space-y-4">
               <div>
-                <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white">Store Departments</h3>
-                <p className="text-xs text-gray-500 font-light">Structure the administrative division within your organization.</p>
+                <h3 className="text-base font-serif font-semibold text-luxury-black dark:text-white">Store Departments</h3>
+                <p className="text-xs text-gray-lux dark:text-gray-400 font-light">Structure the administrative division within your organization.</p>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-150/40 dark:border-gray-700 text-gray-400">
+                    <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-lux dark:text-gray-400">
                       <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Department Name</th>
                       <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Description</th>
                       <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-gray-900 dark:text-white">
+                  <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
                     {departments.map((dept) => (
-                      <tr key={dept._id} className="hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition-colors">
+                      <tr key={dept._id} className="hover:bg-gold-500/5 transition-colors">
                         <td className="py-3 font-semibold">{dept.name}</td>
-                        <td className="py-3 text-gray-500 font-light max-w-[280px] truncate" title={dept.description}>{dept.description}</td>
+                        <td className="py-3 text-gray-lux dark:text-gray-400 font-light max-w-[280px] truncate" title={dept.description}>{dept.description}</td>
                         <td className="py-3 text-right">
                           <button
                             type="button"
                             onClick={() => handleDeleteDept(dept._id)}
-                            className="text-xs font-semibold text-red-650 hover:underline cursor-pointer"
+                            className="text-xs font-semibold text-danger-lux hover:underline cursor-pointer"
                           >
                             Remove
                           </button>
@@ -3197,8 +3458,8 @@ const AdminDashboard = () => {
             </div>
 
             {/* Create Dept */}
-            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm h-fit">
-              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-3">Add Department</h3>
+            <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm h-fit">
+              <h3 className="text-base font-serif font-semibold text-luxury-black dark:text-white mb-3">Add Department</h3>
               <form onSubmit={handleSaveDept} className="space-y-3.5">
                 <input
                   type="text"
@@ -3206,18 +3467,18 @@ const AdminDashboard = () => {
                   value={deptForm.name}
                   onChange={(e) => setDeptForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="Department Name (e.g. Sales)"
-                  className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white"
+                  className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                 />
                 <textarea
                   value={deptForm.description}
                   onChange={(e) => setDeptForm(p => ({ ...p, description: e.target.value }))}
                   placeholder="Department Description"
                   rows={3}
-                  className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white"
+                  className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                 />
                 <button
                   type="submit"
-                  className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 text-xs font-semibold shadow-sm cursor-pointer"
+                  className="w-full rounded-full bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover text-white dark:text-black py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer"
                 >
                   Create Department
                 </button>
@@ -3240,9 +3501,9 @@ const AdminDashboard = () => {
             />
             
             {/* Modal Content Box */}
-            <div className="relative w-full max-w-lg rounded-3xl border border-gray-205 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-xl z-10 overflow-y-auto max-h-[90vh] text-left animate-page-enter">
-              <div className="flex justify-between items-center pb-4 mb-4 border-b border-gray-100 dark:border-gray-700">
-                <h3 className="text-lg font-serif font-semibold text-gray-900 dark:text-white">
+            <div className="relative w-full max-w-lg rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-2xl z-10 overflow-y-auto max-h-[90vh] text-left animate-page-enter">
+              <div className="flex justify-between items-center pb-4 mb-4 border-b border-gold-200/10 dark:border-gold-900/10">
+                <h3 className="text-lg font-serif font-semibold text-luxury-black dark:text-white">
                   {editingEmployeeId ? "Edit Employee Account" : "Add New Employee"}
                 </h3>
                 <button
@@ -3252,7 +3513,7 @@ const AdminDashboard = () => {
                     setEditingEmployeeId("");
                     setEmployeeForm(emptyEmployeeForm);
                   }}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold cursor-pointer"
+                  className="text-gray-400 hover:text-gold-500 text-xl font-bold cursor-pointer transition-colors"
                 >
                   &times;
                 </button>
@@ -3261,61 +3522,61 @@ const AdminDashboard = () => {
               <form onSubmit={handleSaveEmployee} className="space-y-4">
                 {/* Name */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Full Name</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-450">Full Name</label>
                   <input
                     type="text"
                     required
                     value={employeeForm.name}
                     onChange={(e) => setEmployeeForm(p => ({ ...p, name: e.target.value }))}
                     placeholder="Jane Doe"
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                   />
                 </div>
 
                 {/* Email */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Email Address</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-450">Email Address</label>
                   <input
                     type="email"
                     required
                     value={employeeForm.email}
                     onChange={(e) => setEmployeeForm(p => ({ ...p, email: e.target.value }))}
                     placeholder="jane.doe@example.com"
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                   />
                 </div>
 
                 {/* Mobile Number */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mobile Number</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-450">Mobile Number</label>
                   <input
                     type="text"
                     value={employeeForm.mobileNumber}
                     onChange={(e) => setEmployeeForm(p => ({ ...p, mobileNumber: e.target.value }))}
                     placeholder="+91-98765-43210"
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                   />
                 </div>
 
                 {/* Designation */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Designation</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-450">Designation</label>
                   <input
                     type="text"
                     value={employeeForm.designation}
                     onChange={(e) => setEmployeeForm(p => ({ ...p, designation: e.target.value }))}
                     placeholder="Store Manager"
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                   />
                 </div>
 
                 {/* Department Selection */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Department</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-450">Department</label>
                   <select
                     value={employeeForm.department}
                     onChange={(e) => setEmployeeForm(p => ({ ...p, department: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-sans"
+                    className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20 font-sans"
                   >
                     <option value="">Select Department (Optional)</option>
                     {departments.map((dept) => (
@@ -3329,8 +3590,8 @@ const AdminDashboard = () => {
                 {/* Password */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Password</label>
-                    {editingEmployeeId && <span className="text-[9px] text-gray-450 dark:text-gray-500">(leave blank to keep current)</span>}
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-450">Password</label>
+                    {editingEmployeeId && <span className="text-[9px] text-gray-500 dark:text-gray-500">(leave blank to keep current)</span>}
                   </div>
                   <input
                     type="password"
@@ -3338,14 +3599,14 @@ const AdminDashboard = () => {
                     value={employeeForm.password}
                     onChange={(e) => setEmployeeForm(p => ({ ...p, password: e.target.value }))}
                     placeholder={editingEmployeeId ? "••••••••" : "Password (min 6 chars)"}
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
                   />
                 </div>
 
                 {/* Roles Checklist */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Assign Roles</label>
-                  <div className="grid gap-2 grid-cols-2 text-[11px] max-h-36 overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-xl p-2.5 bg-gray-50/50 dark:bg-gray-800/50">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-450">Assign Roles</label>
+                  <div className="grid gap-2 grid-cols-2 text-[11px] max-h-36 overflow-y-auto border border-gold-200/10 dark:border-gold-900/10 rounded-xl p-2.5 bg-gold-500/5 dark:bg-[#1C1C1C]">
                     {roles.map((role) => (
                       <label key={role._id} className="flex items-center gap-2 cursor-pointer select-none">
                         <input
@@ -3361,9 +3622,9 @@ const AdminDashboard = () => {
                               }
                             });
                           }}
-                          className="rounded text-emerald-600 focus:ring-emerald-600 h-4 w-4 cursor-pointer"
+                          className="rounded text-gold-500 focus:ring-gold-500 h-4 w-4 cursor-pointer"
                         />
-                        <span className="text-gray-700 dark:text-gray-300 font-medium truncate" title={role.name}>
+                        <span className="text-luxury-black dark:text-white font-medium truncate" title={role.name}>
                           {role.name}
                         </span>
                       </label>
@@ -3373,11 +3634,11 @@ const AdminDashboard = () => {
 
                 {/* Status Selection */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Account Status</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-lux dark:text-gray-450">Account Status</label>
                   <select
                     value={employeeForm.status}
                     onChange={(e) => setEmployeeForm(p => ({ ...p, status: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-sans"
+                    className="w-full rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20 font-sans"
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -3385,7 +3646,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Buttons */}
-                <div className="flex gap-3 justify-end pt-3 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex gap-3 justify-end pt-3 border-t border-gold-200/10 dark:border-gold-900/10">
                   <button
                     type="button"
                     onClick={() => {
@@ -3393,13 +3654,13 @@ const AdminDashboard = () => {
                       setEditingEmployeeId("");
                       setEmployeeForm(emptyEmployeeForm);
                     }}
-                    className="rounded-full border border-gray-250 dark:border-gray-650 bg-white dark:bg-gray-800 text-gray-700 dark:text-white px-4 py-2 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+                    className="rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white dark:bg-[#1C1C1C] text-gray-lux dark:text-white px-4 py-2 text-xs font-semibold hover:bg-gold-500/5 transition cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-semibold shadow-sm cursor-pointer transition"
+                    className="rounded-full bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover text-white dark:text-black px-5 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-sm"
                   >
                     {editingEmployeeId ? "Update Employee" : "Create Account"}
                   </button>
@@ -3415,14 +3676,14 @@ const AdminDashboard = () => {
   const renderProductsTab = () => {
     return (
       <div className="space-y-6 animate-page-enter">
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <div className="flex border-b border-gold-200/20 dark:border-gold-900/20">
           <button
             type="button"
             onClick={() => setProductsSubTab("inventory")}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
               productsSubTab === "inventory"
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
             }`}
           >
             Inventory List
@@ -3432,8 +3693,8 @@ const AdminDashboard = () => {
             onClick={() => setProductsSubTab("add-edit-product")}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
               productsSubTab === "add-edit-product"
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
             }`}
           >
             {editingId ? "Edit Product Details" : "Add New Product"}
@@ -3441,35 +3702,35 @@ const AdminDashboard = () => {
         </div>
 
         {productsSubTab === "inventory" && (
-          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-6">
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm space-y-6">
             {/* Header / Export */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gold-200/10 dark:border-gold-900/10 pb-4">
               <div>
-                <h3 className="text-xl font-serif font-light tracking-tight text-gray-955 dark:text-white">Stock Management</h3>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-light">Monitor and adjust product inventory levels.</p>
+                <h3 className="text-xl font-serif text-luxury-black dark:text-white">Stock Management</h3>
+                <p className="mt-1 text-xs text-gray-lux dark:text-gray-400 font-light">Monitor and adjust product inventory levels.</p>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs">
-                <span className="rounded-full bg-white/80 dark:bg-gray-700 border border-gray-200/60 dark:border-gray-600 px-3.5 py-1.5 font-medium text-gray-700 dark:text-gray-200 shadow-2xs">
-                  Total Units: <strong className="font-semibold text-gray-955 dark:text-white">{stockSummary.units}</strong>
+                <span className="rounded-full bg-cream dark:bg-white/5 border border-gold-200/10 dark:border-gold-900/10 px-3.5 py-1.5 font-medium text-luxury-black dark:text-white shadow-2xs">
+                  Total Units: <strong className="font-semibold text-gold-600">{stockSummary.units}</strong>
                 </span>
-                <span className="rounded-full bg-amber-50/50 dark:bg-amber-900/20 border border-amber-250/50 px-3.5 py-1.5 font-medium text-amber-900 dark:text-amber-300">
+                <span className="rounded-full bg-warning-lux/10 border border-warning-lux/20 px-3.5 py-1.5 font-medium text-warning-lux">
                   Low: <strong className="font-semibold">{stockSummary.low}</strong>
                 </span>
-                <span className="rounded-full bg-rose-50/50 dark:bg-rose-900/20 border border-rose-200/30 px-3.5 py-1.5 font-medium text-rose-900 dark:text-rose-300">
+                <span className="rounded-full bg-danger-lux/10 border border-danger-lux/20 px-3.5 py-1.5 font-medium text-danger-lux">
                   Out of Stock: <strong className="font-semibold">{stockSummary.out}</strong>
                 </span>
-                <div className="flex items-center gap-2 ml-2 border-l border-gray-200 dark:border-gray-700 pl-3">
+                <div className="flex items-center gap-2 ml-2 border-l border-gold-200/20 dark:border-gold-900/20 pl-3">
                   <button
                     type="button"
                     onClick={handleExportExcel}
-                    className="rounded-full border border-emerald-250 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 px-3.5 py-1.5 font-bold text-emerald-800 dark:text-emerald-450 cursor-pointer shadow-2xs transition"
+                    className="rounded-full border border-gold-500/30 bg-gold-500/5 hover:bg-gold-500 text-gold-700 hover:text-white px-3.5 py-1.5 font-bold uppercase tracking-wider text-[10px] cursor-pointer shadow-2xs transition-all duration-300"
                   >
                     Export Excel
                   </button>
                   <button
                     type="button"
                     onClick={handleExportPDF}
-                    className="rounded-full border border-rose-250 bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 px-3.5 py-1.5 font-bold text-rose-800 dark:text-rose-450 cursor-pointer shadow-2xs transition"
+                    className="rounded-full border border-danger-lux/30 bg-danger-lux/5 hover:bg-danger-lux text-danger-lux hover:text-white px-3.5 py-1.5 font-bold uppercase tracking-wider text-[10px] cursor-pointer shadow-2xs transition-all duration-300"
                   >
                     Export PDF
                   </button>
@@ -3484,8 +3745,8 @@ const AdminDashboard = () => {
                 onClick={() => setSelectedCategory("All")}
                 className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${
                   selectedCategory === "All"
-                    ? "bg-emerald-950 dark:bg-emerald-600 text-white border border-emerald-950 dark:border-emerald-600 shadow-sm"
-                    : "bg-white/50 border border-gray-200 dark:border-gray-700 text-gray-650 dark:text-gray-350 hover:border-emerald-950/40 cursor-pointer dark:hover:border-emerald-600"
+                    ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
+                    : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500 cursor-pointer"
                 }`}
               >
                 All ({products.length})
@@ -3504,8 +3765,8 @@ const AdminDashboard = () => {
                     onClick={() => setSelectedCategory(category)}
                     className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${
                       selectedCategory === category
-                        ? "bg-emerald-950 dark:bg-emerald-600 text-white border border-emerald-950 dark:border-emerald-600 shadow-sm"
-                        : "bg-white/50 border border-gray-200 dark:border-gray-700 text-gray-650 dark:text-gray-350 hover:border-emerald-950/40 cursor-pointer dark:hover:border-emerald-600"
+                        ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
+                        : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500 cursor-pointer"
                     }`}
                   >
                     {category} ({count})
@@ -3518,7 +3779,7 @@ const AdminDashboard = () => {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-150/40 dark:border-gray-700 text-gray-400">
+                  <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-400">
                     <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Product Name</th>
                     <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Category</th>
                     <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Price</th>
@@ -3528,28 +3789,28 @@ const AdminDashboard = () => {
                     <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-gray-900 dark:text-white">
+                <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
                   {filteredProducts.map((product) => {
                     const s = Number(product.stock ?? 0);
                     const statusBadge =
                       s <= 0 ? (
-                        <span className="inline-flex rounded-full bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-700">
+                        <span className="inline-flex rounded-full bg-danger-lux/10 border border-danger-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-danger-lux">
                           Out of stock
                         </span>
                       ) : s <= 5 ? (
-                        <span className="inline-flex rounded-full bg-amber-50 border border-amber-200/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
+                        <span className="inline-flex rounded-full bg-warning-lux/10 border border-warning-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning-lux">
                           Low
                         </span>
                       ) : (
-                        <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                        <span className="inline-flex rounded-full bg-success-lux/10 border border-success-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-success-lux">
                           In Stock
                         </span>
                       );
                     return (
-                      <tr key={product._id} className="hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition-colors">
+                      <tr key={product._id} className="hover:bg-gold-500/5 transition-colors">
                         <td className="py-3.5 pr-3 font-serif text-sm font-medium">{product.name}</td>
-                        <td className="py-3.5 px-1 text-gray-500 dark:text-gray-400 font-light">{product.category}</td>
-                        <td className="py-3.5 px-1 font-light">INR {product.price}</td>
+                        <td className="py-3.5 px-1 text-gray-lux dark:text-gray-400 font-light">{product.category}</td>
+                        <td className="py-3.5 px-1 font-light">INR {Number(product.price).toLocaleString()}</td>
                         <td className="py-3.5 px-1 tabular-nums font-semibold">{s}</td>
                         <td className="py-3.5 px-1">{statusBadge}</td>
                         <td className="py-3.5 px-1">
@@ -3561,13 +3822,13 @@ const AdminDashboard = () => {
                               onChange={(e) =>
                                 setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
                               }
-                              className="w-16 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-center text-xs text-gray-800 dark:text-white transition"
+                              className="w-16 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-center text-xs text-luxury-black dark:text-white transition focus:border-gold-500 focus:ring-1 focus:ring-gold-500/30 outline-none"
                             />
                             <button
                               type="button"
                               disabled={savingStockId === product._id}
                               onClick={() => saveProductStock(product._id)}
-                              className="rounded-full bg-emerald-950 dark:bg-emerald-600 px-3 py-1 text-[10px] font-bold uppercase text-white hover:bg-emerald-900 dark:hover:bg-emerald-700 transition-all disabled:opacity-50 cursor-pointer"
+                              className="rounded-lg bg-gold-500 hover:bg-gold-hover px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white transition disabled:opacity-50 cursor-pointer"
                             >
                               {savingStockId === product._id ? "…" : "Save"}
                             </button>
@@ -3580,14 +3841,14 @@ const AdminDashboard = () => {
                               startEditProduct(product);
                               setProductsSubTab("add-edit-product");
                             }}
-                            className="text-xs font-semibold text-emerald-700 hover:text-emerald-950 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline cursor-pointer"
+                            className="text-xs font-semibold text-gold-600 hover:text-gold-700 hover:underline cursor-pointer"
                           >
                             Edit Details
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteProduct(product._id)}
-                            className="text-xs font-semibold text-red-655 hover:underline cursor-pointer ml-3"
+                            className="text-xs font-semibold text-danger-lux hover:underline cursor-pointer ml-3"
                           >
                             Delete
                           </button>
@@ -3600,37 +3861,37 @@ const AdminDashboard = () => {
             </div>
 
             {/* Mobile View */}
-            <div className="mt-4 space-y-3.5 md:hidden text-gray-900 dark:text-white">
+            <div className="mt-4 space-y-3.5 md:hidden text-luxury-black dark:text-white">
               {filteredProducts.map((product) => {
                 const s = Number(product.stock ?? 0);
                 const statusBadge =
                   s <= 0 ? (
-                    <span className="inline-flex rounded-full bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-700">
+                    <span className="inline-flex rounded-full bg-danger-lux/10 border border-danger-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-danger-lux">
                       Out of stock
                     </span>
                   ) : s <= 5 ? (
-                    <span className="inline-flex rounded-full bg-amber-50 border border-amber-200/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
+                    <span className="inline-flex rounded-full bg-warning-lux/10 border border-warning-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning-lux">
                       Low
                     </span>
                   ) : (
-                    <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                    <span className="inline-flex rounded-full bg-success-lux/10 border border-success-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-success-lux">
                       In Stock
                     </span>
                   );
                 return (
-                  <article key={product._id} className="rounded-2xl border border-gray-150/40 dark:border-gray-700 bg-white/50 dark:bg-gray-800 p-4 space-y-3">
+                  <article key={product._id} className="rounded-xl border border-gold-200/15 dark:border-gold-900/10 bg-white/70 dark:bg-white/5 p-4 space-y-3">
                     <div className="flex justify-between items-start gap-2">
                       <div>
                         <p className="text-sm font-serif font-medium">{product.name}</p>
-                        <p className="mt-0.5 text-[10px] text-gray-400 tracking-wider uppercase font-light">
-                          {product.category} · INR {product.price}
+                        <p className="mt-0.5 text-[10px] text-gray-lux dark:text-gray-400 tracking-wider uppercase font-light">
+                          {product.category} · INR {Number(product.price).toLocaleString()}
                         </p>
                       </div>
                       {statusBadge}
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gold-200/15 dark:border-gold-900/10 pt-3">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-gray-500 font-light">Stock:</span>
+                        <span className="text-[11px] text-gray-lux dark:text-gray-400 font-light">Stock:</span>
                         <input
                           type="number"
                           min="0"
@@ -3638,13 +3899,13 @@ const AdminDashboard = () => {
                           onChange={(e) =>
                             setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
                           }
-                          className="w-16 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-center text-xs text-gray-800 dark:text-white transition"
+                          className="w-16 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-center text-xs text-luxury-black dark:text-white transition focus:border-gold-500 outline-none"
                         />
                         <button
                           type="button"
                           disabled={savingStockId === product._id}
                           onClick={() => saveProductStock(product._id)}
-                          className="rounded-full bg-emerald-950 dark:bg-emerald-600 px-3 py-1 text-[10px] font-bold uppercase text-white hover:bg-emerald-900 dark:hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+                          className="rounded-lg bg-gold-500 hover:bg-gold-hover px-3 py-1 text-[10px] font-bold uppercase text-white transition cursor-pointer"
                         >
                           Save
                         </button>
@@ -3656,14 +3917,14 @@ const AdminDashboard = () => {
                             startEditProduct(product);
                             setProductsSubTab("add-edit-product");
                           }}
-                          className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                          className="text-xs font-semibold text-gold-600 cursor-pointer"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteProduct(product._id)}
-                          className="text-xs font-semibold text-red-655 cursor-pointer"
+                          className="text-xs font-semibold text-danger-lux cursor-pointer"
                         >
                           Delete
                         </button>
@@ -3677,9 +3938,9 @@ const AdminDashboard = () => {
         )}
 
         {productsSubTab === "add-edit-product" && (
-          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-gray-700 text-gray-900 dark:text-white">
-              <h3 className="text-lg font-serif font-light">
+          <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white/70 dark:bg-[#1C1C1C] p-6 shadow-sm space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-gold-200/10 dark:border-gold-900/10 text-luxury-black dark:text-white">
+              <h3 className="text-lg font-serif">
                 {editingId ? "Modify Product Listing" : "Add New Catalog Entry"}
               </h3>
               {editingId && (
@@ -3690,14 +3951,14 @@ const AdminDashboard = () => {
                     setForm(emptyForm);
                     setProductsSubTab("inventory");
                   }}
-                  className="rounded-full border border-gray-200 dark:border-gray-600 px-3 py-1.5 text-xs text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+                  className="rounded-full border border-gold-250 dark:border-gold-700 px-3.5 py-1.5 text-xs text-gray-lux dark:text-white hover:bg-gold-500/10 transition cursor-pointer"
                 >
                   Exit Edit Mode
                 </button>
               )}
             </div>
             {/* Note: The actual full form content is rendered inside the tab routing logic to minimize redundancy */}
-            <p className="text-xs text-gray-400 dark:text-gray-400 font-light">Configure details, attributes, images, categories, personalization settings, and stock levels below.</p>
+            <p className="text-xs text-gray-lux dark:text-gray-400 font-light">Configure details, attributes, images, categories, personalization settings, and stock levels below.</p>
           </div>
         )}
       </div>
@@ -3796,30 +4057,89 @@ const AdminDashboard = () => {
     return hasPermission(item.permission);
   });
 
+  const activeTitle = useMemo(() => {
+    const tabTitles = {
+      overview: "Admin Dashboard | Niyora Gifts Admin",
+      products: "Product Management | Niyora Gifts Admin",
+      orders: "Orders Management | Niyora Gifts Admin",
+      tickets: "Customer Support | Niyora Gifts Admin",
+      coupons: "Business Analytics & Settings | Niyora Gifts Admin",
+      newsletter: "Newsletter Campaigns | Niyora Gifts Admin",
+      employees: "Employees & Permissions | Niyora Gifts Admin",
+      logs: "Security Audit Logs | Niyora Gifts Admin",
+    };
+    return tabTitles[activeTab] || "Admin Dashboard | Niyora Gifts Admin";
+  }, [activeTab]);
+
   return (
-    <div className={`min-h-screen flex transition-colors duration-300 ${darkMode ? "dark bg-slate-900 text-slate-100" : "bg-slate-50 text-slate-800"}`}>
+    <div className={`min-h-screen flex transition-colors duration-300 ${darkMode ? "dark bg-luxury-black text-white" : "bg-[#FAF7F2] text-luxury-black"}`}>
+      <SEO title={activeTitle} description="Niyora Gifts Admin Console - Manage products, stock alerts, invoices, customer support, campaigns and employee accounts." />
+      {showInactivityWarning && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+          <div className="relative w-full max-w-md rounded-3xl border border-gold-500/30 bg-[#1C1C1C] text-white p-8 shadow-2xl z-10 text-center animate-page-enter">
+            <h3 className="text-xl font-serif text-gold-500 mb-2 font-bold tracking-wide">Session Timeout Warning</h3>
+            <p className="text-xs text-gray-300 font-light mb-6">
+              You have been inactive for 55 minutes. For security, your session will expire in 5 minutes.
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                type="button"
+                onClick={handleStayLoggedIn}
+                className="px-6 py-2.5 rounded-full bg-gold-500 hover:bg-gold-hover text-black font-bold uppercase tracking-widest text-[10px] shadow-md transition-all cursor-pointer"
+              >
+                Stay Logged In
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLogout("Manual")}
+                className="px-6 py-2.5 rounded-full border border-gold-500/50 hover:bg-gold-500/10 text-gold-500 font-medium uppercase tracking-widest text-[10px] transition-all cursor-pointer"
+              >
+                Logout Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Sidebar for Desktop */}
-      <aside className={`fixed inset-y-0 left-0 z-30 w-64 bg-slate-955 text-slate-150 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-64"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-30 ${sidebarCollapsed ? "w-20" : "w-64"} bg-[#1C1C1C] text-white border-r border-gold-900/10 transform transition-all duration-300 ease-in-out md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-64"}`}>
         <div className="h-full flex flex-col justify-between">
           <div>
-            <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
-              <span className="text-lg font-bold bg-gradient-to-r from-emerald-450 to-teal-400 bg-clip-text text-transparent font-serif">Niyora Gifts</span>
-              <span className="text-[9px] uppercase tracking-widest bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-semibold">Console</span>
+            <div className={`h-16 flex items-center justify-between border-b border-gold-900/10 ${sidebarCollapsed ? "px-4" : "px-6"}`}>
+              <div className="flex items-center gap-2.5">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-sm font-serif font-bold text-white shadow-md">N</span>
+                {!sidebarCollapsed && (
+                  <div className="flex flex-col">
+                    <span className="text-sm font-serif font-bold tracking-widest text-gold-500">Niyora Gifts</span>
+                    <span className="text-[7px] uppercase tracking-[0.25em] text-gray-400 font-semibold -mt-0.5">Console</span>
+                  </div>
+                )}
+              </div>
+              {!sidebarCollapsed && (
+                <button
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="hidden md:block text-gray-400 hover:text-gold-500 transition cursor-pointer text-xs"
+                >
+                  ◀
+                </button>
+              )}
             </div>
 
             {/* Profile Widget */}
-            <div className="p-5 border-b border-slate-850 flex items-center gap-3 bg-slate-900/40">
-              <div className="h-9 w-9 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs select-none">
+            <div className="p-4 border-b border-gold-900/10 flex items-center gap-3 bg-white/5">
+              <div className="h-9 w-9 shrink-0 rounded-full bg-gold-500/10 text-gold-505 flex items-center justify-center font-bold text-xs ring-1 ring-gold-500/30 select-none">
                 {adminAuth?.name?.split(" ").map(n=>n[0]).join("").toUpperCase() || "A"}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold truncate text-slate-100">{adminAuth?.name}</p>
-                <p className="text-[10px] text-slate-400 truncate mt-0.5">{adminAuth?.designation || "Executive"}</p>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold truncate text-white">{adminAuth?.name}</p>
+                  <p className="text-[9px] text-gray-400 truncate tracking-wider uppercase font-light mt-0.5">{adminAuth?.designation || "Executive"}</p>
+                </div>
+              )}
             </div>
 
-            <nav className="p-4 space-y-1">
+            <nav className="p-3 space-y-1">
               {visibleSidebarItems.map((item) => (
                 <button
                   key={item.id}
@@ -3828,63 +4148,90 @@ const AdminDashboard = () => {
                     setActiveTab(item.id);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
+                  className={`w-full flex items-center rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${sidebarCollapsed ? "justify-center py-3" : "gap-3 px-4 py-2.5"} ${
                     activeTab === item.id
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20"
-                      : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+                      ? "bg-gold-500 text-white shadow-md shadow-gold-500/15 font-semibold"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
                   }`}
+                  title={sidebarCollapsed ? item.label : ""}
                 >
-                  <span className="text-sm">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="text-sm shrink-0">{item.icon}</span>
+                  {!sidebarCollapsed && <span>{item.label}</span>}
                 </button>
               ))}
             </nav>
           </div>
 
           {/* Sidebar Footer */}
-          <div className="p-4 border-t border-slate-850 bg-slate-955 flex items-center justify-between">
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-xl hover:bg-slate-900 text-slate-400 hover:text-slate-200 transition-colors text-xs flex items-center gap-1.5 cursor-pointer animate-fade-in"
-            >
-              <span>{darkMode ? "☀️ Light" : "🌙 Dark"}</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-xl hover:bg-red-900/20 text-slate-450 hover:text-red-400 transition-colors text-xs cursor-pointer font-semibold animate-fade-in"
-            >
-              Logout
-            </button>
+          <div className="p-3.5 border-t border-gold-900/10 bg-[#171717] flex items-center justify-between flex-wrap gap-2">
+            {sidebarCollapsed ? (
+              <button
+                onClick={() => setSidebarCollapsed(false)}
+                className="w-full text-center text-xs text-gray-400 hover:text-gold-500 transition cursor-pointer py-1"
+                title="Expand sidebar"
+              >
+                ▶
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-1.5 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                >
+                  <span>{darkMode ? "☀️ Light" : "🌙 Dark"}</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-1.5 rounded-lg hover:bg-danger-lux/10 text-gold-505 hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                >
+                  Logout
+                </button>
+              </>
+            )}
           </div>
         </div>
       </aside>
 
       {/* Main Panel Content Container */}
-      <div className="flex-1 flex flex-col min-w-0 md:pl-64">
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarCollapsed ? "md:pl-20" : "md:pl-64"}`}>
         
         {/* Top Navbar */}
-        <header className="h-16 flex items-center justify-between px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+        <header className="h-16 flex items-center justify-between px-6 bg-white/80 dark:bg-[#1C1C1C]/80 backdrop-blur-md border-b border-gold-200/20 dark:border-gold-900/20 sticky top-0 z-10 shadow-xs">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-750 md:hidden cursor-pointer"
+              className="p-2 rounded-lg text-gray-500 hover:bg-gold-50 dark:hover:bg-white/5 md:hidden cursor-pointer"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h2 className="text-xs font-semibold text-gray-900 dark:text-white capitalize flex items-center gap-2">
-              <span>Niyora Gifts</span>
-              <span className="text-gray-300 dark:text-gray-600">/</span>
+            <h2 className="text-xs font-semibold text-luxury-black dark:text-white capitalize flex items-center gap-2">
+              <span className="font-serif tracking-wider font-bold">Niyora Console</span>
+              <span className="text-gold-400">/</span>
               <span className="text-gray-500 dark:text-gray-400 font-light">{activeTab}</span>
             </h2>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Secured Session</span>
+            <div className="relative hidden md:block">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 text-xs">🔍</span>
+              <input
+                type="text"
+                placeholder="Global Search..."
+                className="w-48 xl:w-64 rounded-full border border-gold-200/50 dark:border-gold-900/40 bg-white/50 dark:bg-white/5 px-8 py-1.5 text-[11px] text-luxury-black dark:text-white transition-all focus:border-gold-500 focus:w-56 xl:focus:w-72 outline-none"
+              />
             </div>
-            <div className="h-8 w-8 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-xs">
+            
+            <button className="p-2 rounded-full hover:bg-gold-100/50 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 transition cursor-pointer relative text-sm">
+              <span>🔔</span>
+              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-danger-lux animate-pulse" />
+            </button>
+
+            <div className="hidden sm:flex items-center gap-2 border-l border-gold-200/20 dark:border-gold-900/20 pl-4">
+              <span className="h-1.5 w-1.5 rounded-full bg-gold-500 animate-pulse" />
+              <span className="text-[9px] uppercase font-bold text-gold-600 dark:text-gold-400 tracking-wider">Secured</span>
+            </div>
+            <div className="h-8 w-8 rounded-full bg-gold-500 text-white flex items-center justify-center font-bold text-xs ring-2 ring-gold-200/20">
               {adminAuth?.name?.[0].toUpperCase()}
             </div>
           </div>
@@ -5172,18 +5519,18 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === "orders" && (
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Manage Orders</h3>
-        <div className="mt-3 flex overflow-x-auto items-center gap-2 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
+        <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm space-y-4">
+          <h3 className="text-lg font-serif tracking-wide text-luxury-black dark:text-white">Manage Orders</h3>
+        <div className="mt-3 flex overflow-x-auto items-center gap-2.5 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
           {["all", "active", "archived"].map((view) => (
             <button
               key={view}
               type="button"
               onClick={() => setOrderViewFilter(view)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
                 orderViewFilter === view
-                  ? "bg-emerald-600 text-white"
-                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  ? "bg-gold-500 text-white shadow-sm"
+                  : "bg-cream dark:bg-white/5 border border-gold-200/10 dark:border-gold-900/10 text-gold-700 dark:text-gray-300 hover:bg-gold-500/10"
               }`}
             >
               {view === "all"
@@ -5196,7 +5543,7 @@ const AdminDashboard = () => {
           <select
             value={orderStatusFilter}
             onChange={(e) => setOrderStatusFilter(e.target.value)}
-            className="shrink-0 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800"
+            className="shrink-0 rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-gold-700 dark:text-gray-300 outline-none focus:border-gold-500"
             aria-label="Filter orders by status"
             title="Filter orders by status"
           >
@@ -5210,7 +5557,7 @@ const AdminDashboard = () => {
           <select
             value={orderPaymentFilter}
             onChange={(e) => setOrderPaymentFilter(e.target.value)}
-            className="shrink-0 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800"
+            className="shrink-0 rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-gold-700 dark:text-gray-300 outline-none focus:border-gold-500"
             aria-label="Filter orders by payment mode"
             title="Filter orders by payment mode"
           >
@@ -5219,14 +5566,16 @@ const AdminDashboard = () => {
             <option value="cod">COD</option>
           </select>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
-            {selectedOrderIds.length} selected ({selectedOrdersForPrint.length} print-ready)
+        
+        {/* Batch Print Bar */}
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-gold-200/30 bg-gold-50/30 dark:bg-white/5 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gold-700 dark:text-gold-450 mr-2">
+            {selectedOrderIds.length} Selected ({selectedOrdersForPrint.length} Print-Ready)
           </p>
           <select
             value={labelPrintFilter}
             onChange={(event) => setLabelPrintFilter(event.target.value)}
-            className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800"
+            className="rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white dark:bg-[#1C1C1C] px-3.5 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500"
             aria-label="Filter selected orders for label printing"
           >
             <option value="all">All selected</option>
@@ -5234,49 +5583,54 @@ const AdminDashboard = () => {
             <option value="shipped">Shipped only</option>
             <option value="delivered">Delivered only</option>
           </select>
+          
           <button
             type="button"
             onClick={toggleSelectAllVisibleOrders}
-            className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+            className="rounded-full border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gold-700 dark:text-gray-250 hover:bg-gold-500/10 cursor-pointer transition-all duration-300"
           >
             {selectAllButtonLabel}
           </button>
+          
           <button
             type="button"
             onClick={() => setSelectedOrderIds([])}
             disabled={selectedOrderIds.length === 0}
-            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-gray-200 bg-white dark:bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Clear selection
+            Clear
           </button>
+          
           <button
             type="button"
             onClick={() => handlePrintShippingLabelsBatch(selectedOrdersForPrint)}
             disabled={selectedOrdersForPrint.length === 0}
-            className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full bg-gold-500 hover:bg-gold-hover px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm"
           >
-            Print Selected Labels ({selectedOrdersForPrint.length})
+            Print Labels ({selectedOrdersForPrint.length})
           </button>
+          
           <button
             type="button"
             onClick={() => handlePrintInvoicesBatch(selectedOrdersForPrint)}
             disabled={selectedOrdersForPrint.length === 0}
-            className="rounded-full bg-sky-700 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full bg-gold-600 hover:bg-gold-700 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm"
           >
-            Print Selected Invoices ({selectedOrdersForPrint.length})
+            Print Invoices ({selectedOrdersForPrint.length})
           </button>
+          
           <button
             type="button"
             onClick={() => handlePrintCombinedA4Batch(selectedOrdersForPrint)}
             disabled={selectedOrdersForPrint.length === 0}
-            className="rounded-full bg-indigo-700 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full bg-luxury-black dark:bg-white text-white dark:text-black hover:bg-gold-500 hover:text-white dark:hover:bg-gold-500 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm border border-gold-900/10"
           >
             Print Shipping + Invoice ({selectedOrdersForPrint.length})
           </button>
         </div>
         <div className="mt-3 space-y-3 md:hidden">
           {ordersForViewFiltered.map((order) => (
-            <article key={order._id} className="rounded-xl border border-gray-200 p-3">
+            <article key={order._id} className="rounded-xl border border-gold-200/15 dark:border-gold-900/10 bg-white/70 dark:bg-white/5 p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <input
@@ -5285,34 +5639,34 @@ const AdminDashboard = () => {
                     onChange={() => toggleOrderSelection(order._id)}
                     aria-label={`Select order ${getOrderDisplayId(order)}`}
                   />
-                  <p className="text-sm font-semibold text-gray-900">{getOrderDisplayId(order)}</p>
+                  <p className="text-sm font-semibold text-luxury-black dark:text-white">{getOrderDisplayId(order)}</p>
                 </div>
                 <span
-                  className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${
-                    order.__isArchived ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                  className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                    order.__isArchived ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-success-lux/10 border border-success-lux/20 text-success-lux"
                   }`}
                 >
                   {order.__isArchived ? "Archived" : "Active"}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-gray-600">{order.address?.fullName || "Guest"} • INR {order.totalPrice}</p>
-              <p className="text-xs text-gray-600">Status: {order.status} | Mode: <span className="font-semibold text-emerald-850 uppercase">{order.paymentMethod || "Online"}</span></p>
-              <p className="text-xs text-gray-600 break-all">Tracking: {order.trackingId || "-"}</p>
+              <p className="mt-1 text-xs text-gray-lux dark:text-gray-400">{order.address?.fullName || "Guest"} • INR {Number(order.totalPrice || 0).toLocaleString()}</p>
+              <p className="text-xs text-gray-lux dark:text-gray-400">Status: {order.status} | Mode: <span className="font-semibold text-gold-600 uppercase">{order.paymentMethod || "Online"}</span></p>
+              <p className="text-xs text-gray-lux dark:text-gray-400 break-all">Tracking: {order.trackingId || "-"}</p>
               {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
-                <div className="mt-3 space-y-2 rounded-xl bg-gray-50 p-2.5 border border-gray-150/50">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Customizations</p>
+                <div className="mt-3 space-y-2 rounded-xl bg-cream/40 dark:bg-white/5 p-2.5 border border-gold-200/15">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-gold-600">Customizations</p>
                   {order.products?.filter(p => p.customization?.text || p.customization?.uploadedImage).map((p, idx) => (
-                    <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gray-200/50 pt-1.5 first:border-0 first:pt-0">
-                      <p className="font-semibold text-gray-800 line-clamp-1">{p.name}</p>
+                    <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gold-200/15 pt-1.5 first:border-0 first:pt-0">
+                      <p className="font-semibold text-luxury-black dark:text-white line-clamp-1">{p.name}</p>
                       {p.customization?.text && (
-                        <p className="text-gray-650">Text: <span className="text-amber-800 font-medium">"{p.customization.text}"</span></p>
+                        <p className="text-gray-lux">Text: <span className="text-gold-600 font-medium">"{p.customization.text}"</span></p>
                       )}
                       {p.customization?.uploadedImage && (
                         <div className="flex items-center gap-2 mt-1">
                           <img
                             src={p.customization.uploadedImage}
                             alt="Custom uploaded"
-                            className="h-10 w-10 rounded object-cover border"
+                            className="h-10 w-10 rounded object-cover border border-gold-200/30"
                             onError={(e) => {
                               e.target.src = 'https://via.placeholder.com/200x200?text=Error';
                             }}
@@ -5321,7 +5675,7 @@ const AdminDashboard = () => {
                             href={p.customization.uploadedImage}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-lg border border-emerald-250 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                            className="rounded-lg border border-gold-300/35 bg-gold-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-600 hover:bg-gold-500/20"
                           >
                             View Image
                           </a>
@@ -5332,15 +5686,15 @@ const AdminDashboard = () => {
                 </div>
               ) : null}
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <button onClick={() => handlePrintShippingLabel(order)} className="rounded-full border border-gray-200 px-3 py-1 text-xs">Label</button>
-                <button onClick={() => handlePrintInvoice(order)} className="rounded-full border border-gray-200 px-3 py-1 text-xs">Invoice</button>
+                <button onClick={() => handlePrintShippingLabel(order)} className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600">Label</button>
+                <button onClick={() => handlePrintInvoice(order)} className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600">Invoice</button>
                 {order.__isArchived ? (
-                  <button onClick={() => handleRestoreOrder(order)} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-700">Restore</button>
+                  <button onClick={() => handleRestoreOrder(order)} className="rounded-lg border border-success-lux/50 bg-success-lux/10 px-3 py-1.5 text-xs text-success-lux">Restore</button>
                 ) : (
                   <button
                     onClick={() => handleArchiveOrder(order)}
                     disabled={order.status === "Cancelled"}
-                    className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-700 disabled:opacity-50"
+                    className="rounded-lg border border-warning-lux/50 bg-warning-lux/10 px-3 py-1.5 text-xs text-warning-lux disabled:opacity-50"
                   >
                     Archive
                   </button>
@@ -5348,20 +5702,22 @@ const AdminDashboard = () => {
                 <button
                   onClick={() => handleDeleteOrder(order)}
                   disabled={order.status !== "Cancelled" || order.__isArchived}
-                  className="rounded-full bg-red-600 px-3 py-1 text-xs text-white disabled:opacity-50"
+                  className="rounded-lg bg-danger-lux px-3 py-1.5 text-xs text-white disabled:opacity-50"
                 >
                   Delete
                 </button>
               </div>
             </article>
           ))}
-          {ordersForView.length === 0 ? <p className="text-sm text-gray-500">No orders found for this filter.</p> : null}
+          {ordersForView.length === 0 ? <p className="text-sm text-gray-lux font-light text-center py-4">No orders found for this filter.</p> : null}
         </div>
+        
+        {/* Desktop View */}
         <div className="mt-3 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[1480px] text-left text-sm">
-            <thead className="text-gray-500">
-              <tr>
-                <th className="py-2">
+          <table className="w-full min-w-[1480px] text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-400">
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">
                   <input
                     type="checkbox"
                     checked={allVisibleOrdersSelected}
@@ -5369,27 +5725,27 @@ const AdminDashboard = () => {
                     aria-label="Select all visible orders"
                   />
                 </th>
-                <th className="py-2">Order ID</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Payment Mode</th>
-                <th className="py-2">Customization</th>
-                <th className="py-2">Customer</th>
-                <th className="py-2">Shipping Address</th>
-                <th className="py-2">Total</th>
-                <th className="py-2">Update Status</th>
-                <th className="py-2">Tracking ID</th>
-                <th className="py-2">Cancellation</th>
-                <th className="py-2">Shipping Label</th>
-                <th className="py-2">Invoice</th>
-                <th className="py-2">A4 Combined</th>
-                <th className="py-2">Archive</th>
-                <th className="py-2">Delete</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Order ID</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Payment Mode</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Customization</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Customer</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Shipping Address</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Total</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Update Status</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Tracking ID</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Cancellation</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Shipping Label</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Invoice</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">A4 Combined</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Archive</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Delete</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
               {ordersForViewFiltered.map((order) => (
-                <tr key={order._id} className="border-t border-gray-100">
-                  <td className="py-2">
+                <tr key={order._id} className="hover:bg-gold-500/5 transition-colors">
+                  <td className="py-3">
                     <input
                       type="checkbox"
                       checked={selectedOrderIds.includes(order._id)}
@@ -5397,40 +5753,40 @@ const AdminDashboard = () => {
                       aria-label={`Select order ${getOrderDisplayId(order)}`}
                     />
                   </td>
-                  <td className="py-2">{getOrderDisplayId(order)}</td>
-                  <td className="py-2">
+                  <td className="py-3 font-medium">{getOrderDisplayId(order)}</td>
+                  <td className="py-3">
                     <span
-                      className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                        order.__isArchived ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                      className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                        order.__isArchived ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-success-lux/10 border border-success-lux/20 text-success-lux"
                       }`}
                     >
                       {order.__isArchived ? "Archived" : "Active"}
                     </span>
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     <span
-                      className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                        String(order.paymentMethod).toLowerCase() === "cod" ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"
+                      className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                        String(order.paymentMethod).toLowerCase() === "cod" ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-gold-500/10 border border-gold-500/20 text-gold-600"
                       }`}
                     >
                       {order.paymentMethod || "Online"}
                     </span>
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
                       <div className="space-y-3 max-w-[200px]">
                         {order.products?.filter(p => p.customization?.text || p.customization?.uploadedImage).map((p, idx) => (
-                          <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gray-150/40 pt-1.5 first:border-0 first:pt-0">
-                            <p className="font-semibold text-gray-800 line-clamp-1">{p.name}</p>
+                          <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gold-200/10 pt-1.5 first:border-0 first:pt-0">
+                            <p className="font-semibold text-luxury-black dark:text-white line-clamp-1">{p.name}</p>
                             {p.customization?.text && (
-                              <p className="text-gray-650">Text: <span className="text-amber-800 font-medium">"{p.customization.text}"</span></p>
+                              <p className="text-gray-lux text-[10px]">Text: <span className="text-gold-600 font-medium">"{p.customization.text}"</span></p>
                             )}
                             {p.customization?.uploadedImage && (
                               <div className="flex items-center gap-2 mt-1">
                                 <img
                                   src={p.customization.uploadedImage}
                                   alt="Custom uploaded"
-                                  className="h-10 w-10 rounded object-cover border"
+                                  className="h-10 w-10 rounded object-cover border border-gold-200/20"
                                   onError={(e) => {
                                     e.target.src = 'https://via.placeholder.com/200x200?text=Error';
                                   }}
@@ -5439,7 +5795,7 @@ const AdminDashboard = () => {
                                   href={p.customization.uploadedImage}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="rounded-lg border border-emerald-250 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                                  className="rounded-lg border border-gold-300/35 bg-gold-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-600 hover:bg-gold-500/20"
                                 >
                                   View
                                 </a>
@@ -5449,30 +5805,30 @@ const AdminDashboard = () => {
                         ))}
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-400">None</span>
+                      <span className="text-xs text-gray-400 font-light">—</span>
                     )}
                   </td>
-                  <td className="py-2">{order.address?.fullName || "Guest"}</td>
-                  <td className="py-2">
-                    <div className="space-y-0.5">
-                      <p>{order.address?.line1 || "-"}</p>
-                      <p className="text-gray-500">
+                  <td className="py-3 font-medium">{order.address?.fullName || "Guest"}</td>
+                  <td className="py-3">
+                    <div className="space-y-0.5 text-[11px] text-gray-lux dark:text-gray-400">
+                      <p className="font-medium text-luxury-black dark:text-white">{order.address?.line1 || "-"}</p>
+                      <p>
                         {[order.address?.city, order.address?.state, order.address?.postalCode]
                           .filter(Boolean)
                           .join(", ") || "-"}
                       </p>
-                      <p className="text-gray-500">{order.address?.country || "-"}</p>
-                      <p className="text-gray-500">{order.address?.phone || "-"}</p>
+                      <p>{order.address?.country || "-"}</p>
+                      <p className="font-mono">{order.address?.phone || "-"}</p>
                     </div>
                   </td>
-                  <td className="py-2">INR {order.totalPrice}</td>
-                  <td className="py-2">{order.status}</td>
-                  <td className="py-2">
+                  <td className="py-3 font-semibold">INR {Number(order.totalPrice || 0).toLocaleString()}</td>
+                  <td className="py-3 text-[11px] font-semibold text-gold-600">{order.status}</td>
+                  <td className="py-3">
                     <select
                       value={order.status}
                       disabled={order.__isArchived}
                       onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
-                      className="rounded-lg border border-gray-200 px-2 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {orderStatuses.map((status) => (
                         <option key={status} value={status}>
@@ -5481,13 +5837,13 @@ const AdminDashboard = () => {
                       ))}
                     </select>
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     <div className="flex items-center gap-2">
                       <select
                         value={trackingCarriersByOrder[order._id] || order.trackingCarrier || "generic"}
                         onChange={(e) => handleTrackingCarrierChange(order._id, e.target.value)}
                         disabled={order.__isArchived || !isTrackingEditable(order.status)}
-                        className="rounded-lg border border-gray-200 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-gray-50"
+                        className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-[#1C1C1C] px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-white/5"
                       >
                         {trackingCarriers.map((carrier) => (
                           <option key={carrier.value} value={carrier.value}>
@@ -5498,36 +5854,36 @@ const AdminDashboard = () => {
                       <input
                         value={trackingInputs[order._id] ?? order.trackingId ?? ""}
                         onChange={(e) => handleTrackingInputChange(order._id, e.target.value)}
-                        placeholder={isTrackingEditable(order.status) ? "Enter tracking ID" : "Status must be Shipped"}
+                        placeholder={isTrackingEditable(order.status) ? "Enter tracking ID" : "Status: Shipped required"}
                         disabled={order.__isArchived || !isTrackingEditable(order.status)}
-                        className="w-40 rounded-lg border border-gray-200 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:bg-gray-50"
+                        className="w-40 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-white/5"
                       />
                       <button
                         onClick={() => handleSaveTrackingId(order)}
                         disabled={order.__isArchived || !isTrackingEditable(order.status)}
-                        className="rounded-full border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-lg border border-gold-300 bg-gold-500/10 hover:bg-gold-500 px-3 py-1 text-xs font-semibold text-gold-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
                       >
                         Save
                       </button>
                     </div>
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     {order.cancellationRequest?.status === "Pending" ? (
                       <div className="space-y-1">
-                        <p className="text-xs font-semibold text-amber-700">Pending</p>
-                        <p className="max-w-[220px] text-xs text-gray-600">{order.cancellationRequest.reason}</p>
+                        <p className="text-xs font-semibold text-warning-lux">Pending</p>
+                        <p className="max-w-[220px] text-xs text-gray-lux">{order.cancellationRequest.reason}</p>
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
                             onClick={() => handleReviewCancellation(order, "approve")}
-                            className="rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                            className="rounded-lg bg-success-lux px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-success-lux/95 transition cursor-pointer"
                           >
                             Approve
                           </button>
                           <button
                             type="button"
                             onClick={() => handleReviewCancellation(order, "reject")}
-                            className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100"
+                            className="rounded-lg bg-danger-lux px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-danger-lux/95 transition cursor-pointer"
                           >
                             Reject
                           </button>
@@ -5535,75 +5891,75 @@ const AdminDashboard = () => {
                       </div>
                     ) : order.cancellationRequest?.status && order.cancellationRequest.status !== "None" ? (
                       <div className="space-y-1">
-                        <p className="text-xs font-semibold text-gray-800">{order.cancellationRequest.status}</p>
+                        <p className="text-xs font-semibold text-gray-lux">{order.cancellationRequest.status}</p>
                         {order.cancellationRequest.reason ? (
-                          <p className="max-w-[220px] text-xs text-gray-600">{order.cancellationRequest.reason}</p>
+                          <p className="max-w-[220px] text-xs text-gray-lux font-light">{order.cancellationRequest.reason}</p>
                         ) : null}
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-400">—</span>
+                      <span className="text-xs text-gray-400 font-light">—</span>
                     )}
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     <button
                       onClick={() => handlePrintShippingLabel(order)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                      className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
                     >
                       Print Label
                     </button>
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     <button
                       onClick={() => handlePrintInvoice(order)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                      className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
                     >
                       Print Invoice
                     </button>
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     <button
                       onClick={() => handlePrintCombinedA4(order)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                      className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
                     >
                       Print A4 Both
                     </button>
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     {order.status !== "Cancelled" ? (
                       <button
                         onClick={() => handleArchiveOrder(order)}
                         disabled={order.__isArchived}
-                        className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+                        className="rounded-full border border-warning-lux/40 bg-warning-lux/5 px-3 py-1 text-xs font-semibold text-warning-lux hover:bg-warning-lux hover:text-white transition cursor-pointer"
                       >
                         Archive
                       </button>
                     ) : (
-                      <span className="text-xs text-gray-400">-</span>
+                      <span className="text-xs text-gray-400 font-light">-</span>
                     )}
                   </td>
-                  <td className="py-2">
+                  <td className="py-3">
                     {order.__isArchived ? (
                       <button
                         onClick={() => handleRestoreOrder(order)}
-                        className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                        className="rounded-full border border-success-lux/40 bg-success-lux/5 px-3 py-1 text-xs font-semibold text-success-lux hover:bg-success-lux hover:text-white transition cursor-pointer"
                       >
                         Restore
                       </button>
                     ) : (
-                    <button
-                      onClick={() => handleDeleteOrder(order)}
-                      disabled={order.status !== "Cancelled"}
-                      className="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
+                      <button
+                        onClick={() => handleDeleteOrder(order)}
+                        disabled={order.status !== "Cancelled"}
+                        className="rounded-full bg-danger-lux px-3 py-1 text-xs font-semibold text-white hover:bg-danger-lux/95 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition"
+                      >
+                        Delete
+                      </button>
                     )}
                   </td>
                 </tr>
               ))}
               {ordersForViewFiltered.length === 0 ? (
                 <tr>
-                  <td className="py-4 text-gray-500" colSpan={15}>
+                  <td className="py-6 text-gray-500 text-center font-light" colSpan={16}>
                     No orders found for this filter.
                   </td>
                 </tr>
@@ -5683,16 +6039,16 @@ const NewsletterSubscribersSection = ({ authHeader }) => {
   };
 
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100 relative">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
+    <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm relative">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gold-200/10 dark:border-gold-900/10 pb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <svg className="h-5 w-5 text-emerald-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <h3 className="text-lg font-serif font-light text-luxury-black dark:text-white flex items-center gap-2">
+            <svg className="h-5 w-5 text-gold-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
             Newsletter Subscribers
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-xs text-gray-lux dark:text-gray-400 font-light">
             Manage email subscriptions and export addresses for campaigns.
           </p>
         </div>
@@ -5700,7 +6056,7 @@ const NewsletterSubscribersSection = ({ authHeader }) => {
           type="button"
           onClick={handleCopyAllEmails}
           disabled={subscribers.length === 0}
-          className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm cursor-pointer"
+          className="flex items-center gap-1.5 rounded-full bg-gold-500 hover:bg-gold-hover px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition disabled:cursor-not-allowed disabled:opacity-50 shadow-sm cursor-pointer"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -5711,26 +6067,26 @@ const NewsletterSubscribersSection = ({ authHeader }) => {
 
       {/* Local Feedback Alerts */}
       {success && (
-        <div className="my-3 rounded-lg bg-emerald-50 border border-emerald-100 p-2.5 text-xs text-emerald-800 flex items-center gap-2 transition animate-fade-in shadow-xs">
-          <svg className="h-4 w-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <div className="my-3 rounded-xl bg-success-lux/10 border border-success-lux/20 p-3 text-xs text-success-lux flex items-center gap-2 transition animate-fade-in shadow-2xs">
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>{success}</span>
+          <span className="font-medium">{success}</span>
         </div>
       )}
 
       {error && (
-        <div className="my-3 rounded-lg bg-red-50 border border-red-100 p-2.5 text-xs text-red-800 flex items-center gap-2 transition animate-fade-in shadow-xs">
-          <svg className="h-4 w-4 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <div className="my-3 rounded-xl bg-danger-lux/10 border border-danger-lux/20 p-3 text-xs text-danger-lux flex items-center gap-2 transition animate-fade-in shadow-2xs">
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <span>{error}</span>
+          <span className="font-medium">{error}</span>
         </div>
       )}
 
       {loading ? (
-        <div className="py-8 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
-          <svg className="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div className="py-8 text-center text-xs text-gray-lux dark:text-gray-400 flex items-center justify-center gap-2">
+          <svg className="animate-spin h-5 w-5 text-gold-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
@@ -5738,26 +6094,26 @@ const NewsletterSubscribersSection = ({ authHeader }) => {
         </div>
       ) : (
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[500px] text-left text-sm">
-            <thead className="text-gray-500">
-              <tr>
-                <th className="py-2">Email Address</th>
-                <th className="py-2">Subscribed Date</th>
-                <th className="py-2 text-center">Actions</th>
+          <table className="w-full min-w-[500px] text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-lux dark:text-gray-400">
+                <th className="py-3 px-4 font-sans font-bold uppercase tracking-wider">Email Address</th>
+                <th className="py-3 px-4 font-sans font-bold uppercase tracking-wider">Subscribed Date</th>
+                <th className="py-3 px-4 text-center font-sans font-bold uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
               {subscribers.map((sub) => (
-                <tr key={sub._id} className="border-t border-gray-100">
-                  <td className="py-2 font-medium text-gray-900">{sub.email}</td>
-                  <td className="py-2 text-gray-600">
+                <tr key={sub._id} className="hover:bg-gold-500/5 transition-colors">
+                  <td className="py-3 px-4 font-medium">{sub.email}</td>
+                  <td className="py-3 px-4 text-gray-lux dark:text-gray-400">
                     {new Date(sub.createdAt).toLocaleString()}
                   </td>
-                  <td className="py-2 text-center">
+                  <td className="py-3 px-4 text-center">
                     <button
                       type="button"
                       onClick={() => handleDeleteSubscriber(sub._id)}
-                      className="rounded-full px-2.5 py-1 text-xs font-semibold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 transition cursor-pointer"
+                      className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-danger-lux border border-danger-lux/30 bg-danger-lux/5 hover:bg-danger-lux hover:text-white transition-all duration-300 cursor-pointer shadow-2xs"
                       title="Remove Subscriber"
                     >
                       Delete
@@ -5767,7 +6123,7 @@ const NewsletterSubscribersSection = ({ authHeader }) => {
               ))}
               {subscribers.length === 0 ? (
                 <tr>
-                  <td className="py-4 text-gray-500" colSpan={3}>
+                  <td className="py-8 text-center text-gray-lux font-light" colSpan={3}>
                     No newsletter subscribers yet.
                   </td>
                 </tr>

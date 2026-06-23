@@ -1,3 +1,5 @@
+import { resolveMediaUrl } from "../../services/api";
+
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const SuggestionItem = ({ item, query, isActive, onSelect }) => {
@@ -27,7 +29,7 @@ const SuggestionItem = ({ item, query, isActive, onSelect }) => {
             <>
               {item.image ? (
                 <img
-                  src={item.image}
+                  src={resolveMediaUrl(item.image)}
                   alt=""
                   className="h-10 w-10 shrink-0 rounded-lg object-cover border border-gray-100 shadow-sm"
                 />

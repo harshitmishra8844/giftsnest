@@ -45,4 +45,29 @@ api.interceptors.response.use(
   }
 );
 
+export const resolveMediaUrl = (url) => {
+  if (!url) return "";
+  if (typeof url !== "string") return url;
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    if (url.includes("cloudinary.com")) {
+      return url;
+    }
+    if (url.includes("/uploads/")) {
+      const path = url.substring(url.indexOf("/uploads/"));
+      const backendOrigin = baseURL.replace(/\/api$/, "");
+      return `${backendOrigin}${path}`;
+    }
+    return url;
+  }
+
+  if (url.startsWith("/uploads/") || url.startsWith("uploads/")) {
+    const cleanPath = url.startsWith("/") ? url : `/${url}`;
+    const backendOrigin = baseURL.replace(/\/api$/, "");
+    return `${backendOrigin}${cleanPath}`;
+  }
+
+  return url;
+};
+
 export default api;

@@ -1,5 +1,5 @@
 const express = require("express");
-const { adminLogin, getStoreInfo, updateStoreInfo, getEmailDiagnostics, setup2FA, enable2FA, disable2FA, verify2FA } = require("../controllers/adminController");
+const { adminLogin, getStoreInfo, updateStoreInfo, getEmailDiagnostics, setup2FA, enable2FA, disable2FA, verify2FA, adminLogout, getLoginLogs } = require("../controllers/adminController");
 const {
   getProducts,
   createProduct,
@@ -18,6 +18,7 @@ const {
 } = require("../controllers/orderController");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const { checkPermission } = require("../middleware/rbacMiddleware");
+const { loginRateLimiter } = require("../middleware/securityMiddleware");
 const {
   getCoupons,
   createCoupon,
@@ -34,8 +35,10 @@ const {
 
 const router = express.Router();
 
-router.post("/login", adminLogin);
+router.post("/login", loginRateLimiter, adminLogin);
+router.post("/logout", adminLogout);
 router.post("/verify-2fa", verify2FA);
+router.get("/login-logs", protect, getLoginLogs);
 router.post("/2fa/setup", protect, setup2FA);
 router.post("/2fa/enable", protect, enable2FA);
 router.post("/2fa/disable", protect, disable2FA);

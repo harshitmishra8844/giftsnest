@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import QuantityStepper from "../components/QuantityStepper";
+import { resolveMediaUrl } from "../services/api";
 
 const Cart = () => {
   const { state } = useLocation();
@@ -37,7 +38,7 @@ const Cart = () => {
           >
             <div className="h-24 w-full sm:w-28 rounded-xl overflow-hidden bg-gold-50/20 flex-shrink-0 flex items-center justify-center p-1 border border-champagne/20">
               <img 
-                src={item.customization?.uploadedImage || item.image} 
+                src={resolveMediaUrl(item.customization?.uploadedImage || item.image)} 
                 alt={item.name} 
                 className="h-full w-full object-contain" 
               />

@@ -1,9 +1,56 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const StoreSetting = require("../models/StoreSetting");
+const LoginActivityLog = require("../models/LoginActivityLog");
 const { generateToken } = require("./authController");
 const { getSmtpConfig, isSmtpConfigured, isEmailConfigured, verifyEmailTransporter } = require("../services/emailTransporter");
 const { logActivity } = require("../services/logService");
+
+const parseUserAgent = (userAgentString) => {
+  const ua = userAgentString || "";
+  let browser = "Unknown Browser";
+  let device = "Desktop";
+
+  if (/mobile/i.test(ua)) {
+    device = "Mobile";
+  } else if (/tablet|ipad/i.test(ua)) {
+    device = "Tablet";
+  }
+
+  if (/chrome|crios/i.test(ua) && !/edge|edg/i.test(ua) && !/opr/i.test(ua)) {
+    browser = "Chrome";
+  } else if (/safari/i.test(ua) && !/chrome|crios/i.test(ua) && !/android/i.test(ua)) {
+    browser = "Safari";
+  } else if (/firefox|fxios/i.test(ua)) {
+    browser = "Firefox";
+  } else if (/edge|edg/i.test(ua)) {
+    browser = "Edge";
+  } else if (/opr/i.test(ua)) {
+    browser = "Opera";
+  }
+
+  return { browser, device };
+};
+
+const logLoginAttempt = async (userName, email, status, userId, req) => {
+  try {
+    const userAgent = req.headers["user-agent"] || "";
+    const { browser, device } = parseUserAgent(userAgent);
+    const ipAddress = req.ip || req.connection.remoteAddress || "Unknown";
+
+    return await LoginActivityLog.create({
+      userId: userId || null,
+      userName: userName || "Unknown User",
+      email: email.toLowerCase(),
+      browser,
+      device,
+      ipAddress,
+      status
+    });
+  } catch (error) {
+    console.error("Failed to write login activity log:", error);
+  }
+};
 
 const defaultOffers = [
   {
@@ -86,6 +133,7 @@ const adminLogin = async (req, res) => {
       const fallbackPassword = process.env.ADMIN_PASSWORD || "harshit@123";
 
       if (email.toLowerCase() !== fallbackEmail.toLowerCase() || password !== fallbackPassword) {
+        await logLoginAttempt("Unknown Admin", email, "Failed", null, req);
         return res.status(401).json({ message: "Invalid admin credentials" });
       }
 
@@ -103,6 +151,7 @@ const adminLogin = async (req, res) => {
     // Lockout check
     if (admin.lockUntil && admin.lockUntil > new Date()) {
       const minutesLeft = Math.ceil((admin.lockUntil - new Date()) / (60 * 1000));
+      await logLoginAttempt(admin.name, email, "Failed", admin._id, req);
       return res.status(403).json({ 
         message: `Account is temporarily locked due to too many failed attempts. Try again in ${minutesLeft} minutes.` 
       });
@@ -110,6 +159,7 @@ const adminLogin = async (req, res) => {
 
     // Suspension check
     if (admin.status === "Inactive") {
+      await logLoginAttempt(admin.name, email, "Failed", admin._id, req);
       return res.status(403).json({ message: "Your employee account has been suspended or deactivated." });
     }
 
@@ -120,6 +170,7 @@ const adminLogin = async (req, res) => {
         admin.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minute lock
       }
       await admin.save();
+      await logLoginAttempt(admin.name, email, "Failed", admin._id, req);
       return res.status(401).json({ message: "Invalid admin credentials" });
     }
 
@@ -127,12 +178,12 @@ const adminLogin = async (req, res) => {
     admin.loginAttempts = 0;
     admin.lockUntil = null;
 
-
-
     admin.lastLogin = new Date();
     await admin.save();
 
     await logActivity(admin._id, admin.name, "LOGIN", "Logged into admin panel successfully", req);
+
+    const loginLog = await logLoginAttempt(admin.name, admin.email, "Success", admin._id, req);
 
     const roleNames = admin.roles ? admin.roles.map(r => r.name) : [];
     const permissions = new Set();
@@ -146,6 +197,16 @@ const adminLogin = async (req, res) => {
       });
     }
 
+    const token = generateToken(admin._id);
+
+    // Set secure HTTP-only cookie
+    res.cookie("admin_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 1000, // 1 hour
+    });
+
     return res.status(200).json({
       _id: admin._id,
       name: admin.name,
@@ -154,7 +215,8 @@ const adminLogin = async (req, res) => {
       isMasterAdmin: admin.isMasterAdmin,
       roles: roleNames,
       permissions: Array.from(permissions),
-      token: generateToken(admin._id),
+      token,
+      loginLogId: loginLog ? loginLog._id : null,
     });
   } catch (error) {
     console.error("Admin login error:", error.message);
@@ -266,6 +328,7 @@ const verify2FA = async (req, res) => {
     }
 
     if (admin.status === "Inactive") {
+      await logLoginAttempt(admin.name, admin.email, "Failed", admin._id, req);
       return res.status(403).json({ message: "Your employee account has been suspended or deactivated." });
     }
 
@@ -277,6 +340,7 @@ const verify2FA = async (req, res) => {
     });
 
     if (!verified) {
+      await logLoginAttempt(admin.name, admin.email, "Failed", admin._id, req);
       return res.status(401).json({ message: "Invalid 2FA token. Please try again." });
     }
 
@@ -286,6 +350,8 @@ const verify2FA = async (req, res) => {
     await admin.save();
 
     await logActivity(admin._id, admin.name, "LOGIN", "Logged into admin panel successfully (2FA Verified)", req);
+
+    const loginLog = await logLoginAttempt(admin.name, admin.email, "Success", admin._id, req);
 
     const roleNames = admin.roles ? admin.roles.map(r => r.name) : [];
     const permissions = new Set();
@@ -299,6 +365,16 @@ const verify2FA = async (req, res) => {
       });
     }
 
+    const authToken = generateToken(admin._id);
+
+    // Set secure HTTP-only cookie
+    res.cookie("admin_token", authToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 1000, // 1 hour
+    });
+
     return res.status(200).json({
       _id: admin._id,
       name: admin.name,
@@ -307,7 +383,8 @@ const verify2FA = async (req, res) => {
       isMasterAdmin: admin.isMasterAdmin,
       roles: roleNames,
       permissions: Array.from(permissions),
-      token: generateToken(admin._id),
+      token: authToken,
+      loginLogId: loginLog ? loginLog._id : null,
     });
   } catch (error) {
     console.error("2FA verify error:", error.message);
@@ -441,4 +518,65 @@ const getEmailDiagnostics = async (req, res) => {
   }
 };
 
-module.exports = { adminLogin, getStoreInfo, updateStoreInfo, getEmailDiagnostics, setup2FA, enable2FA, disable2FA, verify2FA };
+const adminLogout = async (req, res) => {
+  try {
+    const { loginLogId, reason } = req.body;
+
+    res.clearCookie("admin_token");
+
+    if (loginLogId) {
+      const log = await LoginActivityLog.findById(loginLogId);
+      if (log) {
+        log.logoutTime = new Date();
+        log.status = reason === "Session Expired" ? "Session Expired" : "Logged Out";
+        await log.save();
+      }
+    }
+
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Admin logout error:", error.message);
+    return res.status(500).json({ message: "Failed to logout properly" });
+  }
+};
+
+const getLoginLogs = async (req, res) => {
+  try {
+    if (!req.user || !req.user.isMasterAdmin) {
+      return res.status(403).json({ message: "Access denied. Master Admin access required." });
+    }
+
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 15;
+    const skip = (page - 1) * limit;
+
+    const total = await LoginActivityLog.countDocuments({});
+    const logs = await LoginActivityLog.find({})
+      .sort({ loginTime: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    return res.status(200).json({
+      logs,
+      total,
+      page,
+      pages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error("Get login logs error:", error.message);
+    return res.status(500).json({ message: "Failed to fetch login history logs." });
+  }
+};
+
+module.exports = { 
+  adminLogin, 
+  getStoreInfo, 
+  updateStoreInfo, 
+  getEmailDiagnostics, 
+  setup2FA, 
+  enable2FA, 
+  disable2FA, 
+  verify2FA,
+  adminLogout,
+  getLoginLogs
+};

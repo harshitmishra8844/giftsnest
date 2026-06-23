@@ -1,12 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import QuantityStepper from "./QuantityStepper";
+import { resolveMediaUrl } from "../services/api";
 
 const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
   const navigate = useNavigate();
   const [recentlyAdded, setRecentlyAdded] = useState(false);
   const productUrl = `/products/${product.slug || product._id}`;
-  const imageUrl = product.image || product.images?.[0] || "https://via.placeholder.com/600x400?text=Gift";
+  const imageUrl = resolveMediaUrl(product.image || product.images?.[0] || "https://via.placeholder.com/600x400?text=Gift");
   const stock = product.stock !== undefined && product.stock !== null ? Number(product.stock) : null;
   const hasStockLimit = stock !== null && Number.isFinite(stock);
   const outOfStock = hasStockLimit && stock <= 0;

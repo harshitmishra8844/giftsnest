@@ -106,7 +106,7 @@ const getTicketDetails = async (req, res) => {
  */
 const replyToTicket = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, attachments } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ message: "Message cannot be empty." });
     }
@@ -131,6 +131,7 @@ const replyToTicket = async (req, res) => {
       senderName: req.user.name,
       isAdmin: false,
       message: message.trim(),
+      attachments: attachments || [],
     });
 
     await ticket.save();
@@ -140,6 +141,25 @@ const replyToTicket = async (req, res) => {
       .populate("user", "name email")
       .populate("order", "orderCode totalPrice createdAt status")
       .populate("messages.sender", "name email");
+
+    // Trigger email notification to assigned agent or admins
+    try {
+      const { sendCustomerReplyNotificationToAgentOrAdmin } = require("../services/returnEmailService");
+      if (ticket.assignedAgent) {
+        const User = require("../models/User");
+        const agent = await User.findById(ticket.assignedAgent).select("email name");
+        if (agent) {
+          await sendCustomerReplyNotificationToAgentOrAdmin(agent.email, agent.name, ticket, message);
+        }
+      } else {
+        const admins = await User.find({ isAdmin: true }).select("email name");
+        for (const admin of admins) {
+          await sendCustomerReplyNotificationToAgentOrAdmin(admin.email, admin.name, ticket, message);
+        }
+      }
+    } catch (mailErr) {
+      console.error("[email] Failed to send customer reply ticket alert:", mailErr.message);
+    }
 
     res.json(updatedTicket);
   } catch (error) {
@@ -203,7 +223,7 @@ const adminGetTickets = async (req, res) => {
  */
 const adminReplyToTicket = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, attachments } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ message: "Message cannot be empty." });
     }
@@ -223,6 +243,7 @@ const adminReplyToTicket = async (req, res) => {
       senderName: req.user.name,
       isAdmin: true,
       message: message.trim(),
+      attachments: attachments || [],
     });
 
     await ticket.save();

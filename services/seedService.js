@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Role = require("../models/Role");
 const Department = require("../models/Department");
+const EmailSetting = require("../models/EmailSetting");
 
 const predefinedPermissions = [
   // Products
@@ -181,6 +182,17 @@ const seedDB = async () => {
         await masterAdmin.save();
         console.log(`[seeder] Updated existing user ${masterEmail} to hold Master Admin privileges`);
       }
+    }
+
+    // 4. Seed Default Email Configurations
+    const emailSettingsExist = await EmailSetting.findOne({ singletonKey: "email" });
+    if (!emailSettingsExist) {
+      await EmailSetting.create({
+        singletonKey: "email",
+        adminEmails: [masterEmail],
+        supportEmails: [masterEmail],
+      });
+      console.log(`[seeder] Created default Email Settings with recipient: ${masterEmail}`);
     }
 
     console.log("[seeder] Database seeding finished successfully.");

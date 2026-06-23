@@ -2,7 +2,11 @@ const crypto = require("crypto");
 const razorpay = require("../config/razorpay");
 const Order = require("../models/Order");
 const { decrementStockForPaidOrder } = require("../services/inventoryService");
-const { sendOrderNotificationToAdmin, sendOrderConfirmationToCustomer } = require("../services/orderEmail");
+const {
+  sendCustomerOrderConfirmation,
+  sendAdminNewOrderAlert,
+  sendSupportNotification
+} = require("../services/emailService");
 
 const isRazorpayDemoMode = () => {
   if (process.env.NODE_ENV === "production") return false;
@@ -108,11 +112,14 @@ const completeDemoPayment = async (req, res) => {
 
     if (!wasAlreadyPaid) {
       await decrementStockForPaidOrder(updatedOrder);
-      sendOrderNotificationToAdmin(updatedOrder).catch((mailErr) => {
-        console.error("[email] Failed to send admin order notification email in completeDemoPayment:", mailErr);
-      });
-      sendOrderConfirmationToCustomer(updatedOrder).catch((mailErr) => {
+      sendCustomerOrderConfirmation(updatedOrder).catch((mailErr) => {
         console.error("[email] Failed to send customer order confirmation email in completeDemoPayment:", mailErr);
+      });
+      sendAdminNewOrderAlert(updatedOrder).catch((mailErr) => {
+        console.error("[email] Failed to send admin order alert email in completeDemoPayment:", mailErr);
+      });
+      sendSupportNotification("New Order", updatedOrder).catch((mailErr) => {
+        console.error("[email] Failed to send support order alert email in completeDemoPayment:", mailErr);
       });
     }
 
@@ -173,11 +180,14 @@ const verifyPayment = async (req, res) => {
 
     if (!wasAlreadyPaid) {
       await decrementStockForPaidOrder(updatedOrder);
-      sendOrderNotificationToAdmin(updatedOrder).catch((mailErr) => {
-        console.error("[email] Failed to send admin order notification email in verifyPayment:", mailErr);
-      });
-      sendOrderConfirmationToCustomer(updatedOrder).catch((mailErr) => {
+      sendCustomerOrderConfirmation(updatedOrder).catch((mailErr) => {
         console.error("[email] Failed to send customer order confirmation email in verifyPayment:", mailErr);
+      });
+      sendAdminNewOrderAlert(updatedOrder).catch((mailErr) => {
+        console.error("[email] Failed to send admin order alert email in verifyPayment:", mailErr);
+      });
+      sendSupportNotification("New Order", updatedOrder).catch((mailErr) => {
+        console.error("[email] Failed to send support order alert email in verifyPayment:", mailErr);
       });
     }
 
