@@ -54,6 +54,25 @@ const Checkout = () => {
   const [activeCoupons, setActiveCoupons] = useState([]);
   const [couponsLoading, setCouponsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Online");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [globalStoreInfo, setGlobalStoreInfo] = useState(null);
+
+  useEffect(() => {
+    const fetchGlobalSettings = async () => {
+      try {
+        const { data } = await api.get("/store-info");
+        setGlobalStoreInfo(data);
+      } catch (err) {
+        console.error("Failed to fetch store settings:", err);
+      }
+    };
+    fetchGlobalSettings();
+  }, []);
+
+  const isCodGloballyEnabled = globalStoreInfo?.codEnabled !== false;
+  const isCodAllowedForCart = cartItems.every((item) => item.codEnabled !== false);
+  const isCodAvailable = isCodGloballyEnabled && isCodAllowedForCart;
+
   const userAuth = getUserAuth();
 
   useEffect(() => {
@@ -192,7 +211,7 @@ const Checkout = () => {
   const finalTotal = couponData?.finalTotal ?? subtotal;
   const hasSavedAddresses = savedAddresses.length > 0;
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
     setError("");
     setInfo("");
@@ -226,6 +245,23 @@ const Checkout = () => {
       return;
     }
 
+    // Validation succeeded, show modal
+    setShowPaymentModal(true);
+  };
+
+  const handleConfirmOrder = async (selectedMethod) => {
+    setShowPaymentModal(false);
+    setError("");
+    setInfo("");
+
+    const selectedAddr = savedAddresses.find((addr) => addr._id === selectedAddressId)
+      || savedAddresses.find((addr) => addr.isDefault)
+      || savedAddresses[0];
+    if (!selectedAddr) {
+      setError("No valid delivery address found.");
+      return;
+    }
+
     const orderAddress = {
       fullName: selectedAddr.fullName,
       phone: selectedAddr.phone,
@@ -243,13 +279,13 @@ const Checkout = () => {
         totalPrice: finalTotal,
         couponCode,
         address: orderAddress,
-        paymentMethod,
+        paymentMethod: selectedMethod,
       };
 
       const { data } = await api.post("/orders", payload);
       const appOrder = data.order;
 
-      if (paymentMethod === "COD") {
+      if (selectedMethod === "COD") {
         clearCart();
         navigate("/cart", {
           state: {
@@ -325,7 +361,7 @@ const Checkout = () => {
           appOrderId: appOrder._id,
         },
         theme: {
-          color: "#047857",
+          color: "#D4AF37",
         },
         modal: {
           ondismiss: () => {
@@ -350,14 +386,15 @@ const Checkout = () => {
       setPlacingOrder(false);
     }
   };
-   if (cartItems.length === 0) {
+
+  if (cartItems.length === 0) {
     return (
-      <section className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-12 text-center shadow-sm max-w-xl mx-auto">
-        <h2 className="text-2xl font-serif font-light text-gray-950">No items to checkout</h2>
-        <p className="mt-2.5 text-xs text-gray-500 font-light leading-relaxed">Your cart is empty right now. Add curated gifts to continue.</p>
+      <section className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-12 text-center shadow-xs max-w-xl mx-auto">
+        <h2 className="text-2xl font-serif font-light text-luxury-black">No items to checkout</h2>
+        <p className="mt-2.5 text-xs text-text-secondary font-light leading-relaxed">Your cart is empty right now. Add curated gifts to continue.</p>
         <Link
           to="/products"
-          className="mt-6 inline-flex rounded-full bg-emerald-950 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 transition-all duration-300 shadow-sm"
+          className="mt-6 inline-flex rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow-sm font-semibold"
         >
           Continue Shopping
         </Link>
@@ -369,65 +406,65 @@ const Checkout = () => {
     <section className="grid gap-8 lg:grid-cols-[1fr_340px] pb-16">
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm"
+        className="space-y-6 rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs"
       >
-        <div className="rounded-2xl bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 p-6 text-white shadow-sm">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-emerald-300">Secure Checkout</p>
+        <div className="rounded-2xl bg-luxury-black p-6 text-white shadow-xs border border-gold-500/20">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-gold-400 font-semibold">Secure Checkout</p>
           <h2 className="mt-1.5 text-2xl font-serif font-light tracking-tight">Complete your order</h2>
-          <p className="mt-1 text-xs text-emerald-100/70 font-light">
+          <p className="mt-1 text-xs text-gray-350 font-light">
             Premium packaging, express delivery options, and secure Razorpay payment integrations.
           </p>
         </div>
 
         <div>
-          <h3 className="text-sm font-serif font-semibold text-gray-950 border-b border-gray-100 pb-2">Delivery Address</h3>
+          <h3 className="text-sm font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-2">Delivery Address</h3>
 
           {hasSavedAddresses ? (
-            <div className="mt-4 rounded-2xl border border-gray-100 bg-white/60 p-4 shadow-sm">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Shipping to</p>
+            <div className="mt-4 rounded-2xl border border-champagne/45 bg-white/60 p-4 shadow-xs">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-text-secondary font-semibold">Shipping to</p>
 
               {(() => {
                 const selectedAddr = savedAddresses.find(addr => addr._id === selectedAddressId) || savedAddresses.find(addr => addr.isDefault) || savedAddresses[0];
                 return (
-                  <div className="rounded-xl border border-gray-100 bg-white p-4 text-xs shadow-sm font-light text-gray-600 space-y-1">
+                  <div className="rounded-xl border border-champagne/30 bg-white p-4 text-xs shadow-xs font-light text-text-secondary space-y-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-semibold font-serif text-sm text-gray-950">{selectedAddr.label}</span>
+                      <span className="font-semibold font-serif text-sm text-luxury-black">{selectedAddr.label}</span>
                       {selectedAddr.isDefault && (
-                        <span className="rounded-full bg-emerald-50 border border-emerald-100/40 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-800 tracking-wider">
+                        <span className="rounded-full bg-gold-50 border border-gold-200/30 px-2 py-0.5 text-[9px] font-bold uppercase text-gold-800 tracking-wider">
                           Default
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-900 font-medium">{selectedAddr.fullName}</p>
+                    <p className="text-luxury-black font-medium">{selectedAddr.fullName}</p>
                     <p>{selectedAddr.line1}</p>
                     <p>
                       {selectedAddr.city}, {selectedAddr.state} {selectedAddr.postalCode}
                     </p>
                     <p>{selectedAddr.country}</p>
-                    <p className="text-gray-900 mt-1 font-normal">📞 {selectedAddr.phone}</p>
+                    <p className="text-luxury-black mt-1 font-normal">📞 {selectedAddr.phone}</p>
                   </div>
                 );
               })()}
 
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
+              <div className="mt-4 pt-3 border-t border-champagne/30">
+                <p className="text-[10px] text-text-secondary uppercase tracking-wider font-medium">
                   To change address, visit your{" "}
-                  <Link to="/my-profile" className="text-emerald-800 hover:text-emerald-950 font-bold transition-colors">
+                  <Link to="/my-profile" className="text-gold-700 hover:text-gold-800 font-bold transition-colors">
                     profile settings
                   </Link>
                 </p>
               </div>
             </div>
           ) : (
-            <div className="mt-4 rounded-2xl border border-gray-100 bg-white/60 p-4 shadow-sm">
-              <p className="mb-2 text-xs font-semibold text-gray-900">Add delivery address</p>
-              <p className="text-xs text-gray-500 font-light leading-relaxed mb-4">
+            <div className="mt-4 rounded-2xl border border-champagne/45 bg-white/60 p-4 shadow-xs">
+              <p className="mb-2 text-xs font-semibold text-luxury-black">Add delivery address</p>
+              <p className="text-xs text-text-secondary font-light leading-relaxed mb-4">
                 No saved address found. Please add your address in profile, then return to complete order.
               </p>
               <Link
                 to="/my-profile"
                 state={{ activeTab: "addresses", openAddressForm: true, returnTo: "/checkout" }}
-                className="inline-flex items-center rounded-full bg-emerald-950 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 transition-colors shadow-sm"
+                className="inline-flex items-center rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-colors shadow-sm font-semibold"
               >
                 Go to My Addresses
               </Link>
@@ -435,70 +472,41 @@ const Checkout = () => {
           )}
         </div>
 
-        <div className="rounded-3xl border border-gray-200/40 bg-white/70 p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-3 border-b border-gray-100 pb-2.5">
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center border border-emerald-100/40">
-              <svg className="w-4 h-4 text-emerald-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+        <div className="rounded-3xl border border-champagne bg-white/70 p-6 shadow-xs space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gold-50 rounded-lg flex items-center justify-center border border-gold-200/30">
+              <svg className="w-4 h-4 text-gold-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-serif font-semibold text-gray-950">Payment Method</h3>
-              <p className="text-[10px] text-gray-400 font-light uppercase tracking-wider">Choose your preferred checkout mode</p>
+              <h3 className="text-sm font-serif font-semibold text-luxury-black">Payment Mode Selection</h3>
+              <p className="text-[10px] text-text-secondary font-light uppercase tracking-wider">Select payment method in the next step</p>
             </div>
           </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all duration-300 ${paymentMethod === "Online" ? "border-emerald-500 bg-emerald-50/15 shadow-sm ring-2 ring-emerald-500/10" : "border-gray-150 bg-white hover:border-emerald-300/40 hover:bg-gray-50/40"}`}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="Online"
-                checked={paymentMethod === "Online"}
-                onChange={() => setPaymentMethod("Online")}
-                className="mt-0.5 accent-emerald-950"
-              />
-              <div className="text-left">
-                <p className="text-xs font-semibold text-gray-950">Online Payment</p>
-                <p className="text-[10px] text-gray-400 font-light leading-relaxed mt-1">Pay securely via UPI, Card, NetBanking or Wallets using Razorpay.</p>
-              </div>
-            </label>
-
-            <label className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all duration-300 ${paymentMethod === "COD" ? "border-emerald-500 bg-emerald-50/15 shadow-sm ring-2 ring-emerald-500/10" : "border-gray-150 bg-white hover:border-emerald-300/40 hover:bg-gray-50/40"}`}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="COD"
-                checked={paymentMethod === "COD"}
-                onChange={() => setPaymentMethod("COD")}
-                className="mt-0.5 accent-emerald-950"
-              />
-              <div className="text-left">
-                <p className="text-xs font-semibold text-gray-950">Cash on Delivery (COD)</p>
-                <p className="text-[10px] text-gray-400 font-light leading-relaxed mt-1">Place order now and pay with cash or digital options at the time of delivery.</p>
-              </div>
-            </label>
-          </div>
+          <p className="text-xs text-text-secondary font-light leading-relaxed">
+            You will choose between <strong>Online Payment</strong> and <strong>Cash on Delivery (COD)</strong> in a popup modal after clicking the proceed button.
+          </p>
         </div>
 
-        <div className="rounded-2xl border border-amber-100/80 bg-amber-50/5 p-5 shadow-sm space-y-4">
+        <div className="rounded-2xl border border-gold-300/40 bg-gold-50/5 p-5 shadow-xs space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-100">
-              <svg className="w-4 h-4 text-amber-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 bg-gold-50 rounded-lg flex items-center justify-center border border-gold-200/30">
+              <svg className="w-4 h-4 text-gold-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
             </div>
             <div>
-              <p className="text-xs font-serif font-bold text-gray-950">{"Coupons & offers"}</p>
-              <p className="text-[10px] text-gray-400 font-light uppercase tracking-wider">Select an active coupon or enter a code below</p>
+              <p className="text-xs font-serif font-bold text-luxury-black">{"Coupons & offers"}</p>
+              <p className="text-[10px] text-text-secondary font-light uppercase tracking-wider">Select an active coupon or enter a code below</p>
             </div>
           </div>
 
           {(couponsLoading || activeCoupons.length > 0) && (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Active coupons</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gold-700 font-semibold">Active coupons</p>
               {couponsLoading ? (
-                <p className="text-xs text-amber-700 font-light">Loading offers…</p>
+                <p className="text-xs text-gold-700 font-light">Loading offers…</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {activeCoupons.map((c) => {
@@ -511,27 +519,27 @@ const Checkout = () => {
                         <div
                           className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition ${
                             isApplied
-                              ? "border-emerald-450 bg-emerald-50/40"
+                              ? "border-gold-500 bg-gold-50/40"
                               : meetsMin
-                                ? "border-gray-150 bg-white hover:border-amber-200/50"
-                                : "border-gray-100 bg-gray-50/50"
+                                ? "border-champagne bg-white hover:border-gold-300/50"
+                                : "border-champagne bg-gray-50/30"
                           }`}
                         >
                           <div className="min-w-0 flex-1 space-y-0.5">
-                            <p className="font-mono text-xs font-bold text-emerald-950 tracking-wider">{c.code}</p>
-                            <p className="text-[11px] font-semibold text-emerald-800">{formatCouponOfferLabel(c)}</p>
-                            <p className="text-[10px] text-gray-400 font-light">
+                            <p className="font-mono text-xs font-bold text-luxury-black tracking-wider">{c.code}</p>
+                            <p className="text-[11px] font-semibold text-gold-700">{formatCouponOfferLabel(c)}</p>
+                            <p className="text-[10px] text-text-secondary font-light">
                               Min. order ₹{minCart}
                               {c.endDate ? ` · Valid till ${formatCouponEndDate(c.endDate)}` : ""}
                             </p>
                             {!meetsMin && !isApplied ? (
-                              <p className="text-[10px] font-semibold text-amber-700">
+                              <p className="text-[10px] font-semibold text-gold-600">
                                 Add ₹{Number(shortBy.toFixed(0))} more to use this coupon
                               </p>
                             ) : null}
                           </div>
                           {isApplied ? (
-                            <span className="shrink-0 rounded-full bg-emerald-950 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-white">
+                            <span className="shrink-0 rounded-full bg-gold-500 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-white shadow-xs">
                               Applied
                             </span>
                           ) : (
@@ -539,7 +547,7 @@ const Checkout = () => {
                               type="button"
                               onClick={() => applyCouponWithCode(c.code)}
                               disabled={applyingCoupon || !meetsMin}
-                              className="shrink-0 rounded-full bg-emerald-950 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="shrink-0 rounded-full bg-luxury-black px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white transition hover:bg-gold-500 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-xs"
                             >
                               Apply
                             </button>
@@ -553,19 +561,19 @@ const Checkout = () => {
             </div>
           )}
 
-          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Enter coupon code</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gold-700 font-semibold">Enter coupon code</p>
           <div className="flex gap-2">
             <input
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
               placeholder="Enter coupon code (e.g., GIFT10)"
-              className="flex-1 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-xs transition-all focus:border-emerald-500 focus:bg-emerald-50 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
+              className="flex-1 rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 placeholder:text-gray-400"
             />
             <button
               type="button"
               onClick={applyCoupon}
               disabled={applyingCoupon}
-              className="rounded-full bg-emerald-950 px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-emerald-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+              className="rounded-full bg-luxury-black px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-gold-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs hover:shadow-sm cursor-pointer"
             >
               {applyingCoupon ? (
                 <span className="flex items-center gap-1.5">
@@ -589,7 +597,7 @@ const Checkout = () => {
             </div>
           )}
           {info && (
-            <div className="flex items-center gap-2 text-xs text-emerald-800 font-medium">
+            <div className="flex items-center gap-2 text-xs text-gold-700 font-medium">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -597,36 +605,36 @@ const Checkout = () => {
             </div>
           )}
           {couponData && (
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 shadow-sm">
+            <div className="rounded-xl border border-gold-200 bg-gold-50/40 p-3 shadow-xs">
               <div className="flex flex-wrap items-start justify-between gap-2 text-xs">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <p className="font-semibold text-emerald-950">
+                  <p className="font-semibold text-luxury-black">
                     {couponData.code ? (
                       <>
-                        <span className="rounded-md bg-white px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-emerald-900 ring-1 ring-emerald-100">
+                        <span className="rounded-md bg-white px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-gold-900 ring-1 ring-gold-200">
                           {couponData.code}
                         </span>
-                        <span className="ml-2 font-medium text-emerald-800">applied successfully</span>
+                        <span className="ml-2 font-medium text-gold-700">applied successfully</span>
                       </>
                     ) : (
-                      <span className="font-medium text-emerald-800">Discount applied</span>
+                      <span className="font-medium text-gold-700">Discount applied</span>
                     )}
                   </p>
-                  <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500 font-light">
+                  <div className="flex items-center justify-between gap-3 text-[11px] text-text-secondary font-light">
                     <span>{couponData.message}</span>
-                    <span className="shrink-0 font-bold text-emerald-800">-₹{couponData.discountAmount}</span>
+                    <span className="shrink-0 font-bold text-gold-800">-₹{couponData.discountAmount}</span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={removeCoupon}
-                  className="shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-red-500 hover:text-red-750 transition-colors"
+                  className="shrink-0 rounded-full border border-champagne bg-white px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-red-500 hover:text-red-750 transition-colors cursor-pointer"
                 >
                   Remove
                 </button>
               </div>
               {couponData.couponEndDate ? (
-                <p className="mt-2.5 inline-flex items-center rounded-full border border-emerald-100 bg-white px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                <p className="mt-2.5 inline-flex items-center rounded-full border border-gold-200 bg-white px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-700">
                   Coupon valid until {formatCouponEndDate(couponData.couponEndDate)}
                 </p>
               ) : null}
@@ -635,54 +643,175 @@ const Checkout = () => {
         </div>
 
         {error ? <p className="text-xs text-red-650 font-medium">{error}</p> : null}
-        {info ? <p className="text-xs text-emerald-800 font-medium">{info}</p> : null}
+        {info ? <p className="text-xs text-gold-700 font-medium">{info}</p> : null}
 
         <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl border border-gray-100 bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gray-400">100% Secure Payment</div>
-          <div className="rounded-xl border border-gray-100 bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gray-400">Premium Packaging</div>
-          <div className="rounded-xl border border-gray-100 bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gray-400">Fast Delivery Support</div>
+          <div className="rounded-xl border border-champagne bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gold-800">100% Secure Payment</div>
+          <div className="rounded-xl border border-champagne bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gold-800">Premium Packaging</div>
+          <div className="rounded-xl border border-champagne bg-white/50 px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-gold-800">Fast Delivery Support</div>
         </div>
 
         <button
           type="submit"
           disabled={placingOrder}
-          className="w-full rounded-full bg-emerald-950 px-5 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-75 transition-all duration-300 shadow-sm"
+          className="w-full rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-3.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-75 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
         >
-          {placingOrder 
-            ? (paymentMethod === "COD" ? "Placing your order..." : "Processing secure payment...") 
-            : (paymentMethod === "COD" ? `Place COD Order (INR ${finalTotal})` : "Pay now")
-          }
+          {placingOrder ? "Processing..." : "Proceed to Pay"}
         </button>
       </form>
 
-      <aside className="h-fit rounded-3xl border border-gray-200/40 bg-white/60 p-5 shadow-sm backdrop-blur-sm">
-        <h3 className="text-sm font-serif font-semibold text-gray-950 border-b border-gray-100 pb-2">Order Summary</h3>
-        <ul className="mt-3.5 space-y-2.5 text-xs text-gray-600 font-light border-b border-gray-100 pb-3.5">
+      <aside className="h-fit rounded-3xl border border-champagne/45 bg-white/70 p-5 shadow-xs backdrop-blur-sm">
+        <h3 className="text-sm font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-2">Order Summary</h3>
+        <ul className="mt-3.5 space-y-2.5 text-xs text-text-secondary font-light border-b border-champagne/30 pb-3.5">
           {cartItems.map((item) => (
             <li key={item._id} className="flex items-center justify-between gap-3">
               <span className="truncate max-w-[170px]">{item.name} x {item.quantity}</span>
-              <span className="font-semibold font-serif text-gray-900">INR {item.price * item.quantity}</span>
+              <span className="font-semibold font-serif text-luxury-black">INR {item.price * item.quantity}</span>
             </li>
           ))}
         </ul>
-        <div className="mt-3.5 space-y-2.5 text-xs text-gray-500 font-light border-b border-gray-100 pb-3.5">
+        <div className="mt-3.5 space-y-2.5 text-xs text-text-secondary font-light border-b border-champagne/30 pb-3.5">
           <p className="flex items-center justify-between">
             <span>Subtotal</span>
-            <span className="font-semibold text-gray-800">INR {subtotal}</span>
+            <span className="font-semibold text-luxury-black">INR {subtotal}</span>
           </p>
           <p className="flex items-center justify-between">
             <span>Discount</span>
-            <span className="text-emerald-800 font-bold">- INR {discountAmount}</span>
+            <span className="text-gold-700 font-bold">- INR {discountAmount}</span>
           </p>
         </div>
-        <div className="mt-3.5 flex items-center justify-between text-sm font-semibold text-gray-950">
+        <div className="mt-3.5 flex items-center justify-between text-sm font-semibold text-luxury-black">
           <span>Total Price</span>
           <span className="font-serif text-base">INR {finalTotal}</span>
         </div>
-        <p className="mt-5 rounded-xl bg-gray-50/50 border border-gray-100/50 px-3 py-2.5 text-[10px] text-gray-400 leading-normal font-light">
+        <p className="mt-5 rounded-xl bg-gold-50/20 border border-gold-100/50 px-3 py-2.5 text-[10px] text-text-secondary leading-normal font-light">
           By completing this checkout, you agree to our shipping, cancellation and returns policy guidelines.
         </p>
       </aside>
+
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/60 backdrop-blur-md p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-gold-300/20 bg-white/95 p-6 shadow-2xl space-y-6 animate-scale-in">
+            <div className="flex justify-between items-center border-b border-champagne/30 pb-3">
+              <div>
+                <h3 className="text-lg font-serif font-semibold text-luxury-black">Select Payment Mode</h3>
+                <p className="text-[10px] text-text-secondary font-light uppercase tracking-wider">Choose how you'd like to pay</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="text-text-secondary hover:text-luxury-black text-2xl font-light cursor-pointer transition-colors"
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <label 
+                className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all duration-300 ${
+                  paymentMethod === "Online" 
+                    ? "border-gold-500 bg-gold-50/10 shadow-xs ring-2 ring-gold-500/10" 
+                    : "border-champagne bg-white hover:border-gold-300/40 hover:bg-gold-50/10"
+                }`}
+                onClick={() => setPaymentMethod("Online")}
+              >
+                <input
+                  type="radio"
+                  name="modalPaymentMethod"
+                  value="Online"
+                  checked={paymentMethod === "Online"}
+                  readOnly
+                  className="mt-0.5 accent-gold-600 cursor-pointer"
+                />
+                <div className="text-left">
+                  <p className="text-xs font-semibold text-luxury-black">Online Payment</p>
+                  <p className="text-[10px] text-text-secondary font-light leading-relaxed mt-1">
+                    Pay securely via UPI, Card, NetBanking or Wallets using Razorpay.
+                  </p>
+                </div>
+              </label>
+
+              <label 
+                className={`flex items-start gap-3 rounded-2xl border p-4 transition-all duration-300 ${
+                  !isCodAvailable 
+                    ? "opacity-50 cursor-not-allowed border-champagne bg-gray-50/50" 
+                    : paymentMethod === "COD" 
+                      ? "border-gold-500 bg-gold-50/10 shadow-xs ring-2 ring-gold-500/10 cursor-pointer" 
+                      : "border-champagne bg-white hover:border-gold-300/40 hover:bg-gold-50/10 cursor-pointer"
+                }`}
+                onClick={() => isCodAvailable && setPaymentMethod("COD")}
+              >
+                <input
+                  type="radio"
+                  name="modalPaymentMethod"
+                  value="COD"
+                  checked={paymentMethod === "COD"}
+                  disabled={!isCodAvailable}
+                  readOnly
+                  className="mt-0.5 accent-gold-600 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold text-luxury-black">Cash on Delivery (COD)</p>
+                    {!isCodAvailable && (
+                      <span className="rounded-full bg-gold-50 border border-gold-200/50 px-2 py-0.5 text-[8px] font-bold uppercase text-gold-700 tracking-wider">
+                        Unavailable
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-text-secondary font-light leading-relaxed mt-1">
+                    Place order now and pay with cash or digital options at the time of delivery.
+                  </p>
+                  {!isCodAvailable && (
+                    <p className="text-[9px] text-red-650 font-medium mt-1.5 leading-snug">
+                      {!isCodGloballyEnabled 
+                        ? "COD is currently disabled website-wide." 
+                        : "Some items in your cart do not support COD."}
+                    </p>
+                  )}
+                </div>
+              </label>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 rounded-full border border-champagne bg-white py-3 text-xs font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 transition-all cursor-pointer font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleConfirmOrder(paymentMethod)}
+                className="flex-1 rounded-full bg-gold-500 hover:bg-gold-600 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all cursor-pointer shadow-xs hover:shadow-sm font-semibold"
+              >
+                {paymentMethod === "COD" ? "Confirm Order" : "Pay Now"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>
+        {`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+          }
+          .animate-scale-in {
+            animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+        `}
+      </style>
     </section>
   );
 };

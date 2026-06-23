@@ -14,6 +14,7 @@ const initialForm = {
   occasion: "",
   careInstructions: "",
   category: "",
+  codEnabled: true,
 };
 
 const AddProduct = () => {
@@ -234,6 +235,19 @@ const AddProduct = () => {
           placeholder="Optional image URLs (one per line or comma separated)"
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
         />
+
+        <div className="flex items-center pt-2 pb-2">
+          <label className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              name="codEnabled"
+              checked={form.codEnabled !== false}
+              onChange={(e) => setForm((prev) => ({ ...prev, codEnabled: e.target.checked }))}
+              className="rounded text-pink-650 focus:ring-pink-650 cursor-pointer h-4 w-4"
+            />
+            <span className="font-semibold text-gray-800">Enable Cash on Delivery (COD) for this product</span>
+          </label>
+        </div>
 
         {message ? <p className="text-sm text-green-600">{message}</p> : null}
         {devUploadWarning ? <p className="text-sm text-amber-700">{devUploadWarning}</p> : null}

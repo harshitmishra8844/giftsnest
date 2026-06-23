@@ -28,6 +28,10 @@ const storeSettingSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    codEnabled: {
+      type: Boolean,
+      default: true,
+    },
 
     specialOffer: {
       title: { type: String, trim: true, maxlength: 90 },

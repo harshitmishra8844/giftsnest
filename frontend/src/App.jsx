@@ -88,10 +88,10 @@ function App() {
   };
 
   const navLinkClass = ({ isActive }) =>
-    `rounded-full px-4 py-2 text-[13px] font-bold uppercase tracking-widest transition duration-300 ${
+    `px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-all duration-300 ${
       isActive
-        ? "bg-emerald-900 text-white shadow-sm"
-        : "text-emerald-800 hover:text-emerald-950 hover:bg-emerald-50/50"
+        ? "text-gold-500 border-b-2 border-gold-500 font-bold"
+        : "text-luxury-black hover:text-gold-500 border-b-2 border-transparent hover:border-gold-300/40"
     }`;
 
   useEffect(() => {
@@ -150,18 +150,18 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#faf8f5]">
-      <header className="sticky top-0 z-20 backdrop-blur-md bg-white/75 border-b border-gray-200/40 shadow-sm transition-all duration-300">
+    <div className="min-h-screen bg-ivory">
+      <header className="sticky top-0 z-20 backdrop-blur-lg bg-white/85 border-b border-champagne/40 shadow-xs transition-all duration-300">
         <div className="mx-auto w-full max-w-7xl px-4 py-3 md:px-8">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between lg:gap-6">
             <div className="flex items-center justify-between min-w-[150px] shrink-0">
               <NavLink to="/" className="group inline-flex items-center gap-2.5">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-800 to-emerald-950 text-sm font-bold text-white shadow transition group-hover:scale-105">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-sm font-serif font-bold text-white shadow-md transition group-hover:scale-105">
                   N
                 </span>
-                <span className="text-xl font-bold tracking-widest text-emerald-950 font-serif">Niyora Gifts</span>
+                <span className="text-xl font-bold tracking-widest text-luxury-black font-serif">Niyora Gifts</span>
               </NavLink>
-              <span className="hidden md:inline-block text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded">
+              <span className="hidden md:inline-block text-[9px] font-bold uppercase tracking-[0.3em] text-gold-600 bg-gold-50 px-2.5 py-1 rounded-sm border border-gold-200/30">
                 curated gifting
               </span>
               <div className="ml-2 flex items-center gap-2 md:hidden">
@@ -169,7 +169,7 @@ function App() {
                   to="/cart"
                   aria-label={`Cart (${itemCount})`}
                   title={`Cart (${itemCount})`}
-                  className="relative shrink-0 rounded-full bg-emerald-900 p-2 text-white transition hover:bg-emerald-950 shadow-sm"
+                  className="relative shrink-0 rounded-full bg-luxury-black p-2.5 text-white transition hover:bg-gold-600 shadow-sm"
                 >
                   <span className="inline-flex items-center">
                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,7 +179,7 @@ function App() {
                   {itemCount > 0 ? (
                     <span
                       key={`cart-count-mobile-${itemCount}`}
-                      className="cart-badge-bump absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-4 text-emerald-900 shadow-sm"
+                      className="cart-badge-bump absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold leading-4 text-white shadow-sm"
                     >
                       {itemCount > 99 ? "99+" : itemCount}
                     </span>
@@ -189,7 +189,7 @@ function App() {
                   type="button"
                   onClick={() => setMobileMenuOpen((prev) => !prev)}
                   aria-label="Toggle navigation menu"
-                  className="rounded-full border border-emerald-200 bg-white p-2 text-emerald-900 hover:bg-emerald-50"
+                  className="rounded-full border border-gold-200 bg-white p-2 text-luxury-black hover:bg-gold-50 cursor-pointer"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {mobileMenuOpen ? (
@@ -228,7 +228,7 @@ function App() {
                 to="/cart"
                 aria-label={`Cart (${itemCount})`}
                 title={`Cart (${itemCount})`}
-                className="relative shrink-0 rounded-full bg-emerald-900 px-4 py-2 text-white transition hover:bg-emerald-950 shadow-md hover:shadow-lg flex items-center gap-1"
+                className="relative shrink-0 rounded-full bg-luxury-black hover:bg-gold-600 px-5 py-2 text-white transition hover:scale-102 hover:shadow-md flex items-center gap-2"
               >
                 <span>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +238,7 @@ function App() {
                 {itemCount > 0 ? (
                   <span
                     key={`cart-count-desktop-${itemCount}`}
-                    className="cart-badge-bump inline-flex min-w-4 items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-[10px] font-extrabold leading-3 text-emerald-900"
+                    className="cart-badge-bump inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-[10px] font-extrabold leading-3 text-white"
                   >
                     {itemCount > 99 ? "99+" : itemCount}
                   </span>
@@ -259,16 +259,16 @@ function App() {
           />
           {/* Slide-in drawer */}
           <div
-            className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-[#faf8f5] shadow-2xl p-6 md:hidden flex flex-col justify-between animate-slide-in-right border-l border-emerald-100/20"
+            className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-ivory shadow-2xl p-6 md:hidden flex flex-col justify-between animate-slide-in-right border-l border-gold-100/20"
           >
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-gray-200/40 pb-4">
-                <span className="text-lg font-serif font-bold tracking-wider text-emerald-950">Menu</span>
+                <span className="text-lg font-serif font-bold tracking-wider text-luxury-black">Menu</span>
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-label="Close menu"
-                  className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition"
+                  className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition cursor-pointer"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -281,10 +281,10 @@ function App() {
                   to="/"
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
                       isActive
-                        ? "bg-emerald-900 text-white shadow-sm"
-                        : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
+                        ? "bg-gold-500 text-white shadow-sm"
+                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
                     }`
                   }
                 >
@@ -294,10 +294,10 @@ function App() {
                   to="/products"
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
                       isActive
-                        ? "bg-emerald-900 text-white shadow-sm"
-                        : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
+                        ? "bg-gold-500 text-white shadow-sm"
+                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
                     }`
                   }
                 >
@@ -307,10 +307,10 @@ function App() {
                   to="/about"
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
                       isActive
-                        ? "bg-emerald-900 text-white shadow-sm"
-                        : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
+                        ? "bg-gold-500 text-white shadow-sm"
+                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
                     }`
                   }
                 >
@@ -320,10 +320,10 @@ function App() {
                   to="/my-profile"
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition duration-200 ${
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
                       isActive
-                        ? "bg-emerald-900 text-white shadow-sm"
-                        : "text-emerald-800 hover:bg-emerald-50/50 hover:text-emerald-950"
+                        ? "bg-gold-500 text-white shadow-sm"
+                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
                     }`
                   }
                 >
@@ -333,8 +333,8 @@ function App() {
             </div>
 
             <div className="border-t border-gray-200/40 pt-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-emerald-800 font-bold">Niyora Gifts</p>
-              <p className="text-[9px] text-gray-400 mt-1">Curated with love</p>
+              <p className="text-[10px] uppercase tracking-wider text-gold-600 font-bold">Niyora Gifts</p>
+              <p className="text-[9px] text-gray-405 mt-1 font-light">Curated with love</p>
             </div>
           </div>
         </>
@@ -374,27 +374,27 @@ function App() {
         </Routes>
       </main>
 
-      <footer className="mt-16 bg-gradient-to-br from-emerald-950 to-emerald-980 text-emerald-100/90 border-t border-emerald-900/30">
+      <footer className="mt-16 bg-luxury-black text-gray-300 border-t border-gold-500/20">
         <div className="mx-auto w-full max-w-7xl px-4 py-16 md:px-8">
           <div className="grid gap-10 md:grid-cols-12">
             <div className="md:col-span-4 space-y-4">
-              <h3 className="text-2xl font-bold tracking-widest text-amber-100 font-serif">Niyora Gifts</h3>
-              <p className="max-w-sm text-sm leading-7 text-emerald-200/80">
+              <h3 className="text-2xl font-bold tracking-widest text-gold-500 font-serif">Niyora Gifts</h3>
+              <p className="max-w-sm text-sm leading-7 text-gray-400">
                 Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful, lasting memory.
               </p>
               <div className="flex items-center gap-3 pt-2">
-                <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="rounded-full bg-emerald-900/40 p-2.5 text-emerald-300 hover:bg-emerald-800/80 hover:text-white transition duration-300 border border-emerald-800/40 shadow-sm">
+                <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="rounded-full bg-stone-900 p-2.5 text-gray-400 hover:bg-gold-500 hover:text-white transition duration-300 border border-stone-800 shadow-sm">
                   <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
                     <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9a5.5 5.5 0 0 1-5.5 5.5h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9z" />
                     <path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8zM18 6.5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z" />
                   </svg>
                 </a>
-                <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook" className="rounded-full bg-emerald-900/40 p-2.5 text-emerald-300 hover:bg-emerald-800/80 hover:text-white transition duration-300 border border-emerald-800/40 shadow-sm">
+                <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook" className="rounded-full bg-stone-900 p-2.5 text-gray-400 hover:bg-gold-500 hover:text-white transition duration-300 border border-stone-800 shadow-sm">
                   <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
                     <path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.5 1.6-1.5H17V5a24.2 24.2 0 0 0-2.6-.1c-2.6 0-4.4 1.6-4.4 4.5V11H7.5v3H10v8h3.5z" />
                   </svg>
                 </a>
-                <a href="https://x.com" target="_blank" rel="noreferrer" aria-label="X" className="rounded-full bg-emerald-900/40 p-2.5 text-emerald-300 hover:bg-emerald-800/80 hover:text-white transition duration-300 border border-emerald-800/40 shadow-sm">
+                <a href="https://x.com" target="_blank" rel="noreferrer" aria-label="X" className="rounded-full bg-stone-900 p-2.5 text-gray-400 hover:bg-gold-500 hover:text-white transition duration-300 border border-stone-800 shadow-sm">
                   <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
                     <path d="M18.9 3H21l-4.6 5.3L22 21h-4.8l-3.8-5-4.3 5H7l5-5.8L2 3h4.9l3.4 4.5L13.9 3h5zM18 19h1.3L6.2 5H4.8L18 19z" />
                   </svg>
@@ -403,32 +403,32 @@ function App() {
             </div>
 
             <div className="md:col-span-2 space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-amber-100">Explore</h4>
-              <ul className="space-y-3 text-sm text-emerald-200/70">
-                <li><Link to="/" className="hover:text-amber-100 transition">Home</Link></li>
-                <li><Link to="/about" className="hover:text-amber-100 transition">About</Link></li>
-                <li><Link to="/products" className="hover:text-amber-100 transition">Products</Link></li>
-                <li><Link to="/cart" className="hover:text-amber-100 transition">Cart</Link></li>
-                <li><Link to="/my-profile" className="hover:text-amber-100 transition">My Profile</Link></li>
-                <li><Link to="/admin/login" className="hover:text-amber-100 transition">Admin Login</Link></li>
+              <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-gold-500">Explore</h4>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li><Link to="/" className="hover:text-gold-500 transition">Home</Link></li>
+                <li><Link to="/about" className="hover:text-gold-500 transition">About</Link></li>
+                <li><Link to="/products" className="hover:text-gold-500 transition">Products</Link></li>
+                <li><Link to="/cart" className="hover:text-gold-500 transition">Cart</Link></li>
+                <li><Link to="/my-profile" className="hover:text-gold-500 transition">My Profile</Link></li>
+                <li><Link to="/admin/login" className="hover:text-gold-500 transition">Admin Login</Link></li>
               </ul>
             </div>
 
             <div className="md:col-span-3 space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-amber-100">Customer Care</h4>
-              <ul className="space-y-3 text-sm text-emerald-200/70">
-                <li><Link to="/track-order" className="hover:text-amber-100 transition">Track Order</Link></li>
-                <li><Link to="/shipping-policy" className="hover:text-amber-100 transition">Shipping Policy</Link></li>
-                <li><Link to="/returns-refunds" className="hover:text-amber-100 transition">Returns & Refunds</Link></li>
-                <li><a href="mailto:niyoragifts@gmail.com" className="hover:text-amber-100 transition">niyoragifts@gmail.com</a></li>
-                <li className="text-emerald-300/80">+91 90000 00000</li>
+              <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-gold-500">Customer Care</h4>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li><Link to="/track-order" className="hover:text-gold-500 transition">Track Order</Link></li>
+                <li><Link to="/shipping-policy" className="hover:text-gold-500 transition">Shipping Policy</Link></li>
+                <li><Link to="/returns-refunds" className="hover:text-gold-500 transition">Returns & Refunds</Link></li>
+                <li><a href="mailto:niyoragifts@gmail.com" className="hover:text-gold-500 transition">niyoragifts@gmail.com</a></li>
+                <li className="text-gray-400">+91 90000 00000</li>
               </ul>
             </div>
 
             <div className="md:col-span-3 space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-amber-100">Stay Updated</h4>
-              <p className="text-sm text-emerald-200/70">Get festive offers and latest collections in your inbox.</p>
-              <form onSubmit={handleSubscribe} className="flex items-center rounded-full border border-emerald-800 bg-emerald-950 p-1 shadow focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-200/20 transition duration-300">
+              <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-gold-500">Stay Updated</h4>
+              <p className="text-sm text-gray-400">Get festive offers and latest collections in your inbox.</p>
+              <form onSubmit={handleSubscribe} className="flex items-center rounded-full border border-stone-800 bg-stone-900 p-1 shadow focus-within:border-gold-500 focus-within:ring-2 focus-within:ring-gold-500/20 transition duration-300">
                 <input
                   type="email"
                   placeholder="Your email address"
@@ -436,20 +436,20 @@ function App() {
                   onChange={handleEmailChange}
                   disabled={subStatus === "loading"}
                   required
-                  className="w-full rounded-full bg-transparent px-4 py-2 text-sm text-white placeholder-emerald-300/50 outline-none"
+                  className="w-full rounded-full bg-transparent px-4 py-2 text-sm text-white placeholder-gray-600 outline-none"
                 />
                 <button
                   type="submit"
                   disabled={subStatus === "loading"}
-                  className="rounded-full bg-amber-600 hover:bg-amber-700 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition duration-300 shadow shrink-0 cursor-pointer disabled:opacity-50"
+                  className="rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition duration-300 shadow shrink-0 cursor-pointer disabled:opacity-50"
                 >
                   {subStatus === "loading" ? "..." : "Join"}
                 </button>
               </form>
 
               {subStatus === "success" && (
-                <div className="flex items-start gap-2 rounded-xl border border-emerald-800 bg-emerald-900/40 p-3 text-xs text-emerald-300 shadow-sm">
-                  <svg className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <div className="flex items-start gap-2 rounded-xl border border-gold-800/20 bg-gold-500/10 p-3 text-xs text-gold-500 shadow-sm">
+                  <svg className="h-4 w-4 shrink-0 text-gold-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>{subMessage}</span>
@@ -457,8 +457,8 @@ function App() {
               )}
 
               {subStatus === "error" && (
-                <div className="flex items-start gap-2 rounded-xl border border-amber-900/40 bg-amber-950/20 p-3 text-xs text-amber-300 shadow-sm">
-                  <svg className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <div className="flex items-start gap-2 rounded-xl border border-red-900/20 bg-red-500/10 p-3 text-xs text-red-450 shadow-sm">
+                  <svg className="h-4 w-4 shrink-0 text-red-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <span>{subMessage}</span>
@@ -467,11 +467,11 @@ function App() {
             </div>
           </div>
 
-          <div className="mt-12 flex flex-col gap-3 border-t border-emerald-900/40 pt-6 text-xs text-emerald-300/50 md:flex-row md:items-center md:justify-between">
+          <div className="mt-12 flex flex-col gap-3 border-t border-stone-850 pt-6 text-xs text-gray-500 md:flex-row md:items-center md:justify-between">
             <p>© {new Date().getFullYear()} Niyora Gifts. All rights reserved.</p>
             <div className="flex items-center gap-4">
-              <Link to="/products" className="hover:text-amber-100 transition">Privacy Policy</Link>
-              <Link to="/products" className="hover:text-amber-100 transition">Terms of Service</Link>
+              <Link to="/products" className="hover:text-gold-500 transition">Privacy Policy</Link>
+              <Link to="/products" className="hover:text-gold-500 transition">Terms of Service</Link>
             </div>
           </div>
         </div>

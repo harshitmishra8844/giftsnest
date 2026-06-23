@@ -104,6 +104,10 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    codEnabled: {
+      type: Boolean,
+      default: true,
+    },
     personalizationTextLabel: {
       type: String,
       default: "",

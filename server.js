@@ -15,6 +15,11 @@ const uploadRoutes = require("./routes/uploadRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
 const newsletterRoutes = require("./routes/newsletterRoutes");
+const employeeRoutes = require("./routes/employeeRoutes");
+const roleRoutes = require("./routes/roleRoutes");
+const departmentRoutes = require("./routes/departmentRoutes");
+const logRoutes = require("./routes/logRoutes");
+const ticketRoutes = require("./routes/ticketRoutes");
 const { getStoreInfo } = require("./controllers/adminController");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { verifyEmailTransporter, getSmtpConfig } = require("./services/emailTransporter");
@@ -44,8 +49,13 @@ app.use("/api/payments", paymentRoutes);
 app.get("/api/store-info", getStoreInfo);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);   // admin login safe
+app.use("/api/admin/employees", employeeRoutes);
+app.use("/api/admin/roles", roleRoutes);
+app.use("/api/admin/departments", departmentRoutes);
+app.use("/api/admin/logs", logRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/tickets", ticketRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -73,6 +83,8 @@ const logSmtpStartupInfo = () => {
 const startServer = async () => {
   try {
     await connectDB();
+    const { seedDB } = require("./services/seedService");
+    await seedDB();
     logSmtpStartupInfo();
 
     if (process.env.NODE_ENV === "production") {

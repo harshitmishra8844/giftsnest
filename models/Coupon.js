@@ -35,9 +35,17 @@ const couponSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    startDate: {
+      type: Date,
+      default: null,
+    },
     endDate: {
       type: Date,
       default: null,
+    },
+    activeDays: {
+      type: [String],
+      default: [],
     },
     /** System-generated retention / VIP codes; hidden from public “active coupons” list */
     isSpecial: {

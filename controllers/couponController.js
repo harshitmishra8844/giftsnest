@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const Coupon = require("../models/Coupon");
 const Order = require("../models/Order");
 const { isEmailConfigured, sendCouponEmailToCustomer } = require("../services/couponEmail");
+const { logActivity } = require("../services/logService");
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 
@@ -39,9 +40,17 @@ const parseOptionalPositiveInt = (value) => {
   return Math.floor(n);
 };
 
+const sanitizeActiveDays = (days) => {
+  if (!Array.isArray(days)) return [];
+  const allowed = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  return days
+    .map(d => String(d).trim())
+    .filter(d => allowed.includes(d));
+};
+
 const createCoupon = async (req, res) => {
   try {
-    const { code, type, value, minCartValue, maxDiscount, active, endDate, maxRedemptions, maxRedemptionsPerUser } =
+    const { code, type, value, minCartValue, maxDiscount, active, startDate, endDate, maxRedemptions, maxRedemptionsPerUser, activeDays } =
       req.body;
     if (!code || !type || value === undefined || minCartValue === undefined) {
       return res.status(400).json({ message: "code, type, value and minCartValue are required" });
@@ -58,11 +67,23 @@ const createCoupon = async (req, res) => {
       minCartValue: Number(minCartValue),
       maxDiscount: Number(maxDiscount || 0),
       active: active !== false,
+      startDate: parseOptionalEndDate(startDate),
       endDate: parseOptionalEndDate(endDate),
+      activeDays: sanitizeActiveDays(activeDays),
       isSpecial: false,
       maxRedemptions: parseOptionalPositiveInt(maxRedemptions),
       maxRedemptionsPerUser: parseOptionalPositiveInt(maxRedemptionsPerUser),
     });
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "COUPON_CREATED",
+        `Created public coupon: ${coupon.code} (Value: ${coupon.value} ${coupon.type})`,
+        req
+      );
+    }
 
     return res.status(201).json({ ...coupon.toObject(), paidRedemptionsCount: 0 });
   } catch (error) {
@@ -79,9 +100,11 @@ const generateSpecialCoupon = async (req, res) => {
       minCartValue,
       maxDiscount,
       active,
+      startDate,
       endDate,
       maxRedemptions,
       maxRedemptionsPerUser,
+      activeDays,
       customerEmail,
       customerName,
       emailMessage,
@@ -113,7 +136,9 @@ const generateSpecialCoupon = async (req, res) => {
       minCartValue: Number(minCartValue),
       maxDiscount: Number(maxDiscount || 0),
       active: active !== false,
+      startDate: parseOptionalEndDate(startDate),
       endDate: parseOptionalEndDate(endDate),
+      activeDays: sanitizeActiveDays(activeDays),
       isSpecial: true,
       maxRedemptions: maxR,
       maxRedemptionsPerUser: maxPerUser,
@@ -154,6 +179,16 @@ const generateSpecialCoupon = async (req, res) => {
           }
         }
       }
+    }
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "COUPON_GENERATED_SPECIAL",
+        `Generated special coupon: ${coupon.code} for customer: ${customerEmail || "N/A"}`,
+        req
+      );
     }
 
     return res.status(201).json({
@@ -238,12 +273,29 @@ const updateCoupon = async (req, res) => {
     if (payload.maxRedemptionsPerUser !== undefined) {
       payload.maxRedemptionsPerUser = parseOptionalPositiveInt(payload.maxRedemptionsPerUser);
     }
+    if (payload.startDate !== undefined) {
+      payload.startDate = parseOptionalEndDate(payload.startDate);
+    }
     if (payload.endDate !== undefined) {
       payload.endDate = parseOptionalEndDate(payload.endDate);
+    }
+    if (payload.activeDays !== undefined) {
+      payload.activeDays = sanitizeActiveDays(payload.activeDays);
     }
 
     const coupon = await Coupon.findByIdAndUpdate(id, payload, { returnDocument: 'after', runValidators: true });
     if (!coupon) return res.status(404).json({ message: "Coupon not found" });
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "COUPON_UPDATED",
+        `Updated coupon details: ${coupon.code}`,
+        req
+      );
+    }
+
     const paid = await Order.countDocuments({ couponCode: coupon.code, paymentStatus: "Paid" });
     return res.status(200).json({ ...coupon.toObject(), paidRedemptionsCount: paid });
   } catch (error) {
@@ -257,6 +309,17 @@ const deleteCoupon = async (req, res) => {
     const { id } = req.params;
     const coupon = await Coupon.findByIdAndDelete(id);
     if (!coupon) return res.status(404).json({ message: "Coupon not found" });
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "COUPON_DELETED",
+        `Deleted coupon: ${coupon.code}`,
+        req
+      );
+    }
+
     return res.status(200).json({ message: "Coupon deleted" });
   } catch (error) {
     console.error("Delete coupon error:", error);

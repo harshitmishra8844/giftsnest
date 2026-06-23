@@ -3,6 +3,7 @@ const User = require("../models/User");
 const StoreSetting = require("../models/StoreSetting");
 const { generateToken } = require("./authController");
 const { getSmtpConfig, isSmtpConfigured, isEmailConfigured, verifyEmailTransporter } = require("../services/emailTransporter");
+const { logActivity } = require("../services/logService");
 
 const defaultOffers = [
   {
@@ -79,7 +80,7 @@ const adminLogin = async (req, res) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    let admin = await User.findOne({ email: email.toLowerCase(), isAdmin: true });
+    let admin = await User.findOne({ email: email.toLowerCase(), isAdmin: true }).populate("roles", "name permissions");
     if (!admin) {
       const fallbackEmail = process.env.ADMIN_EMAIL || "niyoragifts@gmail.com";
       const fallbackPassword = process.env.ADMIN_PASSWORD || "harshit@123";
@@ -94,12 +95,55 @@ const adminLogin = async (req, res) => {
         email: fallbackEmail.toLowerCase(),
         password: hashedPassword,
         isAdmin: true,
+        isMasterAdmin: true, // Default created first fallback holds Master Admin
+        status: "Active",
       });
+    }
+
+    // Lockout check
+    if (admin.lockUntil && admin.lockUntil > new Date()) {
+      const minutesLeft = Math.ceil((admin.lockUntil - new Date()) / (60 * 1000));
+      return res.status(403).json({ 
+        message: `Account is temporarily locked due to too many failed attempts. Try again in ${minutesLeft} minutes.` 
+      });
+    }
+
+    // Suspension check
+    if (admin.status === "Inactive") {
+      return res.status(403).json({ message: "Your employee account has been suspended or deactivated." });
     }
 
     const validPassword = await bcrypt.compare(password, admin.password);
     if (!validPassword) {
+      admin.loginAttempts = (admin.loginAttempts || 0) + 1;
+      if (admin.loginAttempts >= 5) {
+        admin.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minute lock
+      }
+      await admin.save();
       return res.status(401).json({ message: "Invalid admin credentials" });
+    }
+
+    // Reset login failures
+    admin.loginAttempts = 0;
+    admin.lockUntil = null;
+
+
+
+    admin.lastLogin = new Date();
+    await admin.save();
+
+    await logActivity(admin._id, admin.name, "LOGIN", "Logged into admin panel successfully", req);
+
+    const roleNames = admin.roles ? admin.roles.map(r => r.name) : [];
+    const permissions = new Set();
+    if (admin.isMasterAdmin) {
+      permissions.add("ALL");
+    } else if (admin.roles) {
+      admin.roles.forEach(r => {
+        if (r.permissions) {
+          r.permissions.forEach(p => permissions.add(p));
+        }
+      });
     }
 
     return res.status(200).json({
@@ -107,11 +151,167 @@ const adminLogin = async (req, res) => {
       name: admin.name,
       email: admin.email,
       isAdmin: true,
+      isMasterAdmin: admin.isMasterAdmin,
+      roles: roleNames,
+      permissions: Array.from(permissions),
       token: generateToken(admin._id),
     });
   } catch (error) {
     console.error("Admin login error:", error.message);
     return res.status(500).json({ message: "Admin login failed" });
+  }
+};
+
+const setup2FA = async (req, res) => {
+  try {
+    const speakeasy = require("speakeasy");
+    const QRCode = require("qrcode");
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const secret = speakeasy.generateSecret({
+      name: `Niyora Gifts:${user.email}`
+    });
+
+    user.twoFactorSecret = secret.base32;
+    await user.save();
+
+    const qrCodeDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+
+    return res.status(200).json({
+      secret: secret.base32,
+      qrCodeDataUrl
+    });
+  } catch (error) {
+    console.error("2FA setup error:", error.message);
+    return res.status(500).json({ message: "Failed to generate 2FA setup details" });
+  }
+};
+
+const enable2FA = async (req, res) => {
+  try {
+    const speakeasy = require("speakeasy");
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ message: "Verification token is required" });
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: "base32",
+      token,
+      window: 1
+    });
+
+    if (!verified) {
+      return res.status(400).json({ message: "Invalid 2FA token. Please try scanning again." });
+    }
+
+    user.twoFactorEnabled = true;
+    await user.save();
+
+    await logActivity(
+      user._id,
+      user.name,
+      "SECURITY_2FA_ENABLED",
+      "Enabled Two-Factor Authentication (2FA) for this account",
+      req
+    );
+
+    return res.status(200).json({ message: "Two-Factor Authentication enabled successfully" });
+  } catch (error) {
+    console.error("2FA enable error:", error.message);
+    return res.status(500).json({ message: "Failed to enable 2FA" });
+  }
+};
+
+const disable2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = "";
+    await user.save();
+
+    await logActivity(
+      user._id,
+      user.name,
+      "SECURITY_2FA_DISABLED",
+      "Disabled Two-Factor Authentication (2FA) for this account",
+      req
+    );
+
+    return res.status(200).json({ message: "Two-Factor Authentication disabled successfully" });
+  } catch (error) {
+    console.error("2FA disable error:", error.message);
+    return res.status(500).json({ message: "Failed to disable 2FA" });
+  }
+};
+
+const verify2FA = async (req, res) => {
+  try {
+    const speakeasy = require("speakeasy");
+    const { userId, token } = req.body;
+
+    if (!userId || !token) {
+      return res.status(400).json({ message: "userId and token are required" });
+    }
+
+    const admin = await User.findById(userId).populate("roles", "name permissions");
+    if (!admin || !admin.isAdmin) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (admin.status === "Inactive") {
+      return res.status(403).json({ message: "Your employee account has been suspended or deactivated." });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: admin.twoFactorSecret,
+      encoding: "base32",
+      token,
+      window: 1
+    });
+
+    if (!verified) {
+      return res.status(401).json({ message: "Invalid 2FA token. Please try again." });
+    }
+
+    admin.loginAttempts = 0;
+    admin.lockUntil = null;
+    admin.lastLogin = new Date();
+    await admin.save();
+
+    await logActivity(admin._id, admin.name, "LOGIN", "Logged into admin panel successfully (2FA Verified)", req);
+
+    const roleNames = admin.roles ? admin.roles.map(r => r.name) : [];
+    const permissions = new Set();
+    if (admin.isMasterAdmin) {
+      permissions.add("ALL");
+    } else if (admin.roles) {
+      admin.roles.forEach(r => {
+        if (r.permissions) {
+          r.permissions.forEach(p => permissions.add(p));
+        }
+      });
+    }
+
+    return res.status(200).json({
+      _id: admin._id,
+      name: admin.name,
+      email: admin.email,
+      isAdmin: true,
+      isMasterAdmin: admin.isMasterAdmin,
+      roles: roleNames,
+      permissions: Array.from(permissions),
+      token: generateToken(admin._id),
+    });
+  } catch (error) {
+    console.error("2FA verify error:", error.message);
+    return res.status(500).json({ message: "2FA login verification failed" });
   }
 };
 
@@ -125,6 +325,7 @@ const getStoreInfo = async (req, res) => {
       storeLogoUrl: dbStoreInfo?.storeLogoUrl || "",
       specialOffer: sanitizeSpecialOffer(dbStoreInfo?.specialOffer),
       offers: sanitizeOffers(dbStoreInfo?.offers),
+      codEnabled: dbStoreInfo?.codEnabled !== undefined ? dbStoreInfo.codEnabled : true,
     });
   } catch (error) {
     console.error("Get store info error:", error.message);
@@ -134,7 +335,7 @@ const getStoreInfo = async (req, res) => {
 
 const updateStoreInfo = async (req, res) => {
   try {
-    const { storeName, storePhone, storeAddress, storeLogoUrl, specialOffer, offers } = req.body;
+    const { storeName, storePhone, storeAddress, storeLogoUrl, specialOffer, offers, codEnabled } = req.body;
     if (!storeName || !storePhone || !storeAddress) {
       return res.status(400).json({ message: "storeName, storePhone and storeAddress are required" });
     }
@@ -149,9 +350,20 @@ const updateStoreInfo = async (req, res) => {
         storeLogoUrl: String(storeLogoUrl || "").trim(),
         specialOffer: sanitizeSpecialOffer(specialOffer),
         offers: sanitizeOffers(offers),
+        codEnabled: codEnabled !== undefined ? Boolean(codEnabled) : true,
       },
       { upsert: true, returnDocument: 'after', runValidators: true, setDefaultsOnInsert: true }
     );
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "SETTINGS_MODIFIED",
+        `Updated store settings (Store Name: ${storeInfo.storeName})`,
+        req
+      );
+    }
 
     return res.status(200).json({
       message: "Store info updated successfully",
@@ -162,6 +374,7 @@ const updateStoreInfo = async (req, res) => {
         storeLogoUrl: storeInfo.storeLogoUrl || "",
         specialOffer: sanitizeSpecialOffer(storeInfo.specialOffer),
         offers: sanitizeOffers(storeInfo.offers),
+        codEnabled: storeInfo.codEnabled !== undefined ? storeInfo.codEnabled : true,
       },
     });
   } catch (error) {
@@ -228,4 +441,4 @@ const getEmailDiagnostics = async (req, res) => {
   }
 };
 
-module.exports = { adminLogin, getStoreInfo, updateStoreInfo, getEmailDiagnostics };
+module.exports = { adminLogin, getStoreInfo, updateStoreInfo, getEmailDiagnostics, setup2FA, enable2FA, disable2FA, verify2FA };

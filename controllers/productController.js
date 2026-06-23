@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
+const { logActivity } = require("../services/logService");
 
 const slugify = (text) =>
   String(text || "")
@@ -212,6 +213,7 @@ const createProduct = async (req, res) => {
       personalizationTextLimit,
       personalizationImageRequired,
       personalizationImageLabel,
+      codEnabled,
     } = req.body;
     const normalizedImages = Array.isArray(images)
       ? images.map((item) => String(item || "").trim()).filter(Boolean)
@@ -248,7 +250,18 @@ const createProduct = async (req, res) => {
       personalizationTextLimit: personalizationTextLimit ? Number(personalizationTextLimit) : 20,
       personalizationImageRequired: Boolean(personalizationImageRequired),
       personalizationImageLabel: String(personalizationImageLabel || "").trim(),
+      codEnabled: codEnabled !== undefined ? Boolean(codEnabled) : true,
     });
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "PRODUCT_CREATED",
+        `Created product: ${product.name} (Price: INR ${product.price}, Category: ${product.category})`,
+        req
+      );
+    }
 
     return res.status(201).json({ message: "Product created successfully", product });
   } catch (error) {
@@ -300,6 +313,16 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "PRODUCT_UPDATED",
+        `Updated product: ${product.name} (ID: ${product._id})`,
+        req
+      );
+    }
+
     return res.status(200).json({ message: "Product updated successfully", product });
   } catch (error) {
     console.error("Update product error:", error.message);
@@ -314,6 +337,17 @@ const deleteProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "PRODUCT_DELETED",
+        `Deleted product: ${product.name} (ID: ${product._id})`,
+        req
+      );
+    }
+
     return res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Delete product error:", error.message);

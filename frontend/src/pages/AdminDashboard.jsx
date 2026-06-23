@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { clearAdminAuth, getAdminAuth } from "../services/adminAuth";
+import { clearAdminAuth, getAdminAuth, saveAdminAuth } from "../services/adminAuth";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -29,6 +29,7 @@ const emptyForm = {
   personalizationTextLimit: "20",
   personalizationImageRequired: false,
   personalizationImageLabel: "",
+  codEnabled: true,
 };
 const emptyCouponForm = {
   code: "",
@@ -36,10 +37,12 @@ const emptyCouponForm = {
   value: "",
   minCartValue: "",
   maxDiscount: "",
+  startDate: "",
   endDate: "",
   active: true,
   maxRedemptions: "",
   maxRedemptionsPerUser: "",
+  activeDays: [],
 };
 
 const emptySpecialCouponForm = {
@@ -79,6 +82,7 @@ const defaultStoreInfo = {
   storePhone: "+91-90000-00000",
   storeAddress: "123 Commerce Street, Mumbai, Maharashtra 400001, India",
   storeLogoUrl: "",
+  codEnabled: true,
   specialOffer: {
     title: "Festive Mega Sale",
     subtitle: "Celebrate the season with curated gifts and limited-time savings.",
@@ -112,6 +116,18 @@ const matchesLabelPrintFilter = (order, filter) => {
   if (filter === "ready") return isReadyToShipStatus(normalized);
   return true;
 };
+const toDatetimeLocalString = (dateInput) => {
+  if (!dateInput) return "";
+  const d = new Date(dateInput);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const MM = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -138,6 +154,172 @@ const AdminDashboard = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [uploadWarning, setUploadWarning] = useState("");
+
+  // --- ENTERPRISE RBAC & SECURITY STATES ---
+  const [activeTab, setActiveTab] = useState("overview");
+  const [productsSubTab, setProductsSubTab] = useState("inventory");
+  const [couponsSubTab, setCouponsSubTab] = useState("public");
+  const [employeesSubTab, setEmployeesSubTab] = useState("employees");
+  const [darkMode, setDarkMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Lists
+  const [employees, setEmployees] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [permissionsConfig, setPermissionsConfig] = useState([]);
+
+  // Log Pagination & Filtering
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsTotalPages, setLogsTotalPages] = useState(1);
+  const [logsTotalCount, setLogsTotalCount] = useState(0);
+  const [logsSearch, setLogsSearch] = useState("");
+  const [logsUserFilter, setLogsUserFilter] = useState("");
+  const [logsActionFilter, setLogsActionFilter] = useState("");
+  const [logsStartDate, setLogsStartDate] = useState("");
+  const [logsEndDate, setLogsEndDate] = useState("");
+
+  // Employee Modal / Forms
+  const emptyEmployeeForm = {
+    name: "",
+    email: "",
+    mobileNumber: "",
+    password: "",
+    department: "",
+    designation: "",
+    status: "Active",
+    roles: []
+  };
+  const [employeeForm, setEmployeeForm] = useState(emptyEmployeeForm);
+  const [editingEmployeeId, setEditingEmployeeId] = useState("");
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+
+  // Custom Role Builder
+  const emptyRoleForm = {
+    name: "",
+    description: "",
+    permissions: []
+  };
+  const [roleForm, setRoleForm] = useState(emptyRoleForm);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [editingRoleId, setEditingRoleId] = useState("");
+
+  // Department modal
+  const emptyDeptForm = {
+    name: "",
+    description: ""
+  };
+  const [deptForm, setDeptForm] = useState(emptyDeptForm);
+  const [showDeptModal, setShowDeptModal] = useState(false);
+
+
+
+  // Performance
+  const [teamStats, setTeamStats] = useState([]);
+
+  // Support Tickets Admin State
+  const [adminTickets, setAdminTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [adminReplyText, setAdminReplyText] = useState("");
+  const [sendingAdminReply, setSendingAdminReply] = useState(false);
+  const [ticketStatusFilter, setTicketStatusFilter] = useState("All");
+  const [ticketSearchQuery, setTicketSearchQuery] = useState("");
+  const [updatingTicketStatus, setUpdatingTicketStatus] = useState(false);
+
+  const fetchAdminTickets = async (statusVal = ticketStatusFilter, searchVal = ticketSearchQuery) => {
+    try {
+      setLoadingTickets(true);
+      setError("");
+      
+      const params = {};
+      if (statusVal && statusVal !== "All") {
+        params.status = statusVal;
+      }
+      if (searchVal && searchVal.trim()) {
+        params.search = searchVal.trim();
+      }
+
+      const { data } = await api.get("/tickets/admin", { params });
+      setAdminTickets(data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load support tickets.");
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  const fetchAdminTicketDetails = async (ticketId) => {
+    try {
+      setLoadingTickets(true);
+      setError("");
+      const { data } = await api.get(`/tickets/admin/${ticketId}`);
+      setSelectedTicket(data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load ticket details.");
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  const handleSendAdminReply = async (e) => {
+    e.preventDefault();
+    if (!adminReplyText.trim() || !selectedTicket) return;
+
+    try {
+      setSendingAdminReply(true);
+      setError("");
+      const { data } = await api.post(`/tickets/admin/${selectedTicket._id}/messages`, {
+        message: adminReplyText,
+      });
+      setSelectedTicket(data);
+      setAdminReplyText("");
+      // Refresh list to sync updated status/activity
+      fetchAdminTickets(ticketStatusFilter, ticketSearchQuery);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send reply message.");
+    } finally {
+      setSendingAdminReply(false);
+    }
+  };
+
+  const handleUpdateTicketStatus = async (status) => {
+    if (!selectedTicket || !status) return;
+
+    try {
+      setUpdatingTicketStatus(true);
+      setError("");
+      const { data } = await api.patch(`/tickets/admin/${selectedTicket._id}/status`, {
+        status,
+      });
+      setSelectedTicket(data);
+      setSuccess("Ticket status updated successfully!");
+      setTimeout(() => setSuccess(""), 4000);
+      fetchAdminTickets(ticketStatusFilter, ticketSearchQuery);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update ticket status.");
+    } finally {
+      setUpdatingTicketStatus(false);
+    }
+  };
+
+  // Fetch admin tickets when activeTab switches to tickets
+  useEffect(() => {
+    if (activeTab === "tickets" && adminAuth) {
+      fetchAdminTickets("All", "");
+      setTicketStatusFilter("All");
+      setTicketSearchQuery("");
+      setSelectedTicket(null);
+    }
+  }, [activeTab, adminAuth]);
+
+  // Permission Check
+  const hasPermission = (permission) => {
+    if (!adminAuth) return false;
+    if (adminAuth.isMasterAdmin) return true;
+    return adminAuth.permissions?.includes(permission) || adminAuth.permissions?.includes("ALL");
+  };
 
   const allFormImages = useMemo(() => {
     const parsed = String(form.imagesText || "")
@@ -225,6 +407,7 @@ const AdminDashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [orderViewFilter, setOrderViewFilter] = useState("active");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderPaymentFilter, setOrderPaymentFilter] = useState("all");
   const [storeInfo, setStoreInfo] = useState(defaultStoreInfo);
   const [savingStoreInfo, setSavingStoreInfo] = useState(false);
   const [uploadingStoreLogo, setUploadingStoreLogo] = useState(false);
@@ -313,12 +496,21 @@ const AdminDashboard = () => {
   }, [orderViewFilter, orders, archivedOrders]);
 
   const ordersForViewFiltered = useMemo(() => {
-    if (orderStatusFilter === "all") return ordersForView;
-    const normalizedFilter = String(orderStatusFilter || "").trim().toLowerCase();
-    return ordersForView.filter(
-      (order) => String(order?.status || "").trim().toLowerCase() === normalizedFilter
-    );
-  }, [ordersForView, orderStatusFilter]);
+    let result = ordersForView;
+    if (orderStatusFilter !== "all") {
+      const normalizedFilter = String(orderStatusFilter || "").trim().toLowerCase();
+      result = result.filter(
+        (order) => String(order?.status || "").trim().toLowerCase() === normalizedFilter
+      );
+    }
+    if (orderPaymentFilter !== "all") {
+      const normalizedFilter = String(orderPaymentFilter || "").trim().toLowerCase();
+      result = result.filter(
+        (order) => String(order?.paymentMethod || "online").trim().toLowerCase() === normalizedFilter
+      );
+    }
+    return result;
+  }, [ordersForView, orderStatusFilter, orderPaymentFilter]);
 
   const visibleOrderIds = useMemo(() => ordersForViewFiltered.map((order) => order._id), [ordersForViewFiltered]);
 
@@ -529,6 +721,7 @@ const AdminDashboard = () => {
             storeLogoUrl: storeInfoRes.value.data?.storeLogoUrl || defaultStoreInfo.storeLogoUrl,
             specialOffer: storeInfoRes.value.data?.specialOffer || defaultStoreInfo.specialOffer,
             offers: Array.isArray(storeInfoRes.value.data?.offers) ? storeInfoRes.value.data.offers : defaultStoreInfo.offers,
+            codEnabled: storeInfoRes.value.data?.codEnabled !== undefined ? storeInfoRes.value.data.codEnabled : defaultStoreInfo.codEnabled,
           });
         }
         if (
@@ -549,6 +742,257 @@ const AdminDashboard = () => {
 
     fetchData();
   }, [adminAuth, authHeader, navigate]);
+
+  // --- ENTERPRISE RBAC & SECURITY HANDLERS & FETCHERS ---
+  const fetchEmployeesList = async () => {
+    try {
+      const { data } = await api.get("/admin/employees", authHeader);
+      setEmployees(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load employees failed:", err);
+    }
+  };
+
+  const fetchRolesList = async () => {
+    try {
+      const { data } = await api.get("/admin/roles", authHeader);
+      setRoles(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load roles failed:", err);
+    }
+  };
+
+  const fetchDepartmentsList = async () => {
+    try {
+      const { data } = await api.get("/admin/departments", authHeader);
+      setDepartments(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load departments failed:", err);
+    }
+  };
+
+  const fetchPermissionsConfig = async () => {
+    try {
+      const { data } = await api.get("/admin/roles/permissions", authHeader);
+      setPermissionsConfig(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load permissions config failed:", err);
+    }
+  };
+
+  const fetchActivityLogsList = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (logsSearch) params.append("search", logsSearch);
+      if (logsUserFilter) params.append("userId", logsUserFilter);
+      if (logsActionFilter) params.append("action", logsActionFilter);
+      if (logsStartDate) params.append("startDate", logsStartDate);
+      if (logsEndDate) params.append("endDate", logsEndDate);
+      params.append("page", logsPage);
+      params.append("limit", 15);
+
+      const { data } = await api.get(`/admin/logs?${params.toString()}`, authHeader);
+      setLogs(data.logs || []);
+      setLogsTotalPages(data.totalPages || 1);
+      setLogsTotalCount(data.totalLogs || 0);
+    } catch (err) {
+      console.error("Load activity logs failed:", err);
+    }
+  };
+
+  const fetchTeamStats = async () => {
+    try {
+      const { data } = await api.get("/admin/employees/performance", authHeader);
+      setTeamStats(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Load team performance failed:", err);
+    }
+  };
+
+  // Load data reactively based on tab changes & filters
+  useEffect(() => {
+    if (!adminAuth?.token) return;
+
+    if (activeTab === "employees") {
+      if (hasPermission("EMPLOYEES_MANAGE")) {
+        fetchEmployeesList();
+        fetchDepartmentsList();
+      }
+      if (hasPermission("ROLES_MANAGE")) {
+        fetchRolesList();
+        fetchPermissionsConfig();
+      }
+    } else if (activeTab === "logs" && hasPermission("ACTIVITY_LOGS_VIEW")) {
+      fetchActivityLogsList();
+    } else if (activeTab === "overview") {
+      if (hasPermission("BUSINESS_ANALYTICS_VIEW")) {
+        fetchTeamStats();
+      }
+    }
+  }, [
+    activeTab, 
+    adminAuth, 
+    logsPage, 
+    logsSearch, 
+    logsUserFilter, 
+    logsActionFilter, 
+    logsStartDate, 
+    logsEndDate
+  ]);
+
+  // Employee CRUD handlers
+  const handleSaveEmployee = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    try {
+      const payload = { ...employeeForm };
+      if (!payload.password && editingEmployeeId) {
+        delete payload.password;
+      }
+      if (editingEmployeeId) {
+        await api.put(`/admin/employees/${editingEmployeeId}`, payload, authHeader);
+        setSuccess("Employee account updated successfully.");
+      } else {
+        await api.post("/admin/employees", payload, authHeader);
+        setSuccess("Employee account created successfully.");
+      }
+      setShowEmployeeModal(false);
+      setEmployeeForm(emptyEmployeeForm);
+      setEditingEmployeeId("");
+      fetchEmployeesList();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save employee");
+    }
+  };
+
+  const startEditEmployee = (emp) => {
+    setEditingEmployeeId(emp._id);
+    setEmployeeForm({
+      name: emp.name,
+      email: emp.email,
+      mobileNumber: emp.mobileNumber || "",
+      password: "",
+      department: emp.department?._id || emp.department || "",
+      designation: emp.designation || "",
+      status: emp.status || "Active",
+      roles: emp.roles ? emp.roles.map(r => r._id || r) : []
+    });
+    setShowEmployeeModal(true);
+  };
+
+  const handleToggleEmployeeStatus = async (emp) => {
+    setError("");
+    setSuccess("");
+    try {
+      const newStatus = emp.status === "Active" ? "Inactive" : "Active";
+      await api.put(`/admin/employees/${emp._id}`, { status: newStatus }, authHeader);
+      setSuccess(`Employee ${emp.name} has been set to ${newStatus}.`);
+      fetchEmployeesList();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to toggle employee status");
+    }
+  };
+
+  const handleDeleteEmployee = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this employee?")) return;
+    setError("");
+    setSuccess("");
+    try {
+      await api.delete(`/admin/employees/${id}`, authHeader);
+      setSuccess("Employee account deleted successfully.");
+      fetchEmployeesList();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete employee account");
+    }
+  };
+
+  // Custom Roles CRUD handlers
+  const handleSaveRole = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    try {
+      if (editingRoleId) {
+        await api.put(`/admin/roles/${editingRoleId}`, roleForm, authHeader);
+        setSuccess("Role updated successfully.");
+      } else {
+        await api.post("/admin/roles", roleForm, authHeader);
+        setSuccess("Custom role created successfully.");
+      }
+      setShowRoleModal(false);
+      setRoleForm(emptyRoleForm);
+      setEditingRoleId("");
+      fetchRolesList();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save role");
+    }
+  };
+
+  const handleTogglePermissionInForm = (permCode) => {
+    setRoleForm(prev => {
+      const perms = [...prev.permissions];
+      if (perms.includes(permCode)) {
+        return { ...prev, permissions: perms.filter(p => p !== permCode) };
+      } else {
+        return { ...prev, permissions: [...perms, permCode] };
+      }
+    });
+  };
+
+  const startEditRole = (role) => {
+    setEditingRoleId(role._id);
+    setRoleForm({
+      name: role.name,
+      description: role.description || "",
+      permissions: role.permissions || []
+    });
+    setShowRoleModal(true);
+  };
+
+  const handleDeleteRole = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this custom role?")) return;
+    setError("");
+    setSuccess("");
+    try {
+      await api.delete(`/admin/roles/${id}`, authHeader);
+      setSuccess("Role deleted successfully.");
+      fetchRolesList();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete custom role");
+    }
+  };
+
+  // Department CRUD handlers
+  const handleSaveDept = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    try {
+      await api.post("/admin/departments", deptForm, authHeader);
+      setSuccess("Department created successfully.");
+      setShowDeptModal(false);
+      setDeptForm(emptyDeptForm);
+      fetchDepartmentsList();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save department");
+    }
+  };
+
+  const handleDeleteDept = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this department?")) return;
+    setError("");
+    setSuccess("");
+    try {
+      await api.delete(`/admin/departments/${id}`, authHeader);
+      setSuccess("Department deleted successfully.");
+      fetchDepartmentsList();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete department");
+    }
+  };
+
+
 
   const handleLogout = () => {
     clearAdminAuth();
@@ -694,6 +1138,7 @@ const AdminDashboard = () => {
       personalizationTextLimit: String(product.personalizationTextLimit ?? 20),
       personalizationImageRequired: Boolean(product.personalizationImageRequired),
       personalizationImageLabel: product.personalizationImageLabel || "",
+      codEnabled: product.codEnabled !== undefined ? Boolean(product.codEnabled) : true,
     });
     setEditingId(product._id);
     setImageFile(null);
@@ -937,6 +1382,7 @@ const AdminDashboard = () => {
         storePhone: storeInfo.storePhone.trim(),
         storeAddress: storeInfo.storeAddress.trim(),
         storeLogoUrl: String(storeInfo.storeLogoUrl || "").trim(),
+        codEnabled: storeInfo.codEnabled !== undefined ? Boolean(storeInfo.codEnabled) : true,
         specialOffer: {
           title: String(storeInfo.specialOffer?.title || "").trim(),
           subtitle: String(storeInfo.specialOffer?.subtitle || "").trim(),
@@ -965,6 +1411,7 @@ const AdminDashboard = () => {
         storeLogoUrl: data.storeInfo?.storeLogoUrl || payload.storeLogoUrl,
         specialOffer: data.storeInfo?.specialOffer || payload.specialOffer,
         offers: Array.isArray(data.storeInfo?.offers) ? data.storeInfo.offers : payload.offers,
+        codEnabled: data.storeInfo?.codEnabled !== undefined ? data.storeInfo.codEnabled : payload.codEnabled,
       });
       setSuccess("Store settings updated.");
     } catch (err) {
@@ -1695,10 +2142,12 @@ const AdminDashboard = () => {
         value: Number(couponForm.value),
         minCartValue: Number(couponForm.minCartValue),
         maxDiscount: Number(couponForm.maxDiscount || 0),
-        endDate: couponForm.endDate ? String(couponForm.endDate).trim() : "",
+        startDate: couponForm.startDate ? new Date(couponForm.startDate).toISOString() : null,
+        endDate: couponForm.endDate ? new Date(couponForm.endDate).toISOString() : null,
         active: couponForm.active,
         maxRedemptions: maxRStr === "" ? null : Number(maxRStr),
         maxRedemptionsPerUser: maxUStr === "" ? null : Number(maxUStr),
+        activeDays: Array.isArray(couponForm.activeDays) ? couponForm.activeDays : [],
       };
       if (editingCouponId) {
         await api.put(`/admin/coupons/${editingCouponId}`, payload, authHeader);
@@ -1727,10 +2176,12 @@ const AdminDashboard = () => {
       value: String(coupon.value),
       minCartValue: String(coupon.minCartValue),
       maxDiscount: String(coupon.maxDiscount || ""),
-      endDate: coupon.endDate ? String(coupon.endDate).slice(0, 10) : "",
+      startDate: coupon.startDate ? toDatetimeLocalString(coupon.startDate) : "",
+      endDate: coupon.endDate ? toDatetimeLocalString(coupon.endDate) : "",
       active: coupon.active,
       maxRedemptions: coupon.maxRedemptions != null ? String(coupon.maxRedemptions) : "",
       maxRedemptionsPerUser: coupon.maxRedemptionsPerUser != null ? String(coupon.maxRedemptionsPerUser) : "",
+      activeDays: Array.isArray(coupon.activeDays) ? coupon.activeDays : [],
     });
   };
 
@@ -1858,115 +2309,1299 @@ const AdminDashboard = () => {
     }
   };
 
-  if (loading) {
+  // --- SYSTEM DASHBOARD SUB-RENDER PANELS ---
+  const renderOverviewTab = () => {
+    const lowStockItems = products.filter(p => Number(p.stock ?? 0) <= 5);
+    const myLogs = logs.filter(l => String(l.userId || l._id) === String(adminAuth?.id || adminAuth?._id));
+
     return (
-      <section className="grid gap-4 md:grid-cols-3">
-        {[...Array(3)].map((_, idx) => (
-          <div key={idx} className="h-24 animate-pulse rounded-xl bg-white shadow-sm ring-1 ring-gray-100" />
-        ))}
-      </section>
-    );
-  }
-
-  return (
-    <section className="space-y-8 pb-16">
-      {/* Header Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-900 p-6 text-white md:p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute left-1/3 bottom-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
-        
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
+      <div className="space-y-8 animate-page-enter">
+        {/* Welcome Header */}
+        <div className="rounded-3xl bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-900 p-6 text-white md:p-8 shadow-xl relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute left-1/3 bottom-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="relative">
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300">Management Console</p>
-            <h1 className="mt-1 text-2xl md:text-3xl font-serif font-light tracking-tight text-white">Niyora Gifts Administrator</h1>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="self-start md:self-auto rounded-full bg-white px-5 py-2.5 text-xs font-bold text-emerald-950 shadow-sm transition duration-300 hover:bg-red-50 hover:text-red-700 hover:scale-105"
-          >
-            Logout Console
-          </button>
-        </div>
-      </div>
-
-      {error ? <p className="text-xs text-red-650 font-medium">{error}</p> : null}
-      {success ? <p className="text-xs text-emerald-800 font-medium">{success}</p> : null}
-      {uploadWarning ? <p className="text-xs text-amber-800 font-medium">{uploadWarning}</p> : null}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Products</p>
-          <p className="mt-1.5 text-2xl font-serif font-light text-gray-950">{products.length}</p>
-        </div>
-        <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Orders</p>
-          <p className="mt-1.5 text-2xl font-serif font-light text-gray-950">{orders.length}</p>
-        </div>
-        <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Revenue</p>
-          <p className="mt-1.5 text-2xl font-serif font-light text-emerald-800">
-            INR {orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0)}
-          </p>
-        </div>
-        <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Coupons</p>
-          <p className="mt-1.5 text-2xl font-serif font-light text-gray-950">{coupons.filter((coupon) => coupon.active).length}</p>
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-4">
-          <div>
-            <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Stock Management</h3>
-            <p className="mt-1 text-xs text-gray-500 font-light">
-              Monitor and adjust product inventory. Stock values dynamically decrement upon completed customer orders.
+            <h1 className="mt-1.5 text-2xl md:text-3xl font-serif font-light tracking-tight">
+              Welcome back, {adminAuth?.name || "Administrator"}
+            </h1>
+            <p className="mt-1 text-xs text-emerald-100 font-light">
+              You are signed in as <strong className="font-semibold">{adminAuth?.designation || "Console Administrator"}</strong> in the {adminAuth?.department?.name || "General"} department.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="rounded-full bg-white/80 border border-gray-200/60 px-3.5 py-1.5 font-medium text-gray-700 shadow-2xs">
-              Total Units: <strong className="font-semibold text-gray-955">{stockSummary.units}</strong>
-            </span>
-            <span className="rounded-full bg-amber-50/50 border border-amber-200/50 px-3.5 py-1.5 font-medium text-amber-900">
-              Low: <strong className="font-semibold text-amber-955">{stockSummary.low}</strong>
-            </span>
-            <span className="rounded-full bg-rose-50/50 border border-rose-200/30 px-3.5 py-1.5 font-medium text-rose-900">
-              Out of Stock: <strong className="font-semibold text-rose-955">{stockSummary.out}</strong>
-            </span>
-            
-            <div className="flex items-center gap-2 ml-2 border-l border-gray-200 pl-3">
+        </div>
+
+        {/* 4 Stats Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-5 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">Total Products</p>
+            <p className="mt-1.5 text-2xl font-serif font-light text-gray-955 dark:text-white">{products.length}</p>
+          </div>
+          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-5 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">Total Orders</p>
+            <p className="mt-1.5 text-2xl font-serif font-light text-gray-955 dark:text-white">{orders.length}</p>
+          </div>
+          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-5 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">Total Revenue</p>
+            <p className="mt-1.5 text-2xl font-serif font-light text-emerald-800 dark:text-emerald-450">
+              INR {orders.filter((order) => order.status !== "Cancelled").reduce((sum, order) => sum + Number(order.totalPrice || 0), 0)}
+            </p>
+          </div>
+          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-5 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-400">Active Coupons</p>
+            <p className="mt-1.5 text-2xl font-serif font-light text-gray-955 dark:text-white">
+              {coupons.filter((coupon) => coupon.active).length}
+            </p>
+          </div>
+        </div>
+
+        {/* Dual Panel Split */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Left Panel */}
+          {hasPermission("BUSINESS_ANALYTICS_VIEW") ? (
+            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
+              <h3 className="text-base font-serif font-semibold text-gray-950 dark:text-white mb-4">Team Action Performance</h3>
+              <div className="space-y-4">
+                {teamStats.map((member) => (
+                  <div key={member._id} className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-medium text-gray-900 dark:text-white">{member.userName || "Unknown Employee"}</span>
+                      <span className="text-gray-500 dark:text-gray-400 font-bold">{member.totalActions} activities</span>
+                    </div>
+                    <div className="w-full bg-gray-100 dark:bg-gray-750 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-emerald-600 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (member.totalActions / (Math.max(...teamStats.map(m=>m.totalActions), 1))) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+                {teamStats.length === 0 && (
+                  <p className="text-xs text-gray-450 dark:text-gray-500 font-light">No team analytics logged yet.</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
+              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-4">Personal Dashboard Summary</h3>
+              <div className="space-y-3.5 text-xs text-gray-650 dark:text-gray-350">
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-750">
+                  <span className="font-medium">Employee sequential ID:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{adminAuth?.employeeId || "EMP-N/A"}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-750">
+                  <span className="font-medium">Designated Role:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{adminAuth?.designation || "Administrator"}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-750">
+                  <span className="font-medium">Department context:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{adminAuth?.department?.name || "Unassigned"}</span>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* Right Panel */}
+          {hasPermission("ACTIVITY_LOGS_VIEW") ? (
+            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
+              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-4">Latest System Activities</h3>
+              <div className="space-y-3.5">
+                {logs.slice(0, 5).map((log) => (
+                  <div key={log._id} className="flex justify-between text-xs items-start gap-2 border-b border-gray-100 dark:border-gray-750 pb-2.5 last:border-b-0 last:pb-0">
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">{log.action}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-400 mt-0.5">{log.details}</p>
+                    </div>
+                    <div className="text-right text-[10px] text-gray-400 shrink-0">
+                      <p>{log.userName}</p>
+                      <p className="mt-0.5">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                    </div>
+                  </div>
+                ))}
+                {logs.length === 0 && (
+                  <p className="text-xs text-gray-450 dark:text-gray-500 font-light">No activity records recorded.</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
+              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-4">Stock Alerts & Warnings</h3>
+              <div className="space-y-2.5">
+                {lowStockItems.slice(0, 5).map((p) => (
+                  <div key={p._id} className="flex justify-between items-center text-xs py-1 border-b border-gray-100 dark:border-gray-750 last:border-b-0">
+                    <span className="font-medium text-gray-900 dark:text-white truncate pr-2">{p.name}</span>
+                    <span className={`font-bold shrink-0 ${p.stock <= 0 ? "text-red-650" : "text-amber-800"}`}>
+                      {p.stock <= 0 ? "OUT OF STOCK" : `${p.stock} units`}
+                    </span>
+                  </div>
+                ))}
+                {lowStockItems.length === 0 && (
+                  <div className="py-6 text-center text-xs text-emerald-800 dark:text-emerald-400 font-semibold">
+                    ✨ No stock warnings. All inventories are healthy!
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+   
+      </div>
+    );
+  };
+
+  const renderTicketsTab = () => {
+    // Calculate counts
+    const totalCount = adminTickets.length;
+    const openCount = adminTickets.filter(t => t.status === "Open").length;
+    const progressCount = adminTickets.filter(t => t.status === "In Progress").length;
+    const resolvedCount = adminTickets.filter(t => t.status === "Resolved").length;
+
+    return (
+      <div className="space-y-6 animate-page-enter">
+        <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
+          <h3 className="text-xl font-serif font-light text-gray-955 dark:text-white mb-2">Customer Support Ticket Center</h3>
+          <p className="text-xs text-gray-500 mb-4 font-light">
+            Respond to customer queries, resolve order issues, and maintain communication threads.
+          </p>
+        </div>
+
+        {/* Stats Row */}
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-gray-205/30 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-4">
+            <span className="text-[10px] uppercase font-bold text-gray-400">Total Tickets</span>
+            <h4 className="text-2xl font-serif font-light mt-1 text-gray-900 dark:text-white">{totalCount}</h4>
+          </div>
+          <div className="rounded-2xl border border-gray-205/30 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-4">
+            <span className="text-[10px] uppercase font-bold text-amber-500">Open Queries</span>
+            <h4 className="text-2xl font-serif font-light mt-1 text-amber-600 dark:text-amber-400">{openCount}</h4>
+          </div>
+          <div className="rounded-2xl border border-gray-205/30 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-4">
+            <span className="text-[10px] uppercase font-bold text-blue-500">In Progress</span>
+            <h4 className="text-2xl font-serif font-light mt-1 text-blue-600 dark:text-blue-400">{progressCount}</h4>
+          </div>
+          <div className="rounded-2xl border border-gray-205/30 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-4">
+            <span className="text-[10px] uppercase font-bold text-gray-500">Resolved</span>
+            <h4 className="text-2xl font-serif font-light mt-1 text-gray-600 dark:text-gray-400">{resolvedCount}</h4>
+          </div>
+        </div>
+
+        {/* Split Console View or General List */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          
+          {/* Tickets List Column */}
+          <div className={`${selectedTicket ? "lg:col-span-1" : "lg:col-span-3"} space-y-4`}>
+            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 p-5 shadow-sm space-y-4">
+              
+              {/* Header search & filters */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center">
+                <div className="flex flex-wrap gap-1">
+                  {["All", "Open", "In Progress", "Resolved"].map((filter) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => {
+                        setTicketStatusFilter(filter);
+                        fetchAdminTickets(filter, ticketSearchQuery);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        ticketStatusFilter === filter
+                          ? "bg-emerald-600 text-white"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-250 dark:hover:bg-gray-600"
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+                
+                <input
+                  type="text"
+                  placeholder="Search code, subject or user..."
+                  value={ticketSearchQuery}
+                  onChange={(e) => {
+                    setTicketSearchQuery(e.target.value);
+                    fetchAdminTickets(ticketStatusFilter, e.target.value);
+                  }}
+                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-1.5 text-xs text-gray-900 dark:text-white"
+                />
+              </div>
+
+              {/* Tickets Table / List */}
+              {loadingTickets && adminTickets.length === 0 ? (
+                <div className="py-12 text-center text-xs text-gray-500 dark:text-gray-400">Loading tickets...</div>
+              ) : adminTickets.length > 0 ? (
+                <div className="overflow-x-auto">
+                  {selectedTicket ? (
+                    /* Compact list for split screen */
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                      {adminTickets.map((t) => (
+                        <div
+                          key={t._id}
+                          onClick={() => fetchAdminTicketDetails(t._id)}
+                          className={`p-3 rounded-2xl border transition duration-200 cursor-pointer ${
+                            selectedTicket._id === t._id
+                              ? "border-emerald-500 bg-emerald-50/15 dark:bg-emerald-950/10"
+                              : "border-gray-150/45 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-750/30"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-[10px] font-bold text-gray-900 dark:text-white">{t.ticketCode}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${
+                              t.status === "Open" ? "bg-amber-50 text-amber-800 border-amber-200/50" :
+                              t.status === "In Progress" ? "bg-blue-50 text-blue-800 border-blue-200/50" :
+                              "bg-gray-50 text-gray-650 border-gray-200/50"
+                            }`}>
+                              {t.status}
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-semibold mt-1 truncate text-gray-900 dark:text-white">{t.subject}</h4>
+                          <p className="text-[10px] text-gray-405 truncate font-light">By {t.user?.name || "Customer"}</p>
+                          <p className="text-[9px] text-gray-400 text-right mt-1">Updated {new Date(t.updatedAt).toLocaleDateString("en-IN")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Large detailed table */
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-150 dark:border-gray-700 text-xs text-gray-455 font-bold uppercase tracking-wider">
+                          <th className="py-3 px-4">Code</th>
+                          <th className="py-3 px-4">Customer</th>
+                          <th className="py-3 px-4">Subject</th>
+                          <th className="py-3 px-4">Associated Order</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4">Created Date</th>
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-xs">
+                        {adminTickets.map((t) => (
+                          <tr key={t._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition">
+                            <td className="py-3.5 px-4 font-mono font-bold text-gray-900 dark:text-white">{t.ticketCode}</td>
+                            <td className="py-3.5 px-4">
+                              <p className="font-semibold text-gray-900 dark:text-white">{t.user?.name || "Unknown User"}</p>
+                              <p className="text-[10px] text-gray-450 font-light">{t.user?.email || ""}</p>
+                            </td>
+                            <td className="py-3.5 px-4 font-medium text-gray-900 dark:text-white max-w-xs truncate">{t.subject}</td>
+                            <td className="py-3.5 px-4 font-mono text-[10px]">
+                              {t.order ? `ORD-${t.order.orderCode || t.order._id?.slice(-8)}` : <span className="text-gray-400">&mdash;</span>}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                                t.status === "Open" ? "bg-amber-50 text-amber-800 border-amber-200/50 dark:bg-amber-950/20 dark:text-amber-400" :
+                                t.status === "In Progress" ? "bg-blue-50 text-blue-800 border-blue-200/50 dark:bg-blue-950/20 dark:text-blue-400" :
+                                "bg-gray-50 text-gray-650 border-gray-200/50 dark:bg-gray-850 dark:text-gray-400"
+                              }`}>
+                                {t.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-gray-450 font-light">{new Date(t.createdAt).toLocaleDateString("en-IN")}</td>
+                            <td className="py-3.5 px-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => fetchAdminTicketDetails(t._id)}
+                                className="px-3.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 font-bold hover:bg-gray-50 dark:hover:bg-gray-750 transition cursor-pointer text-[10px] text-gray-900 dark:text-white"
+                              >
+                                View Chat &rarr;
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-gray-450 text-xs font-light">
+                  No support tickets found matching the selected filter.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ticket Detail & Messaging Console */}
+          {selectedTicket && (
+            <div className="lg:col-span-2 space-y-4">
+              <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 p-5 shadow-sm flex flex-col min-h-[550px]">
+                
+                {/* Header info */}
+                <div className="border-b border-gray-150 dark:border-gray-755 pb-4 mb-4 flex flex-wrap justify-between items-start gap-4 text-gray-900 dark:text-white">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-mono text-xs font-bold bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                        {selectedTicket.ticketCode}
+                      </span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                        selectedTicket.status === "Open" ? "bg-amber-50 text-amber-800 border-amber-200/50" :
+                        selectedTicket.status === "In Progress" ? "bg-blue-50 text-blue-800 border-blue-200/50" :
+                        "bg-gray-50 text-gray-650 border-gray-200/50"
+                      }`}>
+                        {selectedTicket.status}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-semibold">{selectedTicket.subject}</h3>
+                    
+                    {/* User profile info */}
+                    <div className="mt-2 text-[10px] text-gray-550 dark:text-gray-400 font-light space-y-1">
+                      <p>
+                        <span className="font-bold text-gray-700 dark:text-gray-300">Customer:</span> {selectedTicket.user?.name} ({selectedTicket.user?.email})
+                      </p>
+                      {selectedTicket.order && (
+                        <p>
+                          <span className="font-bold text-gray-700 dark:text-gray-300">Associated Order:</span> Order #{selectedTicket.order.orderCode} (INR {selectedTicket.order.totalPrice}) - {selectedTicket.order.status}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {/* Actions dropdown */}
+                    {selectedTicket.status !== "Resolved" && (
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateTicketStatus("Resolved")}
+                        disabled={updatingTicketStatus}
+                        className="px-3 py-1.5 rounded-xl bg-gray-800 dark:bg-slate-700 hover:bg-gray-900 dark:hover:bg-slate-650 text-white font-bold text-[10px] uppercase tracking-wider shadow-xs transition cursor-pointer"
+                      >
+                        Resolve Ticket
+                      </button>
+                    )}
+                    {selectedTicket.status === "Resolved" && (
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateTicketStatus("Open")}
+                        disabled={updatingTicketStatus}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] uppercase tracking-wider shadow-xs transition cursor-pointer"
+                      >
+                        Reopen Ticket
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTicket(null)}
+                      className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-200 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
+                    >
+                      Close Pane
+                    </button>
+                  </div>
+                </div>
+
+                {/* Messages Chat Box */}
+                <div className="flex-1 overflow-y-auto space-y-4 max-h-[350px] pr-2 mb-4 scroll-smooth">
+                  {selectedTicket.messages?.map((msg, index) => {
+                    const isSystem = msg.senderName === "System Note";
+                    if (isSystem) {
+                      return (
+                        <div key={index} className="rounded-xl bg-gray-50 dark:bg-gray-850/50 border border-gray-150 dark:border-gray-750 py-1.5 px-3 text-[10px] text-center max-w-md mx-auto text-gray-500 dark:text-gray-400 font-light">
+                          {msg.message}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div
+                        key={index}
+                        className={`flex flex-col ${msg.isAdmin ? "items-end" : "items-start"}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1 text-[9px] text-gray-500 dark:text-gray-400 font-light">
+                          <span className="font-bold text-gray-700 dark:text-gray-300">
+                            {msg.senderName} {msg.isAdmin ? "(Admin/Staff)" : "(Customer)"}
+                          </span>
+                          <span>&bull;</span>
+                          <span>
+                            {new Date(msg.createdAt).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        <div
+                          className={`rounded-2xl p-3 text-xs leading-relaxed max-w-lg ${
+                            msg.isAdmin
+                              ? "bg-emerald-600 text-white rounded-tr-none shadow-xs"
+                              : "bg-gray-100 dark:bg-gray-750 text-gray-900 dark:text-gray-250 border border-gray-200/50 dark:border-gray-700/50 rounded-tl-none"
+                          }`}
+                        >
+                          {msg.message}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Admin Reply Input */}
+                {selectedTicket.status !== "Resolved" ? (
+                  <form onSubmit={handleSendAdminReply} className="border-t border-gray-150 dark:border-gray-750 pt-4 mt-auto">
+                    <div className="flex items-end gap-3">
+                      <textarea
+                        value={adminReplyText}
+                        onChange={(e) => setAdminReplyText(e.target.value)}
+                        placeholder="Type response to customer..."
+                        rows={2}
+                        className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-750 bg-white dark:bg-gray-800 px-4 py-2.5 text-xs text-gray-900 dark:text-white transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 outline-none resize-none"
+                        required
+                      />
+                      <button
+                        type="submit"
+                        disabled={sendingAdminReply || !adminReplyText.trim()}
+                        className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs shrink-0 cursor-pointer"
+                      >
+                        {sendingAdminReply ? "Sending..." : "Send Reply"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="border-t border-gray-150 dark:border-gray-750 pt-4 mt-auto text-center text-xs text-gray-500 dark:text-gray-400 font-light">
+                    This ticket is resolved. Reopen the ticket first to reply.
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    );
+  };
+
+  const renderLogsTab = () => {
+    return (
+      <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm animate-page-enter">
+        <h3 className="text-xl font-serif font-light text-gray-955 dark:text-white mb-2">System Audit Logs</h3>
+        <p className="text-xs text-gray-500 mb-6 font-light">Trace employee actions, configuration revisions, and security actions.</p>
+        
+        {/* Filters */}
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 mb-6 text-gray-900 dark:text-white">
+          <input
+            type="text"
+            placeholder="Search details..."
+            value={logsSearch}
+            onChange={(e) => { setLogsSearch(e.target.value); setLogsPage(1); }}
+            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs"
+          />
+          <select
+            value={logsUserFilter}
+            onChange={(e) => { setLogsUserFilter(e.target.value); setLogsPage(1); }}
+            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs"
+          >
+            <option value="">All Employees</option>
+            {employees.map(e => (
+              <option key={e._id} value={e._id}>{e.name} ({e.employeeId})</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            placeholder="Start Date"
+            value={logsStartDate}
+            onChange={(e) => { setLogsStartDate(e.target.value); setLogsPage(1); }}
+            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs"
+          />
+          <input
+            type="date"
+            placeholder="End Date"
+            value={logsEndDate}
+            onChange={(e) => { setLogsEndDate(e.target.value); setLogsPage(1); }}
+            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setLogsSearch("");
+              setLogsUserFilter("");
+              setLogsActionFilter("");
+              setLogsStartDate("");
+              setLogsEndDate("");
+              setLogsPage(1);
+            }}
+            className="rounded-xl border border-gray-250 dark:border-gray-600 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+          >
+            Clear Filters
+          </button>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-gray-150/40 dark:border-gray-700 text-gray-400">
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Timestamp</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Employee</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Action</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Details</th>
+                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">IP & Device</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
+              {logs.map((log) => (
+                <tr key={log._id} className="hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition-colors">
+                  <td className="py-3 text-gray-500 font-light">{new Date(log.timestamp).toLocaleString()}</td>
+                  <td className="py-3 font-medium text-gray-900 dark:text-white">{log.userName}</td>
+                  <td className="py-3">
+                    <span className="inline-flex rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      {log.action}
+                    </span>
+                  </td>
+                  <td className="py-3 text-gray-600 dark:text-gray-300 font-light max-w-[320px] truncate" title={log.details}>
+                    {log.details}
+                  </td>
+                  <td className="py-3 text-gray-400 dark:text-gray-400 font-light text-[10px]">
+                    <div>{log.ipAddress || "N/A"}</div>
+                    <div className="truncate max-w-[200px] mt-0.5" title={log.userAgent}>{log.device || log.userAgent || "N/A"}</div>
+                  </td>
+                </tr>
+              ))}
+              {logs.length === 0 ? (
+                <tr>
+                  <td className="py-8 text-center text-gray-400 font-light" colSpan={5}>No activity logs found.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {logsTotalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-4 mt-4 text-xs text-gray-500">
+            <span className="font-light">Page {logsPage} of {logsTotalPages} ({logsTotalCount} total logs)</span>
+            <div className="flex gap-2">
               <button
                 type="button"
-                onClick={handleExportExcel}
-                className="rounded-full border border-emerald-250 bg-emerald-50 hover:bg-emerald-100/80 px-3.5 py-1.5 font-bold text-emerald-800 transition duration-200 cursor-pointer shadow-2xs hover:shadow-xs flex items-center gap-1.5"
+                disabled={logsPage <= 1}
+                onClick={() => setLogsPage(p => Math.max(1, p - 1))}
+                className="rounded-full border border-gray-250 dark:border-gray-600 bg-white dark:bg-gray-800 px-3.5 py-1.5 font-bold text-gray-750 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                <span>📊</span> Export Excel
+                Previous
               </button>
               <button
                 type="button"
-                onClick={handleExportPDF}
-                className="rounded-full border border-rose-250 bg-rose-50 hover:bg-rose-100/80 px-3.5 py-1.5 font-bold text-rose-800 transition duration-200 cursor-pointer shadow-2xs hover:shadow-xs flex items-center gap-1.5"
+                disabled={logsPage >= logsTotalPages}
+                onClick={() => setLogsPage(p => Math.min(logsTotalPages, p + 1))}
+                className="rounded-full border border-gray-250 dark:border-gray-600 bg-white dark:bg-gray-800 px-3.5 py-1.5 font-bold text-gray-750 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                <span>📕</span> Export PDF
+                Next
               </button>
             </div>
           </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderNewsletterTab = () => {
+    return (
+      <div className="animate-page-enter">
+        <NewsletterSubscribersSection authHeader={authHeader} />
+      </div>
+    );
+  };
+
+  const renderEmployeesTab = () => {
+    const groupedPermissions = {};
+    permissionsConfig.forEach((p) => {
+      const g = p.group || "Other";
+      if (!groupedPermissions[g]) groupedPermissions[g] = [];
+      groupedPermissions[g].push(p);
+    });
+
+    return (
+      <div className="space-y-6 animate-page-enter">
+        {/* Sub Navigation */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => setEmployeesSubTab("employees")}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+              employeesSubTab === "employees"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+            }`}
+          >
+            Employees List
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmployeesSubTab("roles")}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+              employeesSubTab === "roles"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+            }`}
+          >
+            Custom Roles Matrix
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmployeesSubTab("departments")}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+              employeesSubTab === "departments"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+            }`}
+          >
+            Departments
+          </button>
         </div>
 
-        <div className="mt-6 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[720px] text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-gray-150/40">
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Product Name</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Category</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Price</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Stock</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Status</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans text-center">Adjust Stock</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {productsByStock.map((product) => {
+        {employeesSubTab === "employees" && (
+          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-6">
+            <div className="flex flex-wrap justify-between items-center gap-4">
+              <div>
+                <h3 className="text-lg font-serif font-light text-gray-955 dark:text-white">Admin Employee Accounts</h3>
+                <p className="text-xs text-gray-500 font-light">Create, edit, suspend or delete console manager accounts.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingEmployeeId("");
+                  setEmployeeForm(emptyEmployeeForm);
+                  setShowEmployeeModal(true);
+                }}
+                className="rounded-full bg-emerald-950 dark:bg-emerald-600 hover:bg-emerald-900 dark:hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
+              >
+                Add Employee Account
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-150/40 dark:border-gray-700 text-gray-400">
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Employee</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Designation / Dept</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Roles</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Security Status</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-gray-900 dark:text-white">
+                  {employees.map((emp) => (
+                    <tr key={emp._id} className="hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition-colors">
+                      <td className="py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center font-bold text-xs">
+                            {emp.name?.[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-semibold">{emp.name} {emp.isMasterAdmin && <span className="text-[9px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-bold ml-1 uppercase">Master</span>}</p>
+                            <p className="text-[10px] text-gray-400 font-light mt-0.5">{emp.email} · ID: {emp.employeeId || "N/A"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <p className="font-medium">{emp.designation || "Executive"}</p>
+                        <p className="text-[10px] text-gray-400 font-light mt-0.5">{emp.department?.name || "General/Unassigned"}</p>
+                      </td>
+                      <td className="py-3 max-w-[200px] truncate" title={emp.roles?.map(r=>r.name).join(", ")}>
+                        {emp.roles?.map(r => (
+                          <span key={r._id} className="inline-block bg-slate-100 dark:bg-slate-700 text-slate-850 dark:text-slate-200 px-2 py-0.5 rounded text-[9px] font-medium mr-1 mb-1">
+                            {r.name}
+                          </span>
+                        ))}
+                        {(!emp.roles || emp.roles.length === 0) && <span className="text-gray-400">—</span>}
+                      </td>
+                      <td className="py-3">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${emp.status === "Active" ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400" : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"}`}>
+                          {emp.status}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => startEditEmployee(emp)}
+                          className="text-xs font-semibold text-emerald-700 hover:text-emerald-950 dark:text-emerald-400 dark:hover:text-emerald-300 transition cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        {!emp.isMasterAdmin && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleEmployeeStatus(emp)}
+                              className={`text-xs font-semibold transition cursor-pointer ${emp.status === "Active" ? "text-amber-700 hover:text-amber-900" : "text-emerald-700 hover:text-emerald-950"}`}
+                            >
+                              {emp.status === "Active" ? "Suspend" : "Activate"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEmployee(emp._id)}
+                              className="text-xs font-semibold text-red-650 hover:text-red-800 transition cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {employeesSubTab === "roles" && (
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Roles List */}
+            <div className="lg:col-span-1 rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-4 h-fit">
+              <div>
+                <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white">Security Roles</h3>
+                <p className="text-[11px] text-gray-500 font-light">Customizable matrices map permissions to employee tasks.</p>
+              </div>
+              <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+                {roles.map((r) => (
+                  <div
+                    key={r._id}
+                    onClick={() => startEditRole(r)}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                      editingRoleId === r._id
+                        ? "border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/10"
+                        : "border-gray-100 hover:bg-gray-50 dark:border-gray-750 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start text-xs">
+                      <span className="font-bold text-gray-900 dark:text-white">{r.name}</span>
+                      {!r.isCustom && <span className="text-[8px] bg-slate-100 dark:bg-slate-700 text-gray-500 px-1 py-0.5 rounded uppercase font-semibold">System</span>}
+                    </div>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-400 mt-1 font-light line-clamp-2">{r.description || "No description provided."}</p>
+                    <div className="flex justify-between items-center mt-2.5">
+                      <span className="text-[9px] font-semibold text-emerald-800 dark:text-emerald-450 uppercase">{r.permissions?.length || 0} permissions</span>
+                      {r.isCustom && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteRole(r._id);
+                          }}
+                          className="text-[9px] font-bold text-red-650 hover:underline cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Role Builder Form */}
+            <div className="lg:col-span-2 rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
+              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-1">
+                {editingRoleId ? `Edit Custom Permissions Matrix: ${roleForm.name}` : "Create Custom Security Role"}
+              </h3>
+              <p className="text-xs text-gray-500 mb-4 font-light">Toggle granular access capabilities across features.</p>
+              
+              <form onSubmit={handleSaveRole} className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    type="text"
+                    required
+                    disabled={editingRoleId && !roles.find(x => x._id === editingRoleId)?.isCustom}
+                    value={roleForm.name}
+                    onChange={(e) => setRoleForm(p => ({ ...p, name: e.target.value }))}
+                    placeholder="Role Name (e.g. Stock Lead)"
+                    className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white"
+                  />
+                  <input
+                    type="text"
+                    value={roleForm.description}
+                    onChange={(e) => setRoleForm(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Brief Role Description"
+                    className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="border-t border-gray-100 dark:border-gray-750 pt-4 space-y-4 max-h-[350px] overflow-y-auto text-gray-900 dark:text-white pr-2">
+                  {Object.keys(groupedPermissions).map((groupName) => (
+                    <div key={groupName} className="space-y-2">
+                      <h4 className="text-xs font-semibold text-emerald-800 dark:text-emerald-450 tracking-wider uppercase">{groupName}</h4>
+                      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 text-[11px]">
+                        {groupedPermissions[groupName].map((perm) => (
+                          <label key={perm.code} className="flex items-start gap-2.5 p-2 rounded-lg border border-gray-100 hover:bg-gray-50/50 dark:border-gray-750 dark:hover:bg-gray-850/50 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={roleForm.permissions.includes(perm.code)}
+                              onChange={() => handleTogglePermissionInForm(perm.code)}
+                              className="rounded text-emerald-600 focus:ring-emerald-600 cursor-pointer h-4 w-4 shrink-0 mt-0.5"
+                            />
+                            <div>
+                              <p className="font-semibold">{perm.name}</p>
+                              <p className="text-[9px] text-gray-400 mt-0.5">{perm.code}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 justify-end pt-3 border-t border-gray-100 dark:border-gray-750">
+                  {editingRoleId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingRoleId("");
+                        setRoleForm(emptyRoleForm);
+                      }}
+                      className="rounded-full border border-gray-250 dark:border-gray-600 px-4 py-2 text-xs font-semibold text-gray-700 dark:text-white"
+                    >
+                      Clear Selection
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-semibold shadow-sm cursor-pointer font-sans"
+                  >
+                    {editingRoleId ? "Update Role Matrix" : "Save Role"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {employeesSubTab === "departments" && (
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Dept List */}
+            <div className="md:col-span-2 rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white">Store Departments</h3>
+                <p className="text-xs text-gray-500 font-light">Structure the administrative division within your organization.</p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-150/40 dark:border-gray-700 text-gray-400">
+                      <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Department Name</th>
+                      <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Description</th>
+                      <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-gray-900 dark:text-white">
+                    {departments.map((dept) => (
+                      <tr key={dept._id} className="hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition-colors">
+                        <td className="py-3 font-semibold">{dept.name}</td>
+                        <td className="py-3 text-gray-500 font-light max-w-[280px] truncate" title={dept.description}>{dept.description}</td>
+                        <td className="py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDept(dept._id)}
+                            className="text-xs font-semibold text-red-650 hover:underline cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Create Dept */}
+            <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm h-fit">
+              <h3 className="text-base font-serif font-semibold text-gray-955 dark:text-white mb-3">Add Department</h3>
+              <form onSubmit={handleSaveDept} className="space-y-3.5">
+                <input
+                  type="text"
+                  required
+                  value={deptForm.name}
+                  onChange={(e) => setDeptForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Department Name (e.g. Sales)"
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white"
+                />
+                <textarea
+                  value={deptForm.description}
+                  onChange={(e) => setDeptForm(p => ({ ...p, description: e.target.value }))}
+                  placeholder="Department Description"
+                  rows={3}
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 text-xs font-semibold shadow-sm cursor-pointer"
+                >
+                  Create Department
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Employee Add/Edit Modal */}
+        {showEmployeeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity cursor-pointer" 
+              onClick={() => {
+                setShowEmployeeModal(false);
+                setEditingEmployeeId("");
+                setEmployeeForm(emptyEmployeeForm);
+              }}
+            />
+            
+            {/* Modal Content Box */}
+            <div className="relative w-full max-w-lg rounded-3xl border border-gray-205 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-xl z-10 overflow-y-auto max-h-[90vh] text-left animate-page-enter">
+              <div className="flex justify-between items-center pb-4 mb-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-lg font-serif font-semibold text-gray-900 dark:text-white">
+                  {editingEmployeeId ? "Edit Employee Account" : "Add New Employee"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmployeeModal(false);
+                    setEditingEmployeeId("");
+                    setEmployeeForm(emptyEmployeeForm);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold cursor-pointer"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEmployee} className="space-y-4">
+                {/* Name */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={employeeForm.name}
+                    onChange={(e) => setEmployeeForm(p => ({ ...p, name: e.target.value }))}
+                    placeholder="Jane Doe"
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={employeeForm.email}
+                    onChange={(e) => setEmployeeForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="jane.doe@example.com"
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Mobile Number */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mobile Number</label>
+                  <input
+                    type="text"
+                    value={employeeForm.mobileNumber}
+                    onChange={(e) => setEmployeeForm(p => ({ ...p, mobileNumber: e.target.value }))}
+                    placeholder="+91-98765-43210"
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Designation */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Designation</label>
+                  <input
+                    type="text"
+                    value={employeeForm.designation}
+                    onChange={(e) => setEmployeeForm(p => ({ ...p, designation: e.target.value }))}
+                    placeholder="Store Manager"
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Department Selection */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Department</label>
+                  <select
+                    value={employeeForm.department}
+                    onChange={(e) => setEmployeeForm(p => ({ ...p, department: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-sans"
+                  >
+                    <option value="">Select Department (Optional)</option>
+                    {departments.map((dept) => (
+                      <option key={dept._id} value={dept._id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Password</label>
+                    {editingEmployeeId && <span className="text-[9px] text-gray-450 dark:text-gray-500">(leave blank to keep current)</span>}
+                  </div>
+                  <input
+                    type="password"
+                    required={!editingEmployeeId}
+                    value={employeeForm.password}
+                    onChange={(e) => setEmployeeForm(p => ({ ...p, password: e.target.value }))}
+                    placeholder={editingEmployeeId ? "••••••••" : "Password (min 6 chars)"}
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Roles Checklist */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Assign Roles</label>
+                  <div className="grid gap-2 grid-cols-2 text-[11px] max-h-36 overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-xl p-2.5 bg-gray-50/50 dark:bg-gray-800/50">
+                    {roles.map((role) => (
+                      <label key={role._id} className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={employeeForm.roles.includes(role._id)}
+                          onChange={() => {
+                            setEmployeeForm(prev => {
+                              const rList = [...prev.roles];
+                              if (rList.includes(role._id)) {
+                                return { ...prev, roles: rList.filter(r => r !== role._id) };
+                              } else {
+                                return { ...prev, roles: [...rList, role._id] };
+                              }
+                            });
+                          }}
+                          className="rounded text-emerald-600 focus:ring-emerald-600 h-4 w-4 cursor-pointer"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300 font-medium truncate" title={role.name}>
+                          {role.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status Selection */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Account Status</label>
+                  <select
+                    value={employeeForm.status}
+                    onChange={(e) => setEmployeeForm(p => ({ ...p, status: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-sans"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 justify-end pt-3 border-t border-gray-100 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEmployeeModal(false);
+                      setEditingEmployeeId("");
+                      setEmployeeForm(emptyEmployeeForm);
+                    }}
+                    className="rounded-full border border-gray-250 dark:border-gray-650 bg-white dark:bg-gray-800 text-gray-700 dark:text-white px-4 py-2 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-semibold shadow-sm cursor-pointer transition"
+                  >
+                    {editingEmployeeId ? "Update Employee" : "Create Account"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderProductsTab = () => {
+    return (
+      <div className="space-y-6 animate-page-enter">
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => setProductsSubTab("inventory")}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+              productsSubTab === "inventory"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+            }`}
+          >
+            Inventory List
+          </button>
+          <button
+            type="button"
+            onClick={() => setProductsSubTab("add-edit-product")}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+              productsSubTab === "add-edit-product"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+            }`}
+          >
+            {editingId ? "Edit Product Details" : "Add New Product"}
+          </button>
+        </div>
+
+        {productsSubTab === "inventory" && (
+          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-6">
+            {/* Header / Export */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div>
+                <h3 className="text-xl font-serif font-light tracking-tight text-gray-955 dark:text-white">Stock Management</h3>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-light">Monitor and adjust product inventory levels.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <span className="rounded-full bg-white/80 dark:bg-gray-700 border border-gray-200/60 dark:border-gray-600 px-3.5 py-1.5 font-medium text-gray-700 dark:text-gray-200 shadow-2xs">
+                  Total Units: <strong className="font-semibold text-gray-955 dark:text-white">{stockSummary.units}</strong>
+                </span>
+                <span className="rounded-full bg-amber-50/50 dark:bg-amber-900/20 border border-amber-250/50 px-3.5 py-1.5 font-medium text-amber-900 dark:text-amber-300">
+                  Low: <strong className="font-semibold">{stockSummary.low}</strong>
+                </span>
+                <span className="rounded-full bg-rose-50/50 dark:bg-rose-900/20 border border-rose-200/30 px-3.5 py-1.5 font-medium text-rose-900 dark:text-rose-300">
+                  Out of Stock: <strong className="font-semibold">{stockSummary.out}</strong>
+                </span>
+                <div className="flex items-center gap-2 ml-2 border-l border-gray-200 dark:border-gray-700 pl-3">
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    className="rounded-full border border-emerald-250 bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 px-3.5 py-1.5 font-bold text-emerald-800 dark:text-emerald-450 cursor-pointer shadow-2xs transition"
+                  >
+                    Export Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportPDF}
+                    className="rounded-full border border-rose-250 bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 px-3.5 py-1.5 font-bold text-rose-800 dark:text-rose-450 cursor-pointer shadow-2xs transition"
+                  >
+                    Export PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Categories filters */}
+            <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1 whitespace-nowrap scroll-smooth w-full text-xs">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("All")}
+                className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${
+                  selectedCategory === "All"
+                    ? "bg-emerald-950 dark:bg-emerald-600 text-white border border-emerald-950 dark:border-emerald-600 shadow-sm"
+                    : "bg-white/50 border border-gray-200 dark:border-gray-700 text-gray-650 dark:text-gray-350 hover:border-emerald-950/40 cursor-pointer dark:hover:border-emerald-600"
+                }`}
+              >
+                All ({products.length})
+              </button>
+              {productCategories.map((category) => {
+                const count = products.filter((product) => {
+                  const productCat = String(product.category || "").toLowerCase();
+                  const selectedCat = category.toLowerCase();
+                  const categoriesList = productCat.split(",").map(c => c.trim());
+                  return categoriesList.includes(selectedCat);
+                }).length;
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setSelectedCategory(category)}
+                    className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${
+                      selectedCategory === category
+                        ? "bg-emerald-950 dark:bg-emerald-600 text-white border border-emerald-950 dark:border-emerald-600 shadow-sm"
+                        : "bg-white/50 border border-gray-200 dark:border-gray-700 text-gray-650 dark:text-gray-350 hover:border-emerald-950/40 cursor-pointer dark:hover:border-emerald-600"
+                    }`}
+                  >
+                    {category} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Table layout (desktop) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-150/40 dark:border-gray-700 text-gray-400">
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Product Name</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Category</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Price</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Stock</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-center">Adjust Stock</th>
+                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-gray-900 dark:text-white">
+                  {filteredProducts.map((product) => {
+                    const s = Number(product.stock ?? 0);
+                    const statusBadge =
+                      s <= 0 ? (
+                        <span className="inline-flex rounded-full bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-700">
+                          Out of stock
+                        </span>
+                      ) : s <= 5 ? (
+                        <span className="inline-flex rounded-full bg-amber-50 border border-amber-200/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
+                          Low
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                          In Stock
+                        </span>
+                      );
+                    return (
+                      <tr key={product._id} className="hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition-colors">
+                        <td className="py-3.5 pr-3 font-serif text-sm font-medium">{product.name}</td>
+                        <td className="py-3.5 px-1 text-gray-500 dark:text-gray-400 font-light">{product.category}</td>
+                        <td className="py-3.5 px-1 font-light">INR {product.price}</td>
+                        <td className="py-3.5 px-1 tabular-nums font-semibold">{s}</td>
+                        <td className="py-3.5 px-1">{statusBadge}</td>
+                        <td className="py-3.5 px-1">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <input
+                              type="number"
+                              min="0"
+                              value={stockInputValue(product)}
+                              onChange={(e) =>
+                                setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
+                              }
+                              className="w-16 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-center text-xs text-gray-800 dark:text-white transition"
+                            />
+                            <button
+                              type="button"
+                              disabled={savingStockId === product._id}
+                              onClick={() => saveProductStock(product._id)}
+                              className="rounded-full bg-emerald-950 dark:bg-emerald-600 px-3 py-1 text-[10px] font-bold uppercase text-white hover:bg-emerald-900 dark:hover:bg-emerald-700 transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              {savingStockId === product._id ? "…" : "Save"}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-3.5 pl-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              startEditProduct(product);
+                              setProductsSubTab("add-edit-product");
+                            }}
+                            className="text-xs font-semibold text-emerald-700 hover:text-emerald-950 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline cursor-pointer"
+                          >
+                            Edit Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(product._id)}
+                            className="text-xs font-semibold text-red-655 hover:underline cursor-pointer ml-3"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile View */}
+            <div className="mt-4 space-y-3.5 md:hidden text-gray-900 dark:text-white">
+              {filteredProducts.map((product) => {
                 const s = Number(product.stock ?? 0);
                 const statusBadge =
                   s <= 0 ? (
@@ -1974,7 +3609,7 @@ const AdminDashboard = () => {
                       Out of stock
                     </span>
                   ) : s <= 5 ? (
-                    <span className="inline-flex rounded-full bg-amber-50 border border-amber-200/50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
+                    <span className="inline-flex rounded-full bg-amber-50 border border-amber-200/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
                       Low
                     </span>
                   ) : (
@@ -1983,14 +3618,19 @@ const AdminDashboard = () => {
                     </span>
                   );
                 return (
-                  <tr key={product._id} className="hover:bg-gray-50/40 transition-colors">
-                    <td className="py-3.5 pr-3 font-serif text-sm font-medium text-gray-900">{product.name}</td>
-                    <td className="py-3.5 px-1 text-gray-500 font-light">{product.category}</td>
-                    <td className="py-3.5 px-1 font-light text-gray-600">INR {product.price}</td>
-                    <td className="py-3.5 px-1 tabular-nums font-semibold text-gray-900">{s}</td>
-                    <td className="py-3.5 px-1">{statusBadge}</td>
-                    <td className="py-3.5 px-1">
-                      <div className="flex items-center justify-center gap-1.5">
+                  <article key={product._id} className="rounded-2xl border border-gray-150/40 dark:border-gray-700 bg-white/50 dark:bg-gray-800 p-4 space-y-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div>
+                        <p className="text-sm font-serif font-medium">{product.name}</p>
+                        <p className="mt-0.5 text-[10px] text-gray-400 tracking-wider uppercase font-light">
+                          {product.category} · INR {product.price}
+                        </p>
+                      </div>
+                      {statusBadge}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-gray-500 font-light">Stock:</span>
                         <input
                           type="number"
                           min="0"
@@ -1998,105 +3638,298 @@ const AdminDashboard = () => {
                           onChange={(e) =>
                             setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
                           }
-                          className="w-16 rounded-full border border-gray-200/80 bg-white px-2.5 py-1 text-center text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                          className="w-16 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-center text-xs text-gray-800 dark:text-white transition"
                         />
                         <button
                           type="button"
                           disabled={savingStockId === product._id}
                           onClick={() => saveProductStock(product._id)}
-                          className="rounded-full bg-emerald-950 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-emerald-900 transition-all duration-300 disabled:opacity-50 hover-float"
+                          className="rounded-full bg-emerald-950 dark:bg-emerald-600 px-3 py-1 text-[10px] font-bold uppercase text-white hover:bg-emerald-900 dark:hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
                         >
-                          {savingStockId === product._id ? "…" : "Save"}
+                          Save
                         </button>
                       </div>
-                    </td>
-                    <td className="py-3.5 pl-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => startEditProduct(product)}
-                        className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition-colors hover:underline"
-                      >
-                        Edit Details
-                      </button>
-                    </td>
-                  </tr>
+                      <div className="space-x-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            startEditProduct(product);
+                            setProductsSubTab("add-edit-product");
+                          }}
+                          className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProduct(product._id)}
+                          className="text-xs font-semibold text-red-655 cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </article>
                 );
               })}
-              {products.length === 0 ? (
-                <tr>
-                  <td className="py-8 text-center text-gray-400 font-light" colSpan={7}>
-                    No products cataloged yet. Add products below to begin.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-4 space-y-3.5 md:hidden">
-          {productsByStock.map((product) => {
-            const s = Number(product.stock ?? 0);
-            const statusBadge =
-              s <= 0 ? (
-                <span className="inline-flex rounded-full bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-700">
-                  Out of stock
-                </span>
-              ) : s <= 5 ? (
-                <span className="inline-flex rounded-full bg-amber-50 border border-amber-200/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
-                  Low
-                </span>
-              ) : (
-                <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
-                  In Stock
-                </span>
-              );
-            return (
-              <article key={product._id} className="rounded-2xl border border-gray-150/40 bg-white/50 p-4 space-y-3">
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <p className="text-sm font-serif font-medium text-gray-950">{product.name}</p>
-                    <p className="mt-0.5 text-[10px] text-gray-400 tracking-wider uppercase font-light">
-                      {product.category} · INR {product.price}
-                    </p>
-                  </div>
-                  {statusBadge}
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-gray-500 font-light">Stock:</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={stockInputValue(product)}
-                      onChange={(e) =>
-                        setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
-                      }
-                      className="w-16 rounded-full border border-gray-200/80 bg-white px-2.5 py-1 text-center text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-                    />
-                    <button
-                      type="button"
-                      disabled={savingStockId === product._id}
-                      onClick={() => saveProductStock(product._id)}
-                      className="rounded-full bg-emerald-950 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-emerald-900 transition-all duration-300 disabled:opacity-50"
-                    >
-                      Save
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => startEditProduct(product)}
-                    className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition-colors"
-                  >
-                    Edit Details
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+            </div>
+          </div>
+        )}
+
+        {productsSubTab === "add-edit-product" && (
+          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-gray-700 text-gray-900 dark:text-white">
+              <h3 className="text-lg font-serif font-light">
+                {editingId ? "Modify Product Listing" : "Add New Catalog Entry"}
+              </h3>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingId("");
+                    setForm(emptyForm);
+                    setProductsSubTab("inventory");
+                  }}
+                  className="rounded-full border border-gray-200 dark:border-gray-600 px-3 py-1.5 text-xs text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+                >
+                  Exit Edit Mode
+                </button>
+              )}
+            </div>
+            {/* Note: The actual full form content is rendered inside the tab routing logic to minimize redundancy */}
+            <p className="text-xs text-gray-400 dark:text-gray-400 font-light">Configure details, attributes, images, categories, personalization settings, and stock levels below.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderOrdersTab = () => {
+    return (
+      <div className="space-y-6 animate-page-enter">
+        {/* Note: The actual tables, selectors, and details forms will be routed dynamically in the JSX return */}
+        <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm">
+          <h3 className="text-xl font-serif font-light text-gray-955 dark:text-white mb-2">Order Fulfillment Management</h3>
+          <p className="text-xs text-gray-500 mb-4 font-light">Process invoices, track courier packages, and audit customer order cancellations.</p>
         </div>
       </div>
+    );
+  };
 
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">Store Settings (Sender Details)</h3>
+  const renderCouponsTab = () => {
+    return (
+      <div className="space-y-6 animate-page-enter">
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => setCouponsSubTab("public")}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+              couponsSubTab === "public"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+            }`}
+          >
+            Public Checkout Coupons
+          </button>
+          <button
+            type="button"
+            onClick={() => setCouponsSubTab("special")}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+              couponsSubTab === "special"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+            }`}
+          >
+            Retention & Special Coupons
+          </button>
+          <button
+            type="button"
+            onClick={() => setCouponsSubTab("store-settings")}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+              couponsSubTab === "store-settings"
+                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+            }`}
+          >
+            Store Settings
+          </button>
+        </div>
+
+        {couponsSubTab === "store-settings" && (
+          <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-4">
+            <h3 className="text-lg font-serif font-light text-gray-955 dark:text-white">Store Information Settings</h3>
+            <p className="text-xs text-gray-405 font-light">Set default sender details for shipping bills and invoices.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+        <div className="text-center space-y-4">
+          <svg className="animate-spin h-10 w-10 text-emerald-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-sm font-semibold tracking-wide">Loading management database...</p>
+        </div>
+      </div>
+    );
+  }  const sidebarItems = [
+    { id: "overview", label: "Overview", icon: "📊", permission: null },
+    { id: "products", label: "Products & Stock", icon: "🛍️", permission: ["PRODUCTS_VIEW", "INVENTORY_VIEW"] },
+    { id: "orders", label: "Orders", icon: "📦", permission: "ORDERS_VIEW" },
+    { id: "tickets", label: "Support Tickets", icon: "💬", permission: ["TICKETS_MANAGE", "SUPPORT_CHAT"] },
+    { id: "coupons", label: "Coupons & Settings", icon: "🎟️", permission: ["COUPONS_MANAGE", "BUSINESS_ANALYTICS_VIEW", "CONTENT_HOMEPAGE"] },
+    { id: "newsletter", label: "Newsletter", icon: "✉️", permission: "MARKETING_CAMPAIGNS" },
+    { id: "employees", label: "Employees & Roles", icon: "👥", permission: ["EMPLOYEES_MANAGE", "ROLES_MANAGE", "DEPARTMENTS_MANAGE"] },
+    { id: "logs", label: "Activity Logs", icon: "📋", permission: "ACTIVITY_LOGS_VIEW" }
+  ];
+
+  const visibleSidebarItems = sidebarItems.filter(item => {
+    if (!item.permission) return true;
+    if (Array.isArray(item.permission)) {
+      return item.permission.some(p => hasPermission(p));
+    }
+    return hasPermission(item.permission);
+  });
+
+  return (
+    <div className={`min-h-screen flex transition-colors duration-300 ${darkMode ? "dark bg-slate-900 text-slate-100" : "bg-slate-50 text-slate-800"}`}>
+      
+      {/* Sidebar for Desktop */}
+      <aside className={`fixed inset-y-0 left-0 z-30 w-64 bg-slate-955 text-slate-150 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-64"}`}>
+        <div className="h-full flex flex-col justify-between">
+          <div>
+            <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
+              <span className="text-lg font-bold bg-gradient-to-r from-emerald-450 to-teal-400 bg-clip-text text-transparent font-serif">Niyora Gifts</span>
+              <span className="text-[9px] uppercase tracking-widest bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-semibold">Console</span>
+            </div>
+
+            {/* Profile Widget */}
+            <div className="p-5 border-b border-slate-850 flex items-center gap-3 bg-slate-900/40">
+              <div className="h-9 w-9 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs select-none">
+                {adminAuth?.name?.split(" ").map(n=>n[0]).join("").toUpperCase() || "A"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold truncate text-slate-100">{adminAuth?.name}</p>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">{adminAuth?.designation || "Executive"}</p>
+              </div>
+            </div>
+
+            <nav className="p-4 space-y-1">
+              {visibleSidebarItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${
+                    activeTab === item.id
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20"
+                      : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+                  }`}
+                >
+                  <span className="text-sm">{item.icon}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Sidebar Footer */}
+          <div className="p-4 border-t border-slate-850 bg-slate-955 flex items-center justify-between">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-xl hover:bg-slate-900 text-slate-400 hover:text-slate-200 transition-colors text-xs flex items-center gap-1.5 cursor-pointer animate-fade-in"
+            >
+              <span>{darkMode ? "☀️ Light" : "🌙 Dark"}</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-xl hover:bg-red-900/20 text-slate-450 hover:text-red-400 transition-colors text-xs cursor-pointer font-semibold animate-fade-in"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Panel Content Container */}
+      <div className="flex-1 flex flex-col min-w-0 md:pl-64">
+        
+        {/* Top Navbar */}
+        <header className="h-16 flex items-center justify-between px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-750 md:hidden cursor-pointer"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h2 className="text-xs font-semibold text-gray-900 dark:text-white capitalize flex items-center gap-2">
+              <span>Niyora Gifts</span>
+              <span className="text-gray-300 dark:text-gray-600">/</span>
+              <span className="text-gray-500 dark:text-gray-400 font-light">{activeTab}</span>
+            </h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Secured Session</span>
+            </div>
+            <div className="h-8 w-8 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-xs">
+              {adminAuth?.name?.[0].toUpperCase()}
+            </div>
+          </div>
+        </header>
+
+        {/* Mobile menu backdrop */}
+        {sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 bg-black/45 z-20 md:hidden animate-fade-in-backdrop"
+          />
+        )}
+
+        <main className="p-6 md:p-8 flex-1 space-y-6 max-w-7xl w-full mx-auto">
+          {error && (
+            <div className="rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-150 dark:border-red-900/50 p-4 text-xs text-red-750 dark:text-red-300 flex items-start gap-2.5">
+              <span>⚠️</span>
+              <p className="font-medium">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-150 dark:border-emerald-900/50 p-4 text-xs text-emerald-850 dark:text-emerald-300 flex items-start gap-2.5">
+              <span>✓</span>
+              <p className="font-medium">{success}</p>
+            </div>
+          )}
+          {uploadWarning && (
+            <div className="rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-150 dark:border-amber-900/50 p-4 text-xs text-amber-850 dark:text-amber-300 flex items-start gap-2.5">
+              <span>⚡</span>
+              <p className="font-medium">{uploadWarning}</p>
+            </div>
+          )}
+
+          {activeTab === "overview" && renderOverviewTab()}
+          {activeTab === "newsletter" && renderNewsletterTab()}
+          {activeTab === "logs" && renderLogsTab()}
+          {activeTab === "employees" && renderEmployeesTab()}
+          {activeTab === "products" && renderProductsTab()}
+          {activeTab === "coupons" && renderCouponsTab()}
+          {activeTab === "orders" && renderOrdersTab()}
+          {activeTab === "tickets" && renderTicketsTab()}
+
+      {activeTab === "coupons" && couponsSubTab === "store-settings" && (
+        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">Store Settings (Sender Details)</h3>
         <p className="mt-1 text-sm text-gray-500">Used in shipping labels and invoices.</p>
         <form onSubmit={saveStoreInfo} className="mt-3 grid gap-3 md:grid-cols-2">
           <input
@@ -2124,6 +3957,18 @@ const AdminDashboard = () => {
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
             required
           />
+          <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/30 p-4 shadow-xs">
+            <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-800 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                name="codEnabled"
+                checked={storeInfo.codEnabled !== undefined ? Boolean(storeInfo.codEnabled) : true}
+                onChange={(e) => setStoreInfo((prev) => ({ ...prev, codEnabled: e.target.checked }))}
+                className="rounded text-emerald-600 focus:ring-emerald-600 cursor-pointer h-4 w-4"
+              />
+              Enable Cash on Delivery (COD) website-wide
+            </label>
+          </div>
           <div className="md:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
             <p className="text-sm font-semibold text-emerald-900">Store Logo</p>
             <p className="mb-3 text-xs text-emerald-700">Used on shipping labels and invoices.</p>
@@ -2289,8 +4134,10 @@ const AdminDashboard = () => {
           </div>
         </form>
       </div>
+      )}
 
-      <div className="rounded-3xl border border-violet-150/40 bg-gradient-to-br from-violet-50/20 via-white/80 to-violet-50/10 backdrop-blur-md p-6 shadow-sm">
+      {activeTab === "coupons" && couponsSubTab === "special" && (
+        <div className="rounded-3xl border border-violet-150/40 bg-gradient-to-br from-violet-50/20 via-white/80 to-violet-50/10 backdrop-blur-md p-6 shadow-sm">
         <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Special Retention Coupons</h3>
         <p className="mt-1 text-xs text-gray-500 font-light leading-relaxed">
           Generate secure, random coupon codes (prefixed with <span className="font-mono text-xs font-semibold text-violet-800">GN-SP-</span>) for VIP clients or win-back campaigns. These codes remain hidden from the public checkout lists.
@@ -2451,8 +4298,11 @@ const AdminDashboard = () => {
           </div>
         </form>
       </div>
+      )}
 
-      <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
+      {activeTab === "coupons" && couponsSubTab === "public" && (
+        <>
+          <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
         <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">
           {editingCouponId ? "Edit Coupon Rule" : "Create Public Coupon"}
         </h3>
@@ -2519,13 +4369,23 @@ const AdminDashboard = () => {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Valid Until</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active From (Date & Time)</label>
             <input
-              type="date"
+              type="datetime-local"
+              value={couponForm.startDate || ""}
+              onChange={(e) => setCouponForm((prev) => ({ ...prev, startDate: e.target.value }))}
+              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+              title="Active start date and time (optional)"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Expires At (Date & Time)</label>
+            <input
+              type="datetime-local"
               value={couponForm.endDate || ""}
               onChange={(e) => setCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
               className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-              title="Valid until (optional)"
+              title="Expiration date and time (optional)"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -2562,6 +4422,73 @@ const AdminDashboard = () => {
               />
               <span className="font-medium text-gray-800">Coupon Active</span>
             </label>
+          </div>
+
+          <div className="md:col-span-3 rounded-2xl border border-gray-200 bg-gray-50/30 p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-700 font-sans">Selective Days of Operation</span>
+                <p className="text-[10px] text-gray-400 font-light mt-0.5 font-sans">Select specific days the coupon is valid. Uncheck all to make it valid every day.</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] }))}
+                  className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
+                >
+                  Weekdays
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Saturday", "Sunday"] }))}
+                  className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
+                >
+                  Weekends
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] }))}
+                  className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
+                >
+                  All Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: [] }))}
+                  className="rounded-full bg-white border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-100 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
+                const activeDays = couponForm.activeDays || [];
+                const isSelected = activeDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      setCouponForm((prev) => {
+                        const current = prev.activeDays || [];
+                        const next = current.includes(day)
+                          ? current.filter((d) => d !== day)
+                          : [...current, day];
+                        return { ...prev, activeDays: next };
+                      });
+                    }}
+                    className={`rounded-full px-4 py-1.5 text-xs font-semibold border transition duration-200 cursor-pointer ${
+                      isSelected
+                        ? "bg-emerald-950 border-emerald-950 text-white shadow-xs"
+                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         
           <div className="md:col-span-3 flex items-center gap-2.5 pt-2">
@@ -2811,8 +4738,12 @@ const AdminDashboard = () => {
           </table>
         </div>
       </div>
+      </>
+      )}
 
-      <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
+      {activeTab === "products" && productsSubTab === "add-edit-product" && (
+        <>
+          <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
         <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Catalog Categories</h3>
         <p className="mt-1 text-xs text-gray-500 font-light mb-4">Filter visible products below or set default category configuration for new entries.</p>
         <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1 whitespace-nowrap scroll-smooth w-full">
@@ -2982,6 +4913,20 @@ const AdminDashboard = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* COD Option */}
+          <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/30 p-4 space-y-3 shadow-xs">
+            <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-800 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                name="codEnabled"
+                checked={form.codEnabled !== undefined ? Boolean(form.codEnabled) : true}
+                onChange={handleFormChange}
+                className="rounded text-emerald-600 focus:ring-emerald-600 cursor-pointer h-4 w-4"
+              />
+              Enable Cash on Delivery (COD) for this product
+            </label>
           </div>
 
           <div className="md:col-span-2">
@@ -3223,9 +5168,12 @@ const AdminDashboard = () => {
           </table>
         </div>
       </div>
+        </>
+      )}
 
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">Manage Orders</h3>
+      {activeTab === "orders" && (
+        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">Manage Orders</h3>
         <div className="mt-3 flex overflow-x-auto items-center gap-2 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
           {["all", "active", "archived"].map((view) => (
             <button
@@ -3258,6 +5206,17 @@ const AdminDashboard = () => {
                 {status}
               </option>
             ))}
+          </select>
+          <select
+            value={orderPaymentFilter}
+            onChange={(e) => setOrderPaymentFilter(e.target.value)}
+            className="shrink-0 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800"
+            aria-label="Filter orders by payment mode"
+            title="Filter orders by payment mode"
+          >
+            <option value="all">All payment modes</option>
+            <option value="online">Online</option>
+            <option value="cod">COD</option>
           </select>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
@@ -3337,7 +5296,7 @@ const AdminDashboard = () => {
                 </span>
               </div>
               <p className="mt-1 text-xs text-gray-600">{order.address?.fullName || "Guest"} • INR {order.totalPrice}</p>
-              <p className="text-xs text-gray-600">Status: {order.status}</p>
+              <p className="text-xs text-gray-600">Status: {order.status} | Mode: <span className="font-semibold text-emerald-850 uppercase">{order.paymentMethod || "Online"}</span></p>
               <p className="text-xs text-gray-600 break-all">Tracking: {order.trackingId || "-"}</p>
               {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
                 <div className="mt-3 space-y-2 rounded-xl bg-gray-50 p-2.5 border border-gray-150/50">
@@ -3412,6 +5371,7 @@ const AdminDashboard = () => {
                 </th>
                 <th className="py-2">Order ID</th>
                 <th className="py-2">Status</th>
+                <th className="py-2">Payment Mode</th>
                 <th className="py-2">Customization</th>
                 <th className="py-2">Customer</th>
                 <th className="py-2">Shipping Address</th>
@@ -3445,6 +5405,15 @@ const AdminDashboard = () => {
                       }`}
                     >
                       {order.__isArchived ? "Archived" : "Active"}
+                    </span>
+                  </td>
+                  <td className="py-2">
+                    <span
+                      className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                        String(order.paymentMethod).toLowerCase() === "cod" ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
+                      {order.paymentMethod || "Online"}
                     </span>
                   </td>
                   <td className="py-2">
@@ -3643,9 +5612,11 @@ const AdminDashboard = () => {
           </table>
         </div>
       </div>
+      )}
 
-      <NewsletterSubscribersSection authHeader={authHeader} />
-    </section>
+        </main>
+      </div>
+    </div>
   );
 };
 

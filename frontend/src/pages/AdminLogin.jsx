@@ -43,10 +43,13 @@ const AdminLogin = () => {
 
   return (
     <section className="mx-auto max-w-md rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-      <h2 className="text-2xl font-bold text-emerald-900">Admin Login</h2>
+      <h2 className="text-2xl font-bold text-emerald-900">
+        Admin Login
+      </h2>
       <p className="mt-1 text-sm text-gray-600">
         Sign in to manage products, orders, offers and store settings.
       </p>
+
       <form onSubmit={handleSubmit} className="mt-5 space-y-3">
         <input
           type="email"
@@ -72,7 +75,7 @@ const AdminLogin = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-70"
+          className="w-full rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-70 animate-pulse-subtle"
         >
           {loading ? "Signing in..." : "Login to Dashboard"}
         </button>

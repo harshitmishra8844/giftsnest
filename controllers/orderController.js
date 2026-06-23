@@ -3,6 +3,7 @@ const Order = require("../models/Order");
 const Coupon = require("../models/Coupon");
 const User = require("../models/User");
 const Product = require("../models/Product");
+const { logActivity } = require("../services/logService");
 
 const calculateSubtotal = (products = []) =>
   products.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
@@ -34,19 +35,49 @@ const getCouponSummary = async (couponCode, subtotal, userId = null) => {
     return { valid: false, code, discountAmount: 0, finalTotal: subtotal, message: "Invalid coupon code" };
   }
 
+  const getCurrentDayInIST = () => {
+    const options = { timeZone: "Asia/Kolkata", weekday: "long" };
+    return new Intl.DateTimeFormat("en-US", options).format(new Date());
+  };
+
+  const now = new Date();
+
+  if (coupon.startDate) {
+    const start = new Date(coupon.startDate);
+    if (!Number.isNaN(start.getTime()) && now < start) {
+      return {
+        valid: false,
+        code,
+        discountAmount: 0,
+        finalTotal: subtotal,
+        message: `This coupon will be active starting ${start.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}`,
+      };
+    }
+  }
+
   if (coupon.endDate) {
     const end = new Date(coupon.endDate);
-    if (!Number.isNaN(end.getTime())) {
-      end.setHours(23, 59, 59, 999);
-      if (new Date() > end) {
-        return {
-          valid: false,
-          code,
-          discountAmount: 0,
-          finalTotal: subtotal,
-          message: "This coupon has expired",
-        };
-      }
+    if (!Number.isNaN(end.getTime()) && now > end) {
+      return {
+        valid: false,
+        code,
+        discountAmount: 0,
+        finalTotal: subtotal,
+        message: "This coupon has expired",
+      };
+    }
+  }
+
+  if (Array.isArray(coupon.activeDays) && coupon.activeDays.length > 0) {
+    const currentDay = getCurrentDayInIST();
+    if (!coupon.activeDays.includes(currentDay)) {
+      return {
+        valid: false,
+        code,
+        discountAmount: 0,
+        finalTotal: subtotal,
+        message: `This coupon is only valid on: ${coupon.activeDays.join(", ")}`,
+      };
     }
   }
 
@@ -123,11 +154,16 @@ const listActiveCouponsPublic = async (req, res) => {
     const coupons = await Coupon.find({ active: true }).sort({ createdAt: -1 }).lean();
     const active = coupons.filter((c) => {
       if (c.isSpecial) return false;
-      if (!c.endDate) return true;
-      const end = new Date(c.endDate);
-      if (Number.isNaN(end.getTime())) return true;
-      end.setHours(23, 59, 59, 999);
-      return now <= end;
+      const now = new Date();
+      if (c.startDate) {
+        const start = new Date(c.startDate);
+        if (!Number.isNaN(start.getTime()) && now < start) return false;
+      }
+      if (c.endDate) {
+        const end = new Date(c.endDate);
+        if (!Number.isNaN(end.getTime()) && now > end) return false;
+      }
+      return true;
     });
     const payload = active.map((c) => ({
       code: c.code,
@@ -135,7 +171,9 @@ const listActiveCouponsPublic = async (req, res) => {
       value: c.value,
       minCartValue: Number(c.minCartValue || 0),
       maxDiscount: Number(c.maxDiscount || 0),
+      startDate: c.startDate ? new Date(c.startDate).toISOString() : null,
       endDate: c.endDate ? new Date(c.endDate).toISOString() : null,
+      activeDays: c.activeDays || [],
     }));
     return res.status(200).json(payload);
   } catch (error) {
@@ -195,6 +233,26 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: couponSummary.message });
     }
 
+    if (paymentMethod === "COD") {
+      const StoreSetting = require("../models/StoreSetting");
+      const dbStoreInfo = await StoreSetting.findOne({ singletonKey: "store" });
+      const isCodGloballyEnabled = dbStoreInfo?.codEnabled !== false;
+      if (!isCodGloballyEnabled) {
+        return res.status(400).json({ message: "Cash on Delivery (COD) is currently disabled for this store." });
+      }
+
+      for (const item of products) {
+        const pid = item.productId || item._id;
+        const pidStr = pid != null ? String(pid) : "";
+        if (pidStr && mongoose.Types.ObjectId.isValid(pidStr)) {
+          const prod = await Product.findById(pidStr).select("codEnabled");
+          if (prod && prod.codEnabled === false) {
+            return res.status(400).json({ message: `Cash on Delivery (COD) is not available for product "${item.name}".` });
+          }
+        }
+      }
+    }
+
     for (const item of products) {
       const pid = item.productId || item._id;
       const pidStr = pid != null ? String(pid) : "";
@@ -251,11 +309,14 @@ const createOrder = async (req, res) => {
 
     if (paymentMethod === "COD") {
       const { decrementStockForPaidOrder } = require("../services/inventoryService");
-      const { sendOrderNotificationToAdmin } = require("../services/orderEmail");
+      const { sendOrderNotificationToAdmin, sendOrderConfirmationToCustomer } = require("../services/orderEmail");
       
       await decrementStockForPaidOrder(order);
       sendOrderNotificationToAdmin(order).catch((mailErr) => {
         console.error("[email] Failed to send admin order notification email for COD order:", mailErr);
+      });
+      sendOrderConfirmationToCustomer(order).catch((mailErr) => {
+        console.error("[email] Failed to send customer order confirmation email for COD order:", mailErr);
       });
     }
 
@@ -310,9 +371,34 @@ const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: "Order status is required" });
     }
 
+    const previousOrder = await Order.findById(id);
+    if (!previousOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
     const order = await Order.findByIdAndUpdate(id, { status }, { returnDocument: 'after', runValidators: true });
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (status === "Cancelled" && previousOrder.status !== "Cancelled") {
+      const { incrementStockForCancelledOrder } = require("../services/inventoryService");
+      const { sendCancellationStatusNotificationToCustomer } = require("../services/orderEmail");
+      
+      await incrementStockForCancelledOrder(order);
+      sendCancellationStatusNotificationToCustomer(order, "Approved", "Updated by administrator").catch((mailErr) => {
+        console.error("[email] Failed to send cancellation email to customer:", mailErr);
+      });
+    }
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "ORDER_STATUS_UPDATED",
+        `Updated order status for ${order.orderCode || order._id} from "${previousOrder.status}" to "${status}"`,
+        req
+      );
     }
 
     return res.status(200).json({ message: "Order status updated", order });
@@ -389,6 +475,11 @@ const requestOrderCancellation = async (req, res) => {
     };
     await order.save();
 
+    const { sendCancellationRequestNotificationToAdmin } = require("../services/orderEmail");
+    sendCancellationRequestNotificationToAdmin(order).catch((mailErr) => {
+      console.error("[email] Failed to send cancellation request email to admin:", mailErr);
+    });
+
     return res.status(200).json({ message: "Cancellation request submitted.", order });
   } catch (error) {
     console.error("Request cancellation error:", error.message);
@@ -425,6 +516,25 @@ const reviewOrderCancellation = async (req, res) => {
       order.cancellationRequest.reviewedAt = reviewedAt;
       order.cancellationRequest.adminNote = adminNote;
       await order.save();
+
+      const { incrementStockForCancelledOrder } = require("../services/inventoryService");
+      const { sendCancellationStatusNotificationToCustomer } = require("../services/orderEmail");
+
+      await incrementStockForCancelledOrder(order);
+      sendCancellationStatusNotificationToCustomer(order, "Approved", adminNote).catch((mailErr) => {
+        console.error("[email] Failed to send cancellation approval email to customer:", mailErr);
+      });
+
+      if (req.user) {
+        await logActivity(
+          req.user._id,
+          req.user.name,
+          "ORDER_CANCELLATION_APPROVED",
+          `Approved cancellation request for order ${order.orderCode || order._id}. Note: ${adminNote || "none"}`,
+          req
+        );
+      }
+
       return res.status(200).json({ message: "Cancellation approved and order cancelled.", order });
     }
 
@@ -432,6 +542,22 @@ const reviewOrderCancellation = async (req, res) => {
     order.cancellationRequest.reviewedAt = reviewedAt;
     order.cancellationRequest.adminNote = adminNote;
     await order.save();
+
+    const { sendCancellationStatusNotificationToCustomer } = require("../services/orderEmail");
+    sendCancellationStatusNotificationToCustomer(order, "Rejected", adminNote).catch((mailErr) => {
+      console.error("[email] Failed to send cancellation rejection email to customer:", mailErr);
+    });
+
+    if (req.user) {
+      await logActivity(
+        req.user._id,
+        req.user.name,
+        "ORDER_CANCELLATION_REJECTED",
+        `Rejected cancellation request for order ${order.orderCode || order._id}. Reason: ${adminNote || "none"}`,
+        req
+      );
+    }
+
     return res.status(200).json({ message: "Cancellation request rejected.", order });
   } catch (error) {
     console.error("Review cancellation error:", error.message);

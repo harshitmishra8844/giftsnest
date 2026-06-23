@@ -25,4 +25,23 @@ const decrementStockForPaidOrder = async (order) => {
   }
 };
 
-module.exports = { decrementStockForPaidOrder };
+const incrementStockForCancelledOrder = async (order) => {
+  // Only restore stock if the order was paid or was a COD order
+  const wasStockDecremented = order.paymentStatus === "Paid" || order.paymentMethod === "COD";
+  if (!wasStockDecremented) return;
+
+  if (!order?.products?.length) return;
+  for (const line of order.products) {
+    const pid = line.productId;
+    if (!pid || !mongoose.Types.ObjectId.isValid(String(pid))) continue;
+    const qty = Math.max(0, Math.floor(Number(line.quantity || 1)));
+    if (qty === 0) continue;
+    await Product.findOneAndUpdate(
+      { _id: pid },
+      { $inc: { stock: qty } },
+      { returnDocument: 'after' }
+    );
+  }
+};
+
+module.exports = { decrementStockForPaidOrder, incrementStockForCancelledOrder };

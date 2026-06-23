@@ -23,6 +23,67 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    mobileNumber: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    department: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+      default: null,
+    },
+    designation: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    employeeId: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+    },
+    profileImage: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active",
+    },
+    lastLogin: {
+      type: Date,
+      default: null,
+    },
+    roles: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Role",
+      },
+    ],
+    isMasterAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    twoFactorSecret: {
+      type: String,
+      default: "",
+    },
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+      default: null,
+    },
     addresses: [
       {
         label: {

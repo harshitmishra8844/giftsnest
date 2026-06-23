@@ -269,14 +269,14 @@ const ProductDetails = () => {
   }, [myReview]);
 
   if (loading) {
-    return <section className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-100">Loading product details...</section>;
+    return <section className="rounded-2xl border border-champagne bg-white p-8 text-center shadow-xs text-luxury-black font-light">Loading product details...</section>;
   }
 
   if (error || !product) {
     return (
-      <section className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-100">
-        <p className="text-red-600">{error || "Product not found."}</p>
-        <Link to="/products" className="mt-4 inline-flex rounded-full bg-emerald-700 px-5 py-2 text-sm font-semibold text-white">
+      <section className="rounded-2xl border border-champagne bg-white p-8 text-center shadow-xs">
+        <p className="text-red-650 font-light">{error || "Product not found."}</p>
+        <Link to="/products" className="mt-4 inline-flex rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-all shadow-sm">
           Back to Products
         </Link>
       </section>
@@ -460,9 +460,9 @@ const ProductDetails = () => {
 
   return (
     <section className="space-y-8 pb-24 md:pb-0">
-      <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm md:p-10">
-        <div className="mb-6 text-[10px] font-extrabold uppercase tracking-[0.2em] text-gray-400">
-          <Link to="/products" className="hover:text-amber-750 transition-colors">Products</Link>
+      <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs md:p-10">
+        <div className="mb-6 text-[10px] font-extrabold uppercase tracking-[0.25em] text-text-secondary">
+          <Link to="/products" className="hover:text-gold-600 transition-colors">Products</Link>
           {String(product.category || "")
             .split(",")
             .map((cat) => cat.trim())
@@ -473,21 +473,21 @@ const ProductDetails = () => {
                 /{" "}
                 <Link
                   to={`/products?category=${encodeURIComponent(cat)}`}
-                  className="hover:text-amber-700 font-bold text-gray-500 transition-colors"
+                  className="hover:text-gold-600 font-bold text-text-secondary transition-colors"
                 >
                   {cat}
                 </Link>
               </span>
             ))}
           {" "}
-          / <span className="text-gray-400 font-normal">{product.name}</span>
+          / <span className="text-text-secondary font-normal">{product.name}</span>
         </div>
 
         <div className="grid gap-10 lg:grid-cols-2">
           {/* Left Column: Image Gallery */}
           <div className="lg:sticky lg:top-24 lg:h-fit">
             <div
-              className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/30 shadow-inner flex items-center justify-center p-6 h-[340px] md:h-[520px] transition-all duration-300 hover:shadow-sm"
+              className="group relative overflow-hidden rounded-2xl border border-champagne/30 bg-gold-50/20 shadow-inner flex items-center justify-center p-6 h-[340px] md:h-[520px] transition-all duration-300 hover:shadow-xs"
               onMouseMove={handleImageMouseMove}
               onMouseLeave={() => setZoomOrigin("center center")}
               onTouchStart={handleImageTouchStart}
@@ -501,7 +501,7 @@ const ProductDetails = () => {
                 onClick={() => setLightboxOpen(true)}
               />
               {galleryImages.length > 0 ? (
-                <div className="absolute bottom-4 right-4 rounded-full bg-black/70 px-3.5 py-1.5 text-[10px] font-semibold text-white tracking-widest">
+                <div className="absolute bottom-4 right-4 rounded-full bg-luxury-black/80 px-3.5 py-1.5 text-[10px] font-semibold text-white tracking-widest">
                   {Math.max(1, galleryImages.indexOf(activeImage) + 1)} / {galleryImages.length}
                 </div>
               ) : null}
@@ -511,7 +511,7 @@ const ProductDetails = () => {
                     type="button"
                     onClick={goToPrevImage}
                     aria-label="Previous image"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/95 px-3.5 py-2.5 text-xs font-bold text-gray-800 shadow-sm transition-all duration-200 hover:scale-105 hover:bg-white backdrop-blur-sm"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/95 px-3.5 py-2.5 text-xs font-bold text-luxury-black shadow-xs transition-all duration-200 hover:scale-105 hover:text-gold-600 backdrop-blur-sm cursor-pointer"
                   >
                     {"<"}
                   </button>
@@ -519,7 +519,7 @@ const ProductDetails = () => {
                     type="button"
                     onClick={goToNextImage}
                     aria-label="Next image"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/95 px-3.5 py-2.5 text-xs font-bold text-gray-800 shadow-sm transition-all duration-200 hover:scale-105 hover:bg-white backdrop-blur-sm"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/95 px-3.5 py-2.5 text-xs font-bold text-luxury-black shadow-xs transition-all duration-200 hover:scale-105 hover:text-gold-600 backdrop-blur-sm cursor-pointer"
                   >
                     {">"}
                   </button>
@@ -536,10 +536,10 @@ const ProductDetails = () => {
                       setUserInteractedWithGallery(true);
                       setActiveImage(imageUrl);
                     }}
-                    className={`overflow-hidden rounded-xl border transition-all duration-200 aspect-square flex items-center justify-center p-1.5 bg-gray-50 ${
+                    className={`overflow-hidden rounded-xl border transition-all duration-200 aspect-square flex items-center justify-center p-1.5 bg-gold-50/10 cursor-pointer ${
                       activeImage === imageUrl
-                        ? "scale-[1.03] border-amber-600 shadow-sm bg-white"
-                        : "border-gray-100 hover:scale-[1.01] hover:border-amber-200"
+                        ? "scale-[1.03] border-gold-500 shadow-xs bg-white"
+                        : "border-champagne hover:scale-[1.01] hover:border-gold-300"
                     }`}
                   >
                     <img src={imageUrl} alt={product.name} className="max-h-full max-w-full object-contain transition duration-200 hover:brightness-105" />
@@ -558,14 +558,16 @@ const ProductDetails = () => {
                   increaseDisabled={outOfStock || reachedMaxStock}
                   decreaseAriaLabel={`Decrease ${product.name} quantity`}
                   increaseAriaLabel={`Increase ${product.name} quantity`}
-                  className="rounded-full border-gray-200 bg-white"
+                  className="rounded-full border-champagne bg-white"
+                  buttonClassName="text-luxury-black hover:bg-gold-50"
+                  valueClassName="text-luxury-black text-xs"
                 />
               ) : (
                 <button
                   type="button"
                   disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
                   onClick={handleAddToCart}
-                  className="rounded-full bg-amber-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
+                  className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm cursor-pointer font-semibold"
                 >
                   {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
                 </button>
@@ -574,7 +576,7 @@ const ProductDetails = () => {
                 type="button"
                 disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
                 onClick={handleBuyNow}
-                className="rounded-full bg-emerald-950 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
+                className="rounded-full bg-luxury-black hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm cursor-pointer font-semibold"
               >
                 Buy Now
               </button>
@@ -584,15 +586,15 @@ const ProductDetails = () => {
           {/* Right Column: Info and options */}
           <div className="space-y-6">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-amber-700">{product.category}</p>
-              <h1 className="mt-1.5 text-3xl md:text-4xl font-serif font-light tracking-tight text-gray-950 leading-tight">{product.name}</h1>
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-500 font-light">
-                <span className="inline-flex items-center rounded-full bg-emerald-950 px-3 py-1 font-bold text-[10px] text-white tracking-wider">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-gold-600">{product.category}</p>
+              <h1 className="mt-1.5 text-3xl md:text-4xl font-serif font-light tracking-tight text-luxury-black leading-tight">{product.name}</h1>
+              <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-text-secondary font-light">
+                <span className="inline-flex items-center rounded-full bg-luxury-black px-3 py-1 font-bold text-[10px] text-white tracking-wider">
                   {rating.toFixed(1)} ★
                 </span>
                 <span className="tracking-wide">{numReviews} customer reviews</span>
-                <span className="text-gray-200">|</span>
-                <span className={`font-semibold tracking-wider uppercase text-[10px] ${outOfStock ? "text-red-600" : "text-emerald-800"}`}>
+                <span className="text-gray-300">|</span>
+                <span className={`font-semibold tracking-wider uppercase text-[10px] ${outOfStock ? "text-red-650" : "text-gold-700"}`}>
                   {outOfStock ? "Sold Out" : `${stock} available`}
                 </span>
               </div>
@@ -600,19 +602,19 @@ const ProductDetails = () => {
 
             {/* Personalization Options */}
             {product.isPersonalized && (
-              <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/20 via-white to-emerald-50/10 p-5 shadow-sm space-y-4 animate-[fadeIn_0.3s_ease-out] ring-1 ring-amber-100/20">
-                <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+              <div className="rounded-2xl border border-gold-300/40 bg-gradient-to-br from-gold-50/10 via-white to-gold-50/5 p-5 shadow-xs space-y-4 animate-[fadeIn_0.3s_ease-out]">
+                <div className="flex items-center gap-2 border-b border-champagne/30 pb-2">
                   <span className="text-base">✨</span>
                   <div>
-                    <h3 className="text-xs font-serif font-bold text-gray-950">Personalize Your Gift</h3>
-                    <p className="text-[9px] text-gray-400 font-light uppercase tracking-wider">Configure your custom options below</p>
+                    <h3 className="text-xs font-serif font-bold text-luxury-black">Personalize Your Gift</h3>
+                    <p className="text-[9px] text-text-secondary font-light uppercase tracking-wider">Configure your custom options below</p>
                   </div>
                 </div>
 
                 {/* Text personalization */}
                 {product.personalizationTextLabel && (
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-medium text-gray-700">
+                    <label className="block text-xs font-medium text-luxury-black">
                       {product.personalizationTextLabel} <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -622,9 +624,9 @@ const ProductDetails = () => {
                         onChange={(e) => setCustomText(e.target.value)}
                         maxLength={product.personalizationTextLimit || 20}
                         placeholder={`Enter personalization text (max ${product.personalizationTextLimit || 20} chars)`}
-                        className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs transition-all focus:border-amber-500 focus:bg-amber-50/10 focus:ring-1 focus:ring-amber-500/20 placeholder:text-gray-400 font-light"
+                        className="w-full rounded-xl border border-champagne bg-white px-3.5 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/15 focus:ring-1 focus:ring-gold-500/20 placeholder:text-gray-400 font-light text-luxury-black"
                       />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-medium text-gray-400">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-medium text-text-secondary">
                         {customText.length}/{product.personalizationTextLimit || 20}
                       </div>
                     </div>
@@ -634,13 +636,13 @@ const ProductDetails = () => {
                 {/* Image upload personalization */}
                 {(product.personalizationImageLabel || product.personalizationImageRequired) && (
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-medium text-gray-700">
+                    <label className="block text-xs font-medium text-luxury-black">
                       {product.personalizationImageLabel || "Upload Photo"} {product.personalizationImageRequired && <span className="text-red-500">*</span>}
                     </label>
                     
                     <div className="flex gap-3 items-center">
                       <div className="flex-1">
-                        <div className="border border-dashed border-gray-300 rounded-xl p-3.5 text-center hover:border-amber-500 transition-colors bg-white/40 cursor-pointer relative group">
+                        <div className="border border-dashed border-champagne rounded-xl p-3.5 text-center hover:border-gold-500 transition-colors bg-white/40 cursor-pointer relative group">
                           <input
                             type="file"
                             accept="image/*"
@@ -648,25 +650,25 @@ const ProductDetails = () => {
                             disabled={uploadingImage}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                           />
-                          <div className="space-y-1 text-xs text-gray-550">
-                            <svg className="w-6 h-6 mx-auto text-gray-400 group-hover:text-amber-600 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="space-y-1 text-xs text-text-secondary">
+                            <svg className="w-6 h-6 mx-auto text-gold-300 group-hover:text-gold-600 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <p className="font-semibold text-[10px] group-hover:text-amber-700 transition-colors duration-200">Click to upload photo</p>
+                            <p className="font-semibold text-[10px] group-hover:text-gold-700 transition-colors duration-200">Click to upload photo</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Photo preview */}
                       {(customImage || uploadingImage) && (
-                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center p-1 border border-gray-150 shadow-inner relative flex-shrink-0 animate-[popIn_0.2s_ease-out]">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gold-50/10 flex items-center justify-center p-1 border border-champagne shadow-inner relative flex-shrink-0 animate-[popIn_0.2s_ease-out]">
                           {uploadingImage ? (
                             <div className="flex flex-col items-center gap-1 animate-pulse">
-                              <svg className="animate-spin h-4.5 w-4.5 text-amber-600" fill="none" viewBox="0 0 24 24">
+                              <svg className="animate-spin h-4.5 w-4.5 text-gold-500" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                               </svg>
-                              <span className="text-[7px] text-amber-750 font-bold uppercase tracking-wider">Uploading</span>
+                              <span className="text-[7px] text-gold-700 font-bold uppercase tracking-wider">Uploading</span>
                             </div>
                           ) : (
                             <>
@@ -674,7 +676,7 @@ const ProductDetails = () => {
                               <button
                                 type="button"
                                 onClick={() => setCustomImage("")}
-                                className="absolute top-0.5 right-0.5 bg-black/75 hover:bg-black text-white w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold transition-all"
+                                className="absolute top-0.5 right-0.5 bg-luxury-black text-white w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold transition-all cursor-pointer"
                                 aria-label="Remove image"
                               >
                                 ×
@@ -690,11 +692,11 @@ const ProductDetails = () => {
             )}
 
             {/* Price & Primary Purchase Card */}
-            <div className="space-y-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="space-y-5 rounded-2xl border border-champagne bg-white p-5 shadow-xs">
               <div className="flex flex-wrap items-baseline gap-3">
-                <p className="text-3xl font-serif font-light text-gray-950">INR {product.price}</p>
-                <p className="text-sm text-gray-400 line-through font-light">INR {comparePrice}</p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/35">Special Price</p>
+                <p className="text-3xl font-serif font-light text-luxury-black">INR {product.price}</p>
+                <p className="text-sm text-text-secondary line-through font-light">INR {comparePrice}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-gold-800 bg-gold-50 border border-gold-200 px-2 py-0.5 rounded shadow-xs">Special Price</p>
               </div>
 
               {/* Purchase Options directly inside details column */}
@@ -707,14 +709,16 @@ const ProductDetails = () => {
                     increaseDisabled={outOfStock || reachedMaxStock}
                     decreaseAriaLabel={`Decrease ${product.name} quantity`}
                     increaseAriaLabel={`Increase ${product.name} quantity`}
-                    className="rounded-full border-gray-200 bg-white"
+                    className="rounded-full border-champagne bg-white"
+                    buttonClassName="text-luxury-black hover:bg-gold-50"
+                    valueClassName="text-luxury-black text-xs"
                   />
                 ) : (
                   <button
                     type="button"
                     disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
                     onClick={handleAddToCart}
-                    className="rounded-full bg-amber-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
+                    className="rounded-full bg-gold-500 hover:bg-gold-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
                   >
                     {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
                   </button>
@@ -723,34 +727,40 @@ const ProductDetails = () => {
                   type="button"
                   disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
                   onClick={handleBuyNow}
-                  className="rounded-full bg-emerald-950 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
+                  className="rounded-full bg-luxury-black hover:bg-gold-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
                 >
                   Buy Now
                 </button>
               </div>
 
-              <div className="border-t border-gray-100 pt-4 grid gap-2 text-xs text-gray-500 font-light">
+              <div className="border-t border-champagne/30 pt-4 grid gap-2 text-xs text-text-secondary font-light">
                 <p>
                   Estimated delivery by{" "}
-                  <span className="font-semibold text-gray-800">
+                  <span className="font-semibold text-luxury-black">
                     {deliveryTimeText || deliveryEstimate}
+                  </span>
+                </p>
+                <p>
+                  Cash on Delivery (COD):{" "}
+                  <span className={`font-semibold ${product.codEnabled !== false ? "text-gold-700" : "text-rose-700"}`}>
+                    {product.codEnabled !== false ? "Available" : "Not Available"}
                   </span>
                 </p>
                 {materialText ? (
                   <p>
-                    Material: <span className="font-semibold text-gray-800">{materialText}</span>
+                    Material: <span className="font-semibold text-luxury-black">{materialText}</span>
                   </p>
                 ) : null}
               </div>
             </div>
 
             {/* Highlights */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-serif font-semibold text-gray-950 border-b border-gray-100 pb-2">Highlights</h2>
-              <ul className="mt-3.5 grid gap-2.5 text-xs text-gray-600 leading-relaxed font-light">
+            <div className="rounded-2xl border border-champagne bg-white p-5 shadow-xs">
+              <h2 className="text-sm font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-2">Highlights</h2>
+              <ul className="mt-3.5 grid gap-2.5 text-xs text-text-secondary leading-relaxed font-light">
                 {highlights.map((item) => (
                   <li key={item} className="flex items-start gap-2.5">
-                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-600" />
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gold-500" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -758,46 +768,46 @@ const ProductDetails = () => {
             </div>
 
             {/* Product Description */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-serif font-semibold text-gray-950 border-b border-gray-100 pb-2">Product Description</h2>
-              <p className="mt-3 text-xs leading-relaxed text-gray-600 font-light whitespace-pre-line">{product.description}</p>
+            <div className="rounded-2xl border border-champagne bg-white p-5 shadow-xs">
+              <h2 className="text-sm font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-2">Product Description</h2>
+              <p className="mt-3 text-xs leading-relaxed text-text-secondary font-light whitespace-pre-line">{product.description}</p>
             </div>
 
             {/* Specifications */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-serif font-semibold text-gray-950 border-b border-gray-100 pb-2">Specifications</h2>
-              <div className="mt-3 overflow-hidden rounded-xl border border-gray-100">
+            <div className="rounded-2xl border border-champagne bg-white p-5 shadow-xs">
+              <h2 className="text-sm font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-2">Specifications</h2>
+              <div className="mt-3 overflow-hidden rounded-xl border border-champagne/20">
                 {specifications.map((item, index) => (
                   <div
                     key={`${item.label}-${index}`}
                     className={`grid gap-2 px-4 py-2.5 text-xs md:grid-cols-[180px_1fr] ${
-                      index !== specifications.length - 1 ? "border-b border-gray-100" : ""
+                      index !== specifications.length - 1 ? "border-b border-champagne/20" : ""
                     }`}
                   >
-                    <p className="font-medium text-gray-400">{item.label}</p>
-                    <p className="text-gray-800 font-light">{item.value}</p>
+                    <p className="font-medium text-text-secondary">{item.label}</p>
+                    <p className="text-luxury-black font-light">{item.value}</p>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Services info merged at the bottom of specifications */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-800 pb-2 border-b border-gray-100">Delivery & Boutique Services</p>
-              <div className="mt-3 grid gap-2.5 sm:grid-cols-2 text-xs text-gray-600">
-                <div className="rounded-xl bg-gray-50/50 px-3.5 py-3 border border-gray-100/50 font-light">Same-day support in selected cities</div>
-                <div className="rounded-xl bg-gray-50/50 px-3.5 py-3 border border-gray-100/50 font-light">Replacement help for damaged orders</div>
-                <div className="rounded-xl bg-gray-50/50 px-3.5 py-3 border border-gray-100/50 font-light font-sans tracking-wide">Secure checkout & premium packaging</div>
-                <div className="rounded-xl bg-gray-50/50 px-3.5 py-3 border border-gray-100/50 font-light">Order tracking code provided</div>
+            <div className="rounded-2xl border border-champagne bg-white p-5 shadow-xs">
+              <p className="text-xs font-bold uppercase tracking-wider text-gold-700 pb-2 border-b border-champagne/30">Delivery & Boutique Services</p>
+              <div className="mt-3 grid gap-2.5 sm:grid-cols-2 text-xs text-text-secondary">
+                <div className="rounded-xl bg-gold-50/20 px-3.5 py-3 border border-champagne/20 font-light">Same-day support in selected cities</div>
+                <div className="rounded-xl bg-gold-50/20 px-3.5 py-3 border border-champagne/20 font-light">Replacement help for damaged orders</div>
+                <div className="rounded-xl bg-gold-50/20 px-3.5 py-3 border border-champagne/20 font-light font-sans tracking-wide">Secure checkout & premium packaging</div>
+                <div className="rounded-xl bg-gold-50/20 px-3.5 py-3 border border-champagne/20 font-light">Order tracking code provided</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm md:p-10">
-        <h2 className="text-lg font-serif font-semibold text-gray-950 border-b border-gray-100 pb-3">Customer Reviews</h2>
-        <p className="mt-2 text-xs text-gray-500 font-light">
+      <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs md:p-10">
+        <h2 className="text-lg font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-3">Customer Reviews</h2>
+        <p className="mt-2 text-xs text-text-secondary font-light">
           {numReviews > 0
             ? `Rated ${rating.toFixed(1)} out of 5 by ${numReviews} customers.`
             : "No reviews yet. Be the first to review this product after purchase."}
@@ -805,35 +815,35 @@ const ProductDetails = () => {
         {reviews.length > 0 ? (
           <div className="mt-4 space-y-4">
             {reviews.map((item) => (
-              <article key={item._id} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <article key={item._id} className="rounded-2xl border border-champagne/45 bg-white p-4 shadow-xs">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-950">{item.name}</p>
+                    <p className="text-sm font-semibold text-luxury-black">{item.name}</p>
                     {item.verifiedPurchase ? (
-                      <span className="rounded-full bg-emerald-50 border border-emerald-100/40 px-2 py-0.5 text-[8px] font-bold uppercase text-emerald-800 tracking-wider">
+                      <span className="rounded-full bg-gold-50 border border-gold-200/30 px-2 py-0.5 text-[8px] font-bold uppercase text-gold-800 tracking-wider">
                         Verified Purchase
                       </span>
                     ) : null}
                   </div>
-                  <p className="text-xs font-bold text-amber-600">{Number(item.rating || 0).toFixed(1)} ★</p>
+                  <p className="text-xs font-bold text-gold-600">{Number(item.rating || 0).toFixed(1)} ★</p>
                 </div>
-                <p className="mt-2 text-xs text-gray-600 leading-relaxed font-light">{item.comment}</p>
-                <p className="mt-2.5 text-[9px] text-gray-400 font-light tracking-wide uppercase">
+                <p className="mt-2 text-xs text-text-secondary leading-relaxed font-light">{item.comment}</p>
+                <p className="mt-2.5 text-[9px] text-text-secondary font-light tracking-wide uppercase">
                   {item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-IN") : ""}
                 </p>
               </article>
             ))}
           </div>
         ) : null}
-        <form onSubmit={submitReview} className="mt-6 grid gap-4 rounded-2xl border border-emerald-100/40 bg-emerald-50/10 p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-900">{myReview ? "Edit Your Review" : "Write a Review"}</p>
+        <form onSubmit={submitReview} className="mt-6 grid gap-4 rounded-2xl border border-gold-250 bg-gold-50/10 p-5 shadow-xs">
+          <p className="text-xs font-bold uppercase tracking-wider text-gold-850">{myReview ? "Edit Your Review" : "Write a Review"}</p>
           <div className="flex items-center gap-1.5">{[1, 2, 3, 4, 5].map(renderStar)}</div>
           <textarea
             value={reviewForm.comment}
             onChange={(e) => setReviewForm((prev) => ({ ...prev, comment: e.target.value }))}
             rows={3}
             placeholder="Share your experience with this product"
-            className="rounded-xl border border-emerald-100/60 bg-white px-3.5 py-3 text-xs focus:ring-1 focus:ring-emerald-500 font-light placeholder:text-gray-400"
+            className="rounded-xl border border-champagne bg-white px-3.5 py-3 text-xs focus:ring-1 focus:ring-gold-500 font-light placeholder:text-gray-400 text-luxury-black"
             disabled={submittingReview || (userAuth?.token && !canReview)}
             required
           />
@@ -841,7 +851,7 @@ const ProductDetails = () => {
             <button
               type="submit"
               disabled={submittingReview || checkingReviewEligibility || (userAuth?.token && !canReview)}
-              className="rounded-full bg-emerald-950 px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm"
+              className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
             >
               {submittingReview ? "Saving..." : myReview ? "Update Review" : "Submit Review"}
             </button>
@@ -850,13 +860,13 @@ const ProductDetails = () => {
                 type="button"
                 onClick={handleDeleteMyReview}
                 disabled={submittingReview}
-                className="rounded-full border border-red-200 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-red-700 hover:bg-red-50 disabled:opacity-60 transition-all duration-200"
+                className="rounded-full border border-red-200 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-red-700 hover:bg-red-50 disabled:opacity-60 transition-all duration-200 cursor-pointer"
               >
                 Delete Review
               </button>
             ) : null}
             {!userAuth?.token ? (
-              <Link to="/login" className="text-xs font-bold uppercase tracking-widest text-emerald-800 hover:text-emerald-950">
+              <Link to="/login" className="text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-850 font-semibold">
                 Login to review
               </Link>
             ) : null}
@@ -864,40 +874,40 @@ const ProductDetails = () => {
               <button
                 type="button"
                 onClick={buyToReview}
-                className="text-xs font-bold uppercase tracking-widest text-emerald-800 hover:text-emerald-950"
+                className="text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-850 font-semibold cursor-pointer"
               >
                 Buy this product to review
               </button>
             ) : null}
           </div>
-          {reviewMessage ? <p className="text-xs text-gray-500 font-light">{reviewMessage}</p> : null}
+          {reviewMessage ? <p className="text-xs text-text-secondary font-light">{reviewMessage}</p> : null}
           {needsPurchaseHint ? (
-            <p className="text-xs text-amber-800 font-light">
+            <p className="text-xs text-gold-700 font-light">
               You can post a review after placing an order for this product from your account.
             </p>
           ) : null}
           {userAuth?.token && !canReview && !checkingReviewEligibility ? (
-            <p className="text-xs text-amber-800 font-light">Review form is unlocked only after purchase.</p>
+            <p className="text-xs text-gold-700 font-light">Review form is unlocked only after purchase.</p>
           ) : null}
         </form>
       </div>
 
       {relatedProducts.length > 0 ? (
-        <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm md:p-10">
-          <h2 className="text-lg font-serif font-semibold text-gray-950 border-b border-gray-100 pb-3">Related Products</h2>
+        <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs md:p-10">
+          <h2 className="text-lg font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-3">Related Products</h2>
           <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {relatedProducts.map((item) => {
               const cardImage = item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=Niyora+Gifts";
               const itemQuantity = cartQuantityById[item._id] || 0;
               return (
-                <article key={item._id} className="group rounded-2xl border border-gray-100 bg-white p-3 shadow-sm hover:shadow-md hover:border-amber-300/30 transition-all duration-300 flex flex-col justify-between">
+                <article key={item._id} className="group rounded-2xl border border-champagne/45 bg-white p-3 shadow-xs hover:shadow-md hover:border-gold-300/40 transition-all duration-300 flex flex-col justify-between">
                   <div>
-                    <Link to={`/products/${item.slug || item._id}`} className="block overflow-hidden rounded-xl bg-gray-50 aspect-[4/3]">
+                    <Link to={`/products/${item.slug || item._id}`} className="block overflow-hidden rounded-xl bg-gold-50/10 aspect-[4/3]">
                       <img src={cardImage} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </Link>
-                    <p className="mt-3 line-clamp-1 text-xs font-serif font-bold text-gray-950 group-hover:text-amber-800 transition-colors">{item.name}</p>
-                    <p className="mt-1 text-[9px] uppercase tracking-wider font-bold text-gray-400">{item.category}</p>
-                    <p className="mt-2 text-sm font-semibold font-serif text-gray-900">INR {item.price}</p>
+                    <p className="mt-3 line-clamp-1 text-xs font-serif font-bold text-luxury-black group-hover:text-gold-600 transition-colors">{item.name}</p>
+                    <p className="mt-1 text-[9px] uppercase tracking-wider font-bold text-gold-600">{item.category}</p>
+                    <p className="mt-2 text-sm font-semibold font-serif text-luxury-black">INR {item.price}</p>
                   </div>
                   <div className="mt-4">
                     {itemQuantity > 0 ? (
@@ -910,16 +920,16 @@ const ProductDetails = () => {
                         }
                         decreaseAriaLabel={`Decrease ${item.name} quantity`}
                         increaseAriaLabel={`Increase ${item.name} quantity`}
-                        buttonClassName="h-7 w-7 text-xs"
-                        valueClassName="text-xs"
-                        className="rounded-full border-gray-200 bg-white"
+                        buttonClassName="h-7 w-7 text-xs text-luxury-black hover:bg-gold-50"
+                        valueClassName="text-xs text-luxury-black"
+                        className="rounded-full border-champagne bg-white"
                       />
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleCardAdd(item)}
                         disabled={Number.isFinite(Number(item.stock)) && Number(item.stock) <= 0}
-                        className="w-full rounded-full bg-emerald-950 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200"
+                        className="w-full rounded-full bg-luxury-black px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-gold-500 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 cursor-pointer"
                       >
                         {Number.isFinite(Number(item.stock)) && Number(item.stock) <= 0 ? "Sold out" : "Add to Cart"}
                       </button>
@@ -933,26 +943,26 @@ const ProductDetails = () => {
       ) : null}
 
       {recentlyViewedProducts.length > 0 ? (
-        <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm md:p-10">
-          <h2 className="text-lg font-serif font-semibold text-gray-950 border-b border-gray-100 pb-3">Recently Viewed</h2>
+        <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs md:p-10">
+          <h2 className="text-lg font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-3">Recently Viewed</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {recentlyViewedProducts.map((item) => {
               const cardImage = item.image || item.images?.[0] || "https://via.placeholder.com/400x300?text=Niyora+Gifts";
               const itemQuantity = cartQuantityById[item._id] || 0;
               return (
-                <article key={item._id} className="group rounded-2xl border border-gray-100 bg-white p-3 shadow-sm hover:shadow-md hover:border-amber-200/30 transition-all duration-300 flex flex-col justify-between">
+                <article key={item._id} className="group rounded-2xl border border-champagne/45 bg-white p-3 shadow-xs hover:shadow-md hover:border-gold-300/40 transition-all duration-300 flex flex-col justify-between">
                   <div>
-                    <Link to={`/products/${item.slug || item._id}`} className="block overflow-hidden rounded-xl bg-gray-50 aspect-square">
+                    <Link to={`/products/${item.slug || item._id}`} className="block overflow-hidden rounded-xl bg-gold-50/10 aspect-square">
                       <img src={cardImage} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </Link>
                     <Link
                       to={`/products/${item.slug || item._id}`}
-                      className="mt-3 block line-clamp-1 text-xs font-serif font-bold text-gray-950 group-hover:text-amber-800 transition-colors"
+                      className="mt-3 block line-clamp-1 text-xs font-serif font-bold text-luxury-black group-hover:text-gold-600 transition-colors"
                     >
                       {item.name}
                     </Link>
-                    <p className="mt-1 text-[9px] uppercase tracking-wider font-bold text-gray-400">{item.category}</p>
-                    <p className="mt-2 text-sm font-semibold font-serif text-gray-900">INR {item.price}</p>
+                    <p className="mt-1 text-[9px] uppercase tracking-wider font-bold text-gold-600">{item.category}</p>
+                    <p className="mt-2 text-sm font-semibold font-serif text-luxury-black">INR {item.price}</p>
                   </div>
                   <div className="mt-4">
                     {itemQuantity > 0 ? (
@@ -965,16 +975,16 @@ const ProductDetails = () => {
                         }
                         decreaseAriaLabel={`Decrease ${item.name} quantity`}
                         increaseAriaLabel={`Increase ${item.name} quantity`}
-                        buttonClassName="h-7 w-7 text-xs"
-                        valueClassName="text-xs"
-                        className="rounded-full border-gray-200 bg-white"
+                        buttonClassName="h-7 w-7 text-xs text-luxury-black hover:bg-gold-50"
+                        valueClassName="text-xs text-luxury-black"
+                        className="rounded-full border-champagne bg-white"
                       />
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleCardAdd(item)}
                         disabled={Number.isFinite(Number(item.stock)) && Number(item.stock) <= 0}
-                        className="w-full rounded-full bg-emerald-950 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200"
+                        className="w-full rounded-full bg-luxury-black px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-gold-500 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 cursor-pointer"
                       >
                         {Number.isFinite(Number(item.stock)) && Number(item.stock) <= 0 ? "Sold out" : "Add to Cart"}
                       </button>
@@ -1041,11 +1051,11 @@ const ProductDetails = () => {
         `}
       </style>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-100 bg-white/95 backdrop-blur-md p-3.5 shadow-lg hidden sm:block md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-champagne bg-white/95 backdrop-blur-md p-3.5 shadow-lg hidden sm:block md:hidden">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold font-serif text-gray-950">INR {product.price}</p>
-            <p className={`text-[10px] uppercase font-bold tracking-wider ${outOfStock ? "text-red-650" : "text-emerald-800"}`}>
+            <p className="text-sm font-semibold font-serif text-luxury-black">INR {product.price}</p>
+            <p className={`text-[10px] uppercase font-bold tracking-wider ${outOfStock ? "text-red-650" : "text-gold-700"}`}>
               {outOfStock ? "Sold out" : `${stock} available`}
             </p>
           </div>
@@ -1058,16 +1068,16 @@ const ProductDetails = () => {
                 increaseDisabled={outOfStock || reachedMaxStock}
                 decreaseAriaLabel={`Decrease ${product.name} quantity`}
                 increaseAriaLabel={`Increase ${product.name} quantity`}
-                buttonClassName="h-7 w-7 text-xs"
-                valueClassName="text-xs"
-                className="rounded-full border-gray-200 bg-white"
+                buttonClassName="h-7 w-7 text-xs text-luxury-black hover:bg-gold-50"
+                valueClassName="text-xs text-luxury-black"
+                className="rounded-full border-champagne bg-white"
               />
             ) : (
               <button
                 type="button"
                 disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
                 onClick={handleAddToCart}
-                className="rounded-full bg-amber-600 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-60 transition-all duration-200"
+                className="rounded-full bg-gold-500 hover:bg-gold-600 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-60 transition-all duration-200 cursor-pointer font-semibold"
               >
                 {uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
               </button>
@@ -1076,7 +1086,7 @@ const ProductDetails = () => {
               type="button"
               disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
               onClick={handleBuyNow}
-              className="rounded-full bg-emerald-950 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-60 transition-all duration-200"
+              className="rounded-full bg-luxury-black hover:bg-gold-600 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white disabled:opacity-60 transition-all duration-200 cursor-pointer font-semibold"
             >
               Buy Now
             </button>
@@ -1085,7 +1095,7 @@ const ProductDetails = () => {
       </div>
 
       {/* Sticky Bottom Actions for Mobile viewports */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200/50 bg-white/95 backdrop-blur-md px-4 py-3.5 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] flex gap-3 sm:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-champagne bg-white/95 backdrop-blur-md px-4 py-3.5 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] flex gap-3 sm:hidden">
         {!product.isPersonalized && cartQuantity > 0 ? (
           <QuantityStepper
             quantity={cartQuantity}
@@ -1094,14 +1104,16 @@ const ProductDetails = () => {
             increaseDisabled={outOfStock || reachedMaxStock}
             decreaseAriaLabel={`Decrease ${product.name} quantity`}
             increaseAriaLabel={`Increase ${product.name} quantity`}
-            className="rounded-full border-gray-200 bg-white flex-1"
+            className="rounded-full border-champagne bg-white flex-1"
+            buttonClassName="text-luxury-black hover:bg-gold-50"
+            valueClassName="text-xs text-luxury-black"
           />
         ) : (
           <button
             type="button"
             disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
             onClick={handleAddToCart}
-            className="flex-1 rounded-full bg-amber-600 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 truncate"
+            className="flex-1 rounded-full bg-gold-500 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-gold-600 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 truncate cursor-pointer font-semibold"
           >
             {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
           </button>
@@ -1110,7 +1122,7 @@ const ProductDetails = () => {
           type="button"
           disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
           onClick={handleBuyNow}
-          className="flex-1 rounded-full bg-emerald-950 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 truncate"
+          className="flex-1 rounded-full bg-luxury-black py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-gold-600 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 truncate cursor-pointer font-semibold"
         >
           Buy Now
         </button>

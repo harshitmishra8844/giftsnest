@@ -1,5 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-gold-50: #FCF9F2;
+  --color-gold-100: #FAF4E5;
+  --color-gold-200: #F1E5C5;
+  --color-gold-300: #E7D29E;
+  --color-gold-400: #DDBD71;
+  --color-gold-500: #D4AF37; /* Primary Gold */
+  --color-gold-600: #C49A2C; /* Luxury Gold Hover */
+  --color-gold-700: #9E7B21;
+  --color-gold-800: #785D19;
+  --color-gold-900: #544111;
+
+  --color-ivory: #FAF7F2;
+  --color-cream: #F5EFE6;
+  --color-champagne: #EFE6D7;
+  --color-luxury-black: #1C1C1C;
+  --color-text-secondary: #6B6B6B;
+
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-pulse-subtle: pulse-subtle 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
 
 * {
   box-sizing: border-box;
@@ -11,9 +46,9 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  background: radial-gradient(circle at top left, #fffdfa 0%, #fefcf9 25%, #ffffff 75%);
-  color: #1f2937;
+  font-family: var(--font-sans);
+  background-color: var(--color-ivory);
+  color: var(--color-luxury-black);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -36,7 +71,7 @@ body {
 }
 
 .glassmorphism-dark {
-  background: rgba(2, 44, 34, 0.88);
+  background: rgba(28, 28, 28, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -225,13 +260,13 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 a:focus-visible {
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25);
   border-radius: 10px;
 }
 
 ::selection {
-  background-color: rgba(5, 150, 105, 0.15);
-  color: #065f46;
+  background-color: rgba(212, 175, 55, 0.15);
+  color: #785D19;
 }
 
 @media (prefers-reduced-motion: reduce) {

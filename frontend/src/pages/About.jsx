@@ -42,35 +42,49 @@ const About = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-emerald-900 to-teal-800 px-6 py-10 text-white shadow-xl md:px-10 scroll-reveal">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">About Niyora Gifts</p>
-        <h1 className="mt-3 text-3xl font-bold md:text-4xl">We help people celebrate with meaningful gifts.</h1>
-        <p className="mt-4 max-w-3xl text-sm text-emerald-50 md:text-base">
+    <div className="space-y-8">
+      <section className="rounded-3xl bg-luxury-black px-8 py-12 text-white shadow-2xl md:px-16 relative overflow-hidden border border-gold-500/20 scroll-reveal">
+        {/* Luxury subtle glows */}
+        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold-400">About Niyora Gifts</p>
+        <h1 className="mt-3 text-3xl font-serif text-white md:text-5xl">We help people celebrate with meaningful gifts.</h1>
+        <p className="mt-4 max-w-3xl text-sm text-gray-300 leading-7 font-light md:text-base">
           Niyora Gifts is built for moments that matter. Whether it&apos;s a birthday, anniversary, thank-you gesture, or festive
           celebration, we combine premium products with dependable service to create gifting experiences people remember.
         </p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3 scroll-reveal">
+      <section className="grid gap-6 md:grid-cols-3 scroll-reveal">
         {values.map((item) => (
-          <article key={item.title} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-emerald-100">
-            <h2 className="text-lg font-bold text-emerald-900">{item.title}</h2>
-            <p className="mt-2 text-sm text-gray-600">{item.text}</p>
+          <article key={item.title} className="rounded-2xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm hover:border-gold-300/40 transition-all duration-300">
+            <h2 className="text-lg font-bold font-serif text-gold-700">{item.title}</h2>
+            <p className="mt-2 text-sm text-text-secondary font-light leading-6">{item.text}</p>
           </article>
         ))}
       </section>
 
-      <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-emerald-100 md:p-8 scroll-reveal">
-        <h2 className="text-2xl font-bold text-emerald-900">Why customers choose us</h2>
-        <ul className="mt-4 grid gap-2 text-sm text-gray-700 md:grid-cols-2">
-          <li className="rounded-lg bg-emerald-50 px-3 py-2">Premium flowers, cakes and personalized gifts</li>
-          <li className="rounded-lg bg-emerald-50 px-3 py-2">Beautiful packaging and quality checks</li>
-          <li className="rounded-lg bg-emerald-50 px-3 py-2">Same-day and midnight delivery options</li>
-          <li className="rounded-lg bg-emerald-50 px-3 py-2">Friendly support throughout your order journey</li>
+      <section className="rounded-2xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm md:p-8 scroll-reveal">
+        <h2 className="text-2xl font-bold font-serif text-luxury-black">Why customers choose us</h2>
+        <ul className="mt-6 grid gap-3 text-sm text-luxury-black md:grid-cols-2">
+          <li className="rounded-xl bg-gold-50/40 border border-gold-100/40 px-4 py-3 font-light flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 shrink-0" />
+            Premium flowers, cakes and personalized gifts
+          </li>
+          <li className="rounded-xl bg-gold-50/40 border border-gold-100/40 px-4 py-3 font-light flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 shrink-0" />
+            Beautiful packaging and quality checks
+          </li>
+          <li className="rounded-xl bg-gold-50/40 border border-gold-100/40 px-4 py-3 font-light flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 shrink-0" />
+            Same-day and midnight delivery options
+          </li>
+          <li className="rounded-xl bg-gold-50/40 border border-gold-100/40 px-4 py-3 font-light flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 shrink-0" />
+            Friendly support throughout your order journey
+          </li>
         </ul>
-        <div className="mt-6">
-          <Link to="/products" className="inline-flex rounded-full bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">
+        <div className="mt-8">
+          <Link to="/products" className="inline-flex rounded-full bg-gold-500 hover:bg-gold-600 text-white font-bold tracking-widest text-xs uppercase px-7 py-3 transition shadow-sm">
             Explore Products
           </Link>
         </div>
