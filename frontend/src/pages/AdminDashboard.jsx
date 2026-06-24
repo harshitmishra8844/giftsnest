@@ -6,6 +6,16 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import SEO from "../components/SEO";
+import {
+  PremiumRingLoader,
+  LoadingOverlay,
+  CardSkeleton,
+  DashboardSkeleton,
+  TableSkeleton,
+  ProductGridSkeleton,
+  AnalyticsSkeleton,
+  ChatSkeleton
+} from "../components/SkeletonLoaders";
 
 const orderStatuses = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered", "Cancelled"];
 
@@ -155,6 +165,13 @@ const AdminDashboard = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [uploadWarning, setUploadWarning] = useState("");
+  const [fetchingEmployees, setFetchingEmployees] = useState(false);
+  const [fetchingLogs, setFetchingLogs] = useState(false);
+  const [fetchingNewsletter, setFetchingNewsletter] = useState(false);
+  const [fetchingProducts, setFetchingProducts] = useState(false);
+  const [fetchingOrders, setFetchingOrders] = useState(false);
+  const [fetchingOverview, setFetchingOverview] = useState(false);
+  const [fetchingCoupons, setFetchingCoupons] = useState(false);
 
   // --- ENTERPRISE RBAC & SECURITY STATES ---
   const [activeTab, setActiveTab] = useState("overview");
@@ -571,6 +588,49 @@ const AdminDashboard = () => {
     return tabTitles[activeTab] || "Admin Dashboard | Niyora Gifts Admin";
   }, [activeTab]);
 
+  const isBusy = saving || uploadingImage || uploadingStoreLogo || updatingTicketStatus || savingStoreInfo || sendingAdminReply || generatingSpecial || sendingCouponEmail || !!savingStockId;
+  const busyText = useMemo(() => {
+    if (uploadingImage || uploadingStoreLogo) return "Uploading assets securely to cloud storage...";
+    if (saving) return "Updating product inventory...";
+    if (savingStoreInfo) return "Saving configuration profiles...";
+    if (updatingTicketStatus) return "Securing support ticket status update...";
+    if (sendingAdminReply) return "Transmitting message to guest...";
+    if (generatingSpecial) return "Generating secure retention code & dispatching email...";
+    if (sendingCouponEmail) return "Sending promotional coupon code to customer email...";
+    if (savingStockId) return "Updating database stock levels...";
+    return "Processing request...";
+  }, [saving, uploadingImage, uploadingStoreLogo, updatingTicketStatus, savingStoreInfo, sendingAdminReply, generatingSpecial, sendingCouponEmail, savingStockId]);
+
+  useEffect(() => {
+    if (activeTab === "overview") {
+      setFetchingOverview(true);
+      const timer = setTimeout(() => setFetchingOverview(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "orders") {
+      setFetchingOrders(true);
+      const timer = setTimeout(() => setFetchingOrders(false), 250);
+      return () => clearTimeout(timer);
+    }
+  }, [orderViewFilter, orderStatusFilter, orderPaymentFilter, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "coupons") {
+      setFetchingCoupons(true);
+      const timer = setTimeout(() => setFetchingCoupons(false), 250);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, couponsSubTab]);
+
+  const changeProductCategory = (cat) => {
+    setFetchingProducts(true);
+    setSelectedCategory(cat);
+    setTimeout(() => setFetchingProducts(false), 250);
+  };
+
   useEffect(() => {
     const visibleSet = new Set(visibleOrderIds);
     setSelectedOrderIds((prev) => prev.filter((orderId) => visibleSet.has(orderId)));
@@ -770,10 +830,13 @@ const AdminDashboard = () => {
   // --- ENTERPRISE RBAC & SECURITY HANDLERS & FETCHERS ---
   const fetchEmployeesList = async () => {
     try {
+      setFetchingEmployees(true);
       const { data } = await api.get("/admin/employees", authHeader);
       setEmployees(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Load employees failed:", err);
+    } finally {
+      setFetchingEmployees(false);
     }
   };
 
@@ -806,6 +869,7 @@ const AdminDashboard = () => {
 
   const fetchActivityLogsList = async () => {
     try {
+      setFetchingLogs(true);
       const params = new URLSearchParams();
       if (logsSearch) params.append("search", logsSearch);
       if (logsUserFilter) params.append("userId", logsUserFilter);
@@ -821,17 +885,22 @@ const AdminDashboard = () => {
       setLogsTotalCount(data.totalLogs || 0);
     } catch (err) {
       console.error("Load activity logs failed:", err);
+    } finally {
+      setFetchingLogs(false);
     }
   };
 
   const fetchLoginLogsList = async () => {
     try {
+      setFetchingLogs(true);
       const { data } = await api.get(`/admin/login-logs?page=${loginLogsPage}&limit=15`, authHeader);
       setLoginLogs(data.logs || []);
       setLoginLogsTotalPages(data.pages || 1);
       setLoginLogsTotalCount(data.total || 0);
     } catch (err) {
       console.error("Load login logs failed:", err);
+    } finally {
+      setFetchingLogs(false);
     }
   };
 
@@ -2415,6 +2484,10 @@ const AdminDashboard = () => {
     const myLogs = logs.filter(l => String(l.userId || l._id) === String(adminAuth?.id || adminAuth?._id));
     const totalRev = orders.filter((order) => order.status !== "Cancelled").reduce((sum, order) => sum + Number(order.totalPrice || 0), 0);
 
+    if (fetchingOverview) {
+      return <DashboardSkeleton />;
+    }
+
     return (
       <div className="space-y-8 animate-page-enter">
         {/* Welcome Header */}
@@ -2687,7 +2760,7 @@ const AdminDashboard = () => {
 
               {/* Tickets Table / List */}
               {loadingTickets && adminTickets.length === 0 ? (
-                <div className="py-12 text-center text-xs text-gray-lux dark:text-gray-400">Loading tickets...</div>
+                <ChatSkeleton />
               ) : adminTickets.length > 0 ? (
                 <div className="overflow-x-auto">
                   {selectedTicket ? (
@@ -2926,55 +2999,59 @@ const AdminDashboard = () => {
         <p className="text-xs text-gray-lux dark:text-gray-400 mb-6 font-light">Trace admin and employee login attempts, session durations, and IP origins.</p>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px] text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-lux dark:text-gray-400">
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Login Time</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Employee / Email</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">IP Address</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Device & Browser</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Logout Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
-              {loginLogs.map((log) => (
-                <tr key={log._id} className="hover:bg-gold-500/5 transition-colors">
-                  <td className="py-3 text-gray-lux dark:text-gray-400 font-light">{new Date(log.loginTime || log.createdAt).toLocaleString()}</td>
-                  <td className="py-3 font-medium">
-                    <div className="text-luxury-black dark:text-white">{log.userName}</div>
-                    <div className="text-[10px] text-gray-lux dark:text-gray-400 font-light">{log.email}</div>
-                  </td>
-                  <td className="py-3 text-luxury-black dark:text-gray-300 font-light">{log.ipAddress || "Unknown"}</td>
-                  <td className="py-3 text-gray-lux dark:text-gray-400 font-light">
-                    <div>{log.device || "Unknown Device"}</div>
-                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{log.browser || "Unknown Browser"}</div>
-                  </td>
-                  <td className="py-3">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
-                      log.status === "Success"
-                        ? "bg-success-lux/10 border-success-lux/20 text-success-lux"
-                        : log.status === "Failed"
-                        ? "bg-danger-lux/10 border-danger-lux/20 text-danger-lux"
-                        : "bg-warning-lux/10 border-warning-lux/20 text-warning-lux"
-                    }`}>
-                      {log.status}
-                    </span>
-                  </td>
-                  <td className="py-3 text-gray-lux dark:text-gray-400 font-light">
-                    {log.logoutTime ? new Date(log.logoutTime).toLocaleString() : (log.status === "Success" ? "Active Session" : "-")}
-                  </td>
+        {fetchingLogs ? (
+          <TableSkeleton rows={6} cols={6} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px] text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-lux dark:text-gray-400">
+                  <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Login Time</th>
+                  <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Employee / Email</th>
+                  <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">IP Address</th>
+                  <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Device & Browser</th>
+                  <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
+                  <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Logout Time</th>
                 </tr>
-              ))}
-              {loginLogs.length === 0 ? (
-                <tr>
-                  <td className="py-8 text-center text-gray-lux font-light" colSpan={6}>No login history logs found.</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
+                {loginLogs.map((log) => (
+                  <tr key={log._id} className="hover:bg-gold-500/5 transition-colors">
+                    <td className="py-3 text-gray-lux dark:text-gray-400 font-light">{new Date(log.loginTime || log.createdAt).toLocaleString()}</td>
+                    <td className="py-3 font-medium">
+                      <div className="text-luxury-black dark:text-white">{log.userName}</div>
+                      <div className="text-[10px] text-gray-lux dark:text-gray-400 font-light">{log.email}</div>
+                    </td>
+                    <td className="py-3 text-luxury-black dark:text-gray-300 font-light">{log.ipAddress || "Unknown"}</td>
+                    <td className="py-3 text-gray-lux dark:text-gray-400 font-light">
+                      <div>{log.device || "Unknown Device"}</div>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{log.browser || "Unknown Browser"}</div>
+                    </td>
+                    <td className="py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
+                        log.status === "Success"
+                          ? "bg-success-lux/10 border-success-lux/20 text-success-lux"
+                          : log.status === "Failed"
+                          ? "bg-danger-lux/10 border-danger-lux/20 text-danger-lux"
+                          : "bg-warning-lux/10 border-warning-lux/20 text-warning-lux"
+                      }`}>
+                        {log.status}
+                      </span>
+                    </td>
+                    <td className="py-3 text-gray-lux dark:text-gray-400 font-light">
+                      {log.logoutTime ? new Date(log.logoutTime).toLocaleString() : (log.status === "Success" ? "Active Session" : "-")}
+                    </td>
+                  </tr>
+                ))}
+                {loginLogs.length === 0 ? (
+                  <tr>
+                    <td className="py-8 text-center text-gray-lux font-light" colSpan={6}>No login history logs found.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
         {loginLogsTotalPages > 1 && (
@@ -3175,6 +3252,20 @@ const AdminDashboard = () => {
       if (!groupedPermissions[g]) groupedPermissions[g] = [];
       groupedPermissions[g].push(p);
     });
+
+    if (fetchingEmployees) {
+      return (
+        <div className="space-y-6 animate-page-enter">
+          {/* Sub Navigation mock to preserve layout */}
+          <div className="flex border-b border-gold-200/20 dark:border-gold-900/20">
+            <button type="button" className="px-4 py-2.5 text-xs font-semibold border-b-2 border-gold-500 text-gold-500 font-bold">Employees List</button>
+            <button type="button" className="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-gray-lux dark:text-gray-400">Custom Roles Matrix</button>
+            <button type="button" className="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-gray-lux dark:text-gray-400">Departments</button>
+          </div>
+          <TableSkeleton rows={5} cols={5} />
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-6 animate-page-enter">
@@ -3756,7 +3847,7 @@ const AdminDashboard = () => {
             <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1 whitespace-nowrap scroll-smooth w-full text-xs">
               <button
                 type="button"
-                onClick={() => setSelectedCategory("All")}
+                onClick={() => changeProductCategory("All")}
                 className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${
                   selectedCategory === "All"
                     ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
@@ -3776,7 +3867,7 @@ const AdminDashboard = () => {
                   <button
                     key={category}
                     type="button"
-                    onClick={() => setSelectedCategory(category)}
+                    onClick={() => changeProductCategory(category)}
                     className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${
                       selectedCategory === category
                         ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
@@ -3789,21 +3880,106 @@ const AdminDashboard = () => {
               })}
             </div>
 
-            {/* Table layout (desktop) */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-400">
-                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Product Name</th>
-                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Category</th>
-                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Price</th>
-                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Stock</th>
-                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
-                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-center">Adjust Stock</th>
-                    <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
+            {fetchingProducts ? (
+              <>
+                <div className="hidden md:block">
+                  <TableSkeleton rows={6} cols={7} />
+                </div>
+                <div className="block md:hidden space-y-4">
+                  <CardSkeleton />
+                  <CardSkeleton />
+                  <CardSkeleton />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Table layout (desktop) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full min-w-[720px] text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-400">
+                        <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Product Name</th>
+                        <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Category</th>
+                        <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Price</th>
+                        <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Stock</th>
+                        <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
+                        <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-center">Adjust Stock</th>
+                        <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
+                      {filteredProducts.map((product) => {
+                        const s = Number(product.stock ?? 0);
+                        const statusBadge =
+                          s <= 0 ? (
+                            <span className="inline-flex rounded-full bg-danger-lux/10 border border-danger-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-danger-lux">
+                              Out of stock
+                            </span>
+                          ) : s <= 5 ? (
+                            <span className="inline-flex rounded-full bg-warning-lux/10 border border-warning-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning-lux">
+                              Low
+                            </span>
+                          ) : (
+                            <span className="inline-flex rounded-full bg-success-lux/10 border border-success-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-success-lux">
+                              In Stock
+                            </span>
+                          );
+                        return (
+                          <tr key={product._id} className="hover:bg-gold-500/5 transition-colors">
+                            <td className="py-3.5 pr-3 font-serif text-sm font-medium">{product.name}</td>
+                            <td className="py-3.5 px-1 text-gray-lux dark:text-gray-400 font-light">{product.category}</td>
+                            <td className="py-3.5 px-1 font-light">INR {Number(product.price).toLocaleString()}</td>
+                            <td className="py-3.5 px-1 tabular-nums font-semibold">{s}</td>
+                            <td className="py-3.5 px-1">{statusBadge}</td>
+                            <td className="py-3.5 px-1">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={stockInputValue(product)}
+                                  onChange={(e) =>
+                                    setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
+                                  }
+                                  className="w-16 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-center text-xs text-luxury-black dark:text-white transition focus:border-gold-500 focus:ring-1 focus:ring-gold-500/30 outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={savingStockId === product._id}
+                                  onClick={() => saveProductStock(product._id)}
+                                  className="rounded-lg bg-gold-500 hover:bg-gold-hover px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white transition disabled:opacity-50 cursor-pointer"
+                                >
+                                  {savingStockId === product._id ? "…" : "Save"}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-3.5 pl-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  startEditProduct(product);
+                                  setProductsSubTab("add-edit-product");
+                                }}
+                                className="text-xs font-semibold text-gold-600 hover:text-gold-700 hover:underline cursor-pointer"
+                              >
+                                Edit Details
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteProduct(product._id)}
+                                className="text-xs font-semibold text-danger-lux hover:underline cursor-pointer ml-3"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile View */}
+                <div className="mt-4 space-y-3.5 md:hidden text-luxury-black dark:text-white">
                   {filteredProducts.map((product) => {
                     const s = Number(product.stock ?? 0);
                     const statusBadge =
@@ -3821,14 +3997,19 @@ const AdminDashboard = () => {
                         </span>
                       );
                     return (
-                      <tr key={product._id} className="hover:bg-gold-500/5 transition-colors">
-                        <td className="py-3.5 pr-3 font-serif text-sm font-medium">{product.name}</td>
-                        <td className="py-3.5 px-1 text-gray-lux dark:text-gray-400 font-light">{product.category}</td>
-                        <td className="py-3.5 px-1 font-light">INR {Number(product.price).toLocaleString()}</td>
-                        <td className="py-3.5 px-1 tabular-nums font-semibold">{s}</td>
-                        <td className="py-3.5 px-1">{statusBadge}</td>
-                        <td className="py-3.5 px-1">
-                          <div className="flex items-center justify-center gap-1.5">
+                      <article key={product._id} className="rounded-xl border border-gold-200/15 dark:border-gold-900/10 bg-white/70 dark:bg-white/5 p-4 space-y-3">
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <p className="text-sm font-serif font-medium">{product.name}</p>
+                            <p className="mt-0.5 text-[10px] text-gray-lux dark:text-gray-400 tracking-wider uppercase font-light">
+                              {product.category} · INR {Number(product.price).toLocaleString()}
+                            </p>
+                          </div>
+                          {statusBadge}
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gold-200/15 dark:border-gold-900/10 pt-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-gray-lux dark:text-gray-400 font-light">Stock:</span>
                             <input
                               type="number"
                               min="0"
@@ -3836,118 +4017,43 @@ const AdminDashboard = () => {
                               onChange={(e) =>
                                 setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
                               }
-                              className="w-16 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-center text-xs text-luxury-black dark:text-white transition focus:border-gold-500 focus:ring-1 focus:ring-gold-500/30 outline-none"
+                              className="w-16 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-center text-xs text-luxury-black dark:text-white transition focus:border-gold-500 outline-none"
                             />
                             <button
                               type="button"
                               disabled={savingStockId === product._id}
                               onClick={() => saveProductStock(product._id)}
-                              className="rounded-lg bg-gold-500 hover:bg-gold-hover px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white transition disabled:opacity-50 cursor-pointer"
+                              className="rounded-lg bg-gold-500 hover:bg-gold-hover px-3 py-1 text-[10px] font-bold uppercase text-white transition cursor-pointer"
                             >
-                              {savingStockId === product._id ? "…" : "Save"}
+                              Save
                             </button>
                           </div>
-                        </td>
-                        <td className="py-3.5 pl-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              startEditProduct(product);
-                              setProductsSubTab("add-edit-product");
-                            }}
-                            className="text-xs font-semibold text-gold-600 hover:text-gold-700 hover:underline cursor-pointer"
-                          >
-                            Edit Details
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteProduct(product._id)}
-                            className="text-xs font-semibold text-danger-lux hover:underline cursor-pointer ml-3"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
+                          <div className="space-x-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                startEditProduct(product);
+                                setProductsSubTab("add-edit-product");
+                              }}
+                              className="text-xs font-semibold text-gold-600 cursor-pointer"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(product._id)}
+                              className="text-xs font-semibold text-danger-lux cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </article>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile View */}
-            <div className="mt-4 space-y-3.5 md:hidden text-luxury-black dark:text-white">
-              {filteredProducts.map((product) => {
-                const s = Number(product.stock ?? 0);
-                const statusBadge =
-                  s <= 0 ? (
-                    <span className="inline-flex rounded-full bg-danger-lux/10 border border-danger-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-danger-lux">
-                      Out of stock
-                    </span>
-                  ) : s <= 5 ? (
-                    <span className="inline-flex rounded-full bg-warning-lux/10 border border-warning-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning-lux">
-                      Low
-                    </span>
-                  ) : (
-                    <span className="inline-flex rounded-full bg-success-lux/10 border border-success-lux/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-success-lux">
-                      In Stock
-                    </span>
-                  );
-                return (
-                  <article key={product._id} className="rounded-xl border border-gold-200/15 dark:border-gold-900/10 bg-white/70 dark:bg-white/5 p-4 space-y-3">
-                    <div className="flex justify-between items-start gap-2">
-                      <div>
-                        <p className="text-sm font-serif font-medium">{product.name}</p>
-                        <p className="mt-0.5 text-[10px] text-gray-lux dark:text-gray-400 tracking-wider uppercase font-light">
-                          {product.category} · INR {Number(product.price).toLocaleString()}
-                        </p>
-                      </div>
-                      {statusBadge}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gold-200/15 dark:border-gold-900/10 pt-3">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-gray-lux dark:text-gray-400 font-light">Stock:</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={stockInputValue(product)}
-                          onChange={(e) =>
-                            setStockDrafts((prev) => ({ ...prev, [product._id]: e.target.value }))
-                          }
-                          className="w-16 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-center text-xs text-luxury-black dark:text-white transition focus:border-gold-500 outline-none"
-                        />
-                        <button
-                          type="button"
-                          disabled={savingStockId === product._id}
-                          onClick={() => saveProductStock(product._id)}
-                          className="rounded-lg bg-gold-500 hover:bg-gold-hover px-3 py-1 text-[10px] font-bold uppercase text-white transition cursor-pointer"
-                        >
-                          Save
-                        </button>
-                      </div>
-                      <div className="space-x-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            startEditProduct(product);
-                            setProductsSubTab("add-edit-product");
-                          }}
-                          className="text-xs font-semibold text-gold-600 cursor-pointer"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteProduct(product._id)}
-                          className="text-xs font-semibold text-danger-lux cursor-pointer"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -4041,18 +4147,10 @@ const AdminDashboard = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-        <div className="text-center space-y-4">
-          <svg className="animate-spin h-10 w-10 text-emerald-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p className="text-sm font-semibold tracking-wide">Loading management database...</p>
-        </div>
-      </div>
-    );
-  }  const sidebarItems = [
+    return <PremiumRingLoader text="Loading management database..." />;
+  }
+
+  const sidebarItems = [
     { id: "overview", label: "Overview", icon: "📊", permission: null },
     { id: "products", label: "Products & Stock", icon: "🛍️", permission: ["PRODUCTS_VIEW", "INVENTORY_VIEW"] },
     { id: "orders", label: "Orders", icon: "📦", permission: "ORDERS_VIEW" },
@@ -4074,6 +4172,7 @@ const AdminDashboard = () => {
   return (
     <div className={`min-h-screen flex transition-colors duration-300 ${darkMode ? "dark bg-luxury-black text-white" : "bg-[#FAF7F2] text-luxury-black"}`}>
       <SEO title={activeTitle} description="Niyora Gifts Admin Console - Manage products, stock alerts, invoices, customer support, campaigns and employee accounts." />
+      <LoadingOverlay active={isBusy} text={busyText} />
       {showInactivityWarning && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
@@ -4868,8 +4967,12 @@ const AdminDashboard = () => {
           Monitor campaign redemptions and usage stats. Use &quot;Email&quot; to send specific codes directly to customer inboxes.
         </p>
         
-        {couponEmailTargetId ? (
-          <form
+        {fetchingCoupons ? (
+          <TableSkeleton rows={5} cols={8} />
+        ) : (
+          <>
+            {couponEmailTargetId ? (
+              <form
             onSubmit={submitCouponEmail}
             className="mt-4 rounded-2xl border border-sky-100 bg-sky-50/20 p-5 animate-fade-in"
           >
@@ -5084,6 +5187,8 @@ const AdminDashboard = () => {
             </tbody>
           </table>
         </div>
+          </>
+        )}
       </div>
       </>
       )}
@@ -5521,7 +5626,11 @@ const AdminDashboard = () => {
       {activeTab === "orders" && (
         <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm space-y-4">
           <h3 className="text-lg font-serif tracking-wide text-luxury-black dark:text-white">Manage Orders</h3>
-        <div className="mt-3 flex overflow-x-auto items-center gap-2.5 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
+          {fetchingOrders ? (
+            <TableSkeleton rows={5} cols={8} />
+          ) : (
+            <>
+              <div className="mt-3 flex overflow-x-auto items-center gap-2.5 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
           {["all", "active", "archived"].map((view) => (
             <button
               key={view}
@@ -5967,6 +6076,8 @@ const AdminDashboard = () => {
             </tbody>
           </table>
         </div>
+            </>
+          )}
       </div>
       )}
 
@@ -6085,13 +6196,7 @@ const NewsletterSubscribersSection = ({ authHeader }) => {
       )}
 
       {loading ? (
-        <div className="py-8 text-center text-xs text-gray-lux dark:text-gray-400 flex items-center justify-center gap-2">
-          <svg className="animate-spin h-5 w-5 text-gold-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Loading subscribers...
-        </div>
+        <TableSkeleton rows={5} cols={3} />
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[500px] text-left text-xs border-collapse">
