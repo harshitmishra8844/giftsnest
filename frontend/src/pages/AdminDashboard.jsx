@@ -557,6 +557,20 @@ const AdminDashboard = () => {
     return "Select all visible";
   }, [allVisibleOrdersSelected, labelPrintFilter]);
 
+  const activeTitle = useMemo(() => {
+    const tabTitles = {
+      overview: "Admin Dashboard | Niyora Gifts Admin",
+      products: "Product Management | Niyora Gifts Admin",
+      orders: "Orders Management | Niyora Gifts Admin",
+      tickets: "Customer Support | Niyora Gifts Admin",
+      coupons: "Business Analytics & Settings | Niyora Gifts Admin",
+      newsletter: "Newsletter Campaigns | Niyora Gifts Admin",
+      employees: "Employees & Permissions | Niyora Gifts Admin",
+      logs: "Security Audit Logs | Niyora Gifts Admin",
+    };
+    return tabTitles[activeTab] || "Admin Dashboard | Niyora Gifts Admin";
+  }, [activeTab]);
+
   useEffect(() => {
     const visibleSet = new Set(visibleOrderIds);
     setSelectedOrderIds((prev) => prev.filter((orderId) => visibleSet.has(orderId)));
@@ -4056,20 +4070,6 @@ const AdminDashboard = () => {
     }
     return hasPermission(item.permission);
   });
-
-  const activeTitle = useMemo(() => {
-    const tabTitles = {
-      overview: "Admin Dashboard | Niyora Gifts Admin",
-      products: "Product Management | Niyora Gifts Admin",
-      orders: "Orders Management | Niyora Gifts Admin",
-      tickets: "Customer Support | Niyora Gifts Admin",
-      coupons: "Business Analytics & Settings | Niyora Gifts Admin",
-      newsletter: "Newsletter Campaigns | Niyora Gifts Admin",
-      employees: "Employees & Permissions | Niyora Gifts Admin",
-      logs: "Security Audit Logs | Niyora Gifts Admin",
-    };
-    return tabTitles[activeTab] || "Admin Dashboard | Niyora Gifts Admin";
-  }, [activeTab]);
 
   return (
     <div className={`min-h-screen flex transition-colors duration-300 ${darkMode ? "dark bg-luxury-black text-white" : "bg-[#FAF7F2] text-luxury-black"}`}>
