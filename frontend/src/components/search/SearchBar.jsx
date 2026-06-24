@@ -181,8 +181,8 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
 
   return (
     <div className="relative">
-      <div className="group flex items-center rounded-full border border-white/70 bg-white/75 shadow-[0_10px_30px_rgba(16,185,129,0.18)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_38px_rgba(16,185,129,0.24)] focus-within:-translate-y-0.5 focus-within:border-emerald-200 focus-within:bg-white/90 focus-within:ring-4 focus-within:ring-emerald-200/60 focus-within:shadow-[0_16px_40px_rgba(16,185,129,0.3)]">
-        <span className="pl-3 text-emerald-600 transition group-focus-within:text-emerald-700" aria-hidden="true">
+      <div className="group flex items-center rounded-full border border-white/70 bg-white/75 shadow-[0_10px_30px_rgba(212,175,55,0.08)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_38px_rgba(212,175,55,0.12)] focus-within:-translate-y-0.5 focus-within:border-gold-300 focus-within:bg-white/90 focus-within:ring-4 focus-within:ring-gold-300/20 focus-within:shadow-[0_16px_40px_rgba(212,175,55,0.18)]">
+        <span className="pl-3 text-gold-500 transition group-focus-within:text-gold-600" aria-hidden="true">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -207,6 +207,7 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
           aria-controls={listboxId}
           aria-activedescendant={activeIndex >= 0 && suggestions[activeIndex] ? suggestions[activeIndex].id : undefined}
           className="w-full rounded-full bg-transparent px-3 py-2.5 text-sm text-gray-700 placeholder:text-gray-500 focus:outline-none focus-visible:shadow-none"
+          style={{ outline: "none", boxShadow: "none" }}
         />
         {query ? (
           <button
@@ -231,7 +232,7 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
           onClick={() => runSearch(query)}
           aria-label="Search now"
           title="Search"
-          className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-emerald-700 transition hover:bg-white/80 hover:text-emerald-800 focus-visible:shadow-none"
+          className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-gold-600 transition hover:bg-gold-50 hover:text-gold-700 focus-visible:shadow-none"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -242,7 +243,7 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
           onClick={handleVoiceSearch}
           aria-label="Voice search"
           title="Voice search"
-          className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-emerald-700 transition hover:bg-white/80 hover:text-emerald-800 focus-visible:shadow-none"
+          className="mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-gold-600 transition hover:bg-gold-50 hover:text-gold-700 focus-visible:shadow-none"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3a3 3 0 00-3 3v5a3 3 0 106 0V6a3 3 0 00-3-3zm6 8a6 6 0 01-12 0M12 19v3m-3 0h6" />
@@ -290,16 +291,16 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
             
             {/* Pulsing microphone animation */}
             <div className="relative flex items-center justify-center w-24 h-24">
-              <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
-              <div className="absolute inset-2 bg-emerald-500/40 rounded-full animate-pulse" />
-              <div className="relative w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg">
+              <div className="absolute inset-0 bg-gold-500/20 rounded-full animate-ping" />
+              <div className="absolute inset-2 bg-gold-500/45 rounded-full animate-pulse" />
+              <div className="relative w-16 h-16 bg-gold-600 rounded-full flex items-center justify-center text-white shadow-lg">
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
               </div>
             </div>
             
-            <p className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-gold-800 bg-gold-50 px-3 py-1.5 rounded-full border border-gold-200/50 uppercase tracking-wider">
               Speak clearly now
             </p>
             

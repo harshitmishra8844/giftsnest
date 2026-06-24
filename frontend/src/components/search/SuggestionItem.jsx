@@ -20,8 +20,8 @@ const SuggestionItem = ({ item, query, isActive, onSelect }) => {
         }}
         className={`flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 text-left text-sm transition-all duration-200 cursor-pointer ${
           isActive
-            ? "bg-emerald-50 text-emerald-950 border border-emerald-100 scale-[1.01] shadow-sm"
-            : "text-gray-700 hover:bg-emerald-50/50 border border-transparent"
+            ? "bg-gold-50 text-gold-950 border border-gold-200/50 scale-[1.01] shadow-sm"
+            : "text-gray-700 hover:bg-gold-50/50 border border-transparent"
         }`}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -34,7 +34,7 @@ const SuggestionItem = ({ item, query, isActive, onSelect }) => {
                   className="h-10 w-10 shrink-0 rounded-lg object-cover border border-gray-100 shadow-sm"
                 />
               ) : (
-                <div className="h-10 w-10 shrink-0 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center text-lg">
+                <div className="h-10 w-10 shrink-0 rounded-lg bg-gold-50 text-gold-700 border border-gold-200/30 flex items-center justify-center text-lg">
                   🎁
                 </div>
               )}
@@ -43,7 +43,7 @@ const SuggestionItem = ({ item, query, isActive, onSelect }) => {
                   {parts.map((part, idx) => (
                     <span
                       key={`${item.id}-${idx}`}
-                      className={part.toLowerCase() === safeQuery.toLowerCase() ? "font-bold text-emerald-800 bg-emerald-50" : ""}
+                      className={part.toLowerCase() === safeQuery.toLowerCase() ? "font-bold text-gold-800 bg-gold-50" : ""}
                     >
                       {part}
                     </span>
@@ -63,7 +63,7 @@ const SuggestionItem = ({ item, query, isActive, onSelect }) => {
                 {parts.map((part, idx) => (
                   <span
                     key={`${item.id}-${idx}`}
-                    className={part.toLowerCase() === safeQuery.toLowerCase() ? "font-bold text-emerald-800 bg-emerald-50" : ""}
+                    className={part.toLowerCase() === safeQuery.toLowerCase() ? "font-bold text-gold-800 bg-gold-50" : ""}
                   >
                     {part}
                   </span>
@@ -74,7 +74,7 @@ const SuggestionItem = ({ item, query, isActive, onSelect }) => {
         </div>
 
         {item.type === "Product" && item.price ? (
-          <span className="shrink-0 text-xs font-bold text-emerald-800 bg-emerald-50/70 border border-emerald-100 px-2 py-1 rounded-lg">
+          <span className="shrink-0 text-xs font-bold text-gold-800 bg-gold-50/70 border border-gold-200/40 px-2 py-1 rounded-lg">
             INR {item.price}
           </span>
         ) : (

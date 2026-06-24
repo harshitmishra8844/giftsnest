@@ -21,11 +21,11 @@ const SuggestionsList = ({
     <div
       id={id}
       role="listbox"
-      className="search-dropdown absolute left-0 right-0 top-13 z-30 rounded-3xl border border-emerald-100/50 bg-white/95 backdrop-blur-lg p-4 shadow-[0_20px_50px_rgba(16,185,129,0.15)] flex flex-col gap-4 text-left"
+      className="search-dropdown absolute left-0 right-0 top-13 z-30 rounded-3xl border border-gold-200/40 bg-white/95 backdrop-blur-lg p-4 shadow-[0_20px_50px_rgba(212,175,55,0.08)] flex flex-col gap-4 text-left"
     >
       {isLoading ? (
-        <div className="flex items-center gap-2.5 px-3 py-4 text-sm font-bold text-emerald-800 bg-emerald-50/50 rounded-2xl border border-emerald-100/30">
-          <span className="search-loader inline-block h-4.5 w-4.5 rounded-full border-2 border-emerald-200 border-t-emerald-600 animate-spin" />
+        <div className="flex items-center gap-2.5 px-3 py-4 text-sm font-bold text-gold-800 bg-gold-50/50 rounded-2xl border border-gold-200/30">
+          <span className="search-loader inline-block h-4.5 w-4.5 rounded-full border-2 border-gold-200 border-t-gold-500 animate-spin" />
           Analyzing catalog database...
         </div>
       ) : null}
@@ -102,7 +102,7 @@ const SuggestionsList = ({
                       event.preventDefault();
                       onSelect(term);
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50/50 px-3.5 py-1.5 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100/80 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-gold-200/40 bg-gold-50/40 text-gold-800 transition hover:bg-gold-100/50 cursor-pointer"
                   >
                     <span>🕒</span>
                     <span>{term}</span>
@@ -123,7 +123,7 @@ const SuggestionsList = ({
                     event.preventDefault();
                     onPickTrending(term);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-bold text-gray-700 transition hover:border-emerald-300 hover:text-emerald-700 hover:scale-[1.01] cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-bold text-gray-700 transition hover:border-gold-400 hover:text-gold-600 hover:scale-[1.01] cursor-pointer"
                 >
                   <span>🔥</span>
                   <span>{term}</span>
