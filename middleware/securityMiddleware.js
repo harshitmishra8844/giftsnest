@@ -22,10 +22,22 @@ const csrfProtection = (req, res, next) => {
 
   const isAllowed = (urlStr) => {
     if (!urlStr) return false;
+    
+    // Normalize domain string by removing protocols, www., ports, and paths
+    const normalize = (str) => {
+      let cleaned = str.trim().toLowerCase();
+      cleaned = cleaned.replace(/^(https?:\/\/)?(www\.)?/, "");
+      cleaned = cleaned.split(":")[0];
+      cleaned = cleaned.split("/")[0];
+      return cleaned;
+    };
+
+    const requestDomain = normalize(urlStr);
+
     if (
-      urlStr.includes("localhost") ||
-      urlStr.includes("127.0.0.1") ||
-      urlStr.includes("[::1]")
+      requestDomain === "localhost" ||
+      requestDomain === "127.0.0.1" ||
+      requestDomain === "[::1]"
     ) {
       return true;
     }
@@ -37,7 +49,8 @@ const csrfProtection = (req, res, next) => {
       .filter(Boolean);
 
     for (const allowedUrl of allowedUrls) {
-      if (urlStr.startsWith(allowedUrl)) {
+      const allowedDomain = normalize(allowedUrl);
+      if (requestDomain === allowedDomain || requestDomain.endsWith("." + allowedDomain)) {
         return true;
       }
     }
