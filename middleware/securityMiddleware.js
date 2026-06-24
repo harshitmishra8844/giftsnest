@@ -20,8 +20,6 @@ const csrfProtection = (req, res, next) => {
   const origin = req.headers.origin;
   const referer = req.headers.referer;
 
-  const allowedFrontendUrl = process.env.FRONTEND_URL || "";
-
   const isAllowed = (urlStr) => {
     if (!urlStr) return false;
     if (
@@ -31,17 +29,28 @@ const csrfProtection = (req, res, next) => {
     ) {
       return true;
     }
-    if (allowedFrontendUrl && urlStr.startsWith(allowedFrontendUrl)) {
-      return true;
+    
+    // Support multiple comma-separated frontend URLs
+    const allowedUrls = (process.env.FRONTEND_URL || "")
+      .split(",")
+      .map(url => url.trim())
+      .filter(Boolean);
+
+    for (const allowedUrl of allowedUrls) {
+      if (urlStr.startsWith(allowedUrl)) {
+        return true;
+      }
     }
     return false;
   };
 
   if (origin && !isAllowed(origin)) {
+    console.warn(`[CSRF Block] Origin "${origin}" is not allowed. Allowed: ${process.env.FRONTEND_URL || 'none'}`);
     return res.status(403).json({ message: "CSRF protection: Invalid request origin." });
   }
 
   if (!origin && referer && !isAllowed(referer)) {
+    console.warn(`[CSRF Block] Referer "${referer}" is not allowed. Allowed: ${process.env.FRONTEND_URL || 'none'}`);
     return res.status(403).json({ message: "CSRF protection: Invalid request referer." });
   }
 
