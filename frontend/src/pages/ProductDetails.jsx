@@ -240,14 +240,32 @@ const ProductDetails = () => {
   }, [product]);
 
   const specifications = useMemo(() => {
+    let list = [];
     if (Array.isArray(product?.specifications) && product.specifications.length > 0) {
-      return product.specifications.filter((item) => item?.label && item?.value);
+      list = product.specifications.filter((item) => item?.label && item?.value);
+    } else {
+      list = [
+        { label: "Category", value: String(product?.category || "Gift") },
+        { label: "Availability", value: Number(product?.stock ?? 0) > 0 ? "In Stock" : "Out of Stock" },
+        { label: "Customizable", value: product?.customisable === false ? "No" : "Yes" },
+      ];
     }
-    return [
-      { label: "Category", value: String(product?.category || "Gift") },
-      { label: "Availability", value: Number(product?.stock ?? 0) > 0 ? "In Stock" : "Out of Stock" },
-      { label: "Customizable", value: product?.customisable === false ? "No" : "Yes" },
-    ];
+    // Filter out Care Instructions since we show it in a dedicated card
+    return list.filter(item => String(item.label || "").trim().toLowerCase() !== "care instructions");
+  }, [product]);
+
+  const careInstructions = useMemo(() => {
+    if (product?.careInstructions && String(product.careInstructions).trim()) {
+      return String(product.careInstructions).trim();
+    }
+    // Fallback: search in specifications before filtering
+    if (Array.isArray(product?.specifications)) {
+      const spec = product.specifications.find(
+        (item) => String(item?.label || "").trim().toLowerCase() === "care instructions"
+      );
+      return spec ? String(spec.value).trim() : "";
+    }
+    return "";
   }, [product]);
   const findSpecValue = (label) =>
     String(
@@ -542,18 +560,17 @@ const ProductDetails = () => {
                       setUserInteractedWithGallery(true);
                       setActiveImage(imageUrl);
                     }}
-                    className={`overflow-hidden rounded-xl border transition-all duration-200 aspect-square flex items-center justify-center p-1.5 bg-gold-50/10 cursor-pointer ${
-                      activeImage === imageUrl
-                        ? "scale-[1.03] border-gold-500 shadow-xs bg-white"
-                        : "border-champagne hover:scale-[1.01] hover:border-gold-300"
-                    }`}
+                    className={`overflow-hidden rounded-xl border transition-all duration-200 aspect-square flex items-center justify-center p-1.5 bg-gold-50/10 cursor-pointer ${activeImage === imageUrl
+                      ? "scale-[1.03] border-gold-500 shadow-xs bg-white"
+                      : "border-champagne hover:scale-[1.01] hover:border-gold-300"
+                      }`}
                   >
                     <img src={resolveMediaUrl(imageUrl)} alt={product.name} className="max-h-full max-w-full object-contain transition duration-200 hover:brightness-105" />
                   </button>
                 ))}
               </div>
             ) : null}
-            
+
             {/* Gallery Checkout Bar for Tablet/Desktop */}
             <div className="mt-6 hidden grid-cols-2 gap-4 sm:grid">
               {!product.isPersonalized && cartQuantity > 0 ? (
@@ -645,7 +662,7 @@ const ProductDetails = () => {
                     <label className="block text-xs font-medium text-luxury-black">
                       {product.personalizationImageLabel || "Upload Photo"} {product.personalizationImageRequired && <span className="text-red-500">*</span>}
                     </label>
-                    
+
                     <div className="flex gap-3 items-center">
                       <div className="flex-1">
                         <div className="border border-dashed border-champagne rounded-xl p-3.5 text-center hover:border-gold-500 transition-colors bg-white/40 cursor-pointer relative group">
@@ -786,9 +803,8 @@ const ProductDetails = () => {
                 {specifications.map((item, index) => (
                   <div
                     key={`${item.label}-${index}`}
-                    className={`grid gap-2 px-4 py-2.5 text-xs md:grid-cols-[180px_1fr] ${
-                      index !== specifications.length - 1 ? "border-b border-champagne/20" : ""
-                    }`}
+                    className={`grid gap-2 px-4 py-2.5 text-xs md:grid-cols-[180px_1fr] ${index !== specifications.length - 1 ? "border-b border-champagne/20" : ""
+                      }`}
                   >
                     <p className="font-medium text-text-secondary">{item.label}</p>
                     <p className="text-luxury-black font-light">{item.value}</p>
@@ -796,6 +812,14 @@ const ProductDetails = () => {
                 ))}
               </div>
             </div>
+
+            {/* Care Instructions */}
+            {careInstructions && (
+              <div className="rounded-2xl border border-champagne bg-white p-5 shadow-xs">
+                <h2 className="text-sm font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-2">Care Instructions</h2>
+                <p className="mt-3 text-xs leading-relaxed text-text-secondary font-light whitespace-pre-line">{careInstructions}</p>
+              </div>
+            )}
 
             {/* Return & Replacement Policy Card */}
             {(product.returnAvailable || product.replacementAvailable) && (
@@ -819,7 +843,7 @@ const ProductDetails = () => {
                       <div>
                         <p className="font-semibold text-luxury-black text-[11px]">{product.returnWindow} Return</p>
                         <p className="text-[9px] text-text-secondary font-light mt-0.5">
-                          {product.returnConditions?.some(c => c.startsWith("Return Shipping:")) 
+                          {product.returnConditions?.some(c => c.startsWith("Return Shipping:"))
                             ? product.returnConditions.find(c => c.startsWith("Return Shipping:"))?.replace("Return Shipping: ", "")
                             : "Terms Apply"}
                         </p>
@@ -842,17 +866,17 @@ const ProductDetails = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2 pt-1 text-[9px]">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 border border-emerald-100/50">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gold-50 px-2.5 py-1 font-medium text-gold-700 border border-gold-100/50">
                     <span className="text-[10px]">✓</span> Damaged Product Covered
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 border border-emerald-100/50">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gold-50 px-2.5 py-1 font-medium text-gold-700 border border-gold-100/50">
                     <span className="text-[10px]">✓</span> Wrong Product Covered
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-gold-50 px-2.5 py-1 font-medium text-gold-700 border border-gold-100/50">
                     <span className="text-[10px]">✓</span> Easy Digital Process
                   </span>
                 </div>
-                
+
                 <p className="text-[9px] text-text-secondary/70 italic mt-2 leading-relaxed">
                   Note: Returns accepted within {product.returnWindow || "7 Days"}. Product must be unused and in original packaging. Personalized products are non-returnable. Refund processed after quality inspection.
                 </p>

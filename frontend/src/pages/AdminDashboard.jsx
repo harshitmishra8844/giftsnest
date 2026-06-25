@@ -261,7 +261,7 @@ const AdminDashboard = () => {
     try {
       setLoadingTickets(true);
       setError("");
-      
+
       const params = {};
       if (statusVal && statusVal !== "All") {
         params.status = statusVal;
@@ -367,7 +367,7 @@ const AdminDashboard = () => {
       .map((item) => item.trim())
       .filter((item) => item && item !== urlToDelete)
       .join("\n");
-    
+
     let newImage = form.image;
     if (form.image === urlToDelete) {
       const remaining = String(newImagesText)
@@ -376,7 +376,7 @@ const AdminDashboard = () => {
         .filter(Boolean);
       newImage = remaining[0] || "";
     }
-    
+
     setForm((prev) => ({
       ...prev,
       image: newImage,
@@ -390,11 +390,11 @@ const AdminDashboard = () => {
         .split(/\r?\n|,/)
         .map((item) => item.trim())
         .filter(Boolean);
-      
+
       if (!existing.includes(url)) {
         existing.unshift(url);
       }
-      
+
       return {
         ...prev,
         image: url,
@@ -408,14 +408,14 @@ const AdminDashboard = () => {
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
-    
+
     let newList;
     if (currentList.includes(cat)) {
       newList = currentList.filter((item) => item !== cat);
     } else {
       newList = [...currentList, cat];
     }
-    
+
     setForm((prev) => ({
       ...prev,
       category: newList.join(", ")
@@ -478,13 +478,13 @@ const AdminDashboard = () => {
       selectedCategory === "All"
         ? products
         : products.filter(
-            (product) => {
-              const productCat = String(product.category || "").toLowerCase();
-              const selectedCat = selectedCategory.toLowerCase();
-              const categoriesList = productCat.split(",").map(c => c.trim());
-              return categoriesList.includes(selectedCat);
-            }
-          ),
+          (product) => {
+            const productCat = String(product.category || "").toLowerCase();
+            const selectedCat = selectedCategory.toLowerCase();
+            const categoriesList = productCat.split(",").map(c => c.trim());
+            return categoriesList.includes(selectedCat);
+          }
+        ),
     [products, selectedCategory]
   );
 
@@ -658,7 +658,7 @@ const AdminDashboard = () => {
       });
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      
+
       const maxLens = {};
       dataToExport.forEach((row) => {
         Object.keys(row).forEach((key) => {
@@ -672,7 +672,7 @@ const AdminDashboard = () => {
 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Status");
-      
+
       const dateStr = new Date().toISOString().split("T")[0];
       XLSX.writeFile(workbook, `niyora-gifts-stock-report-${dateStr}.xlsx`);
     } catch (err) {
@@ -694,7 +694,7 @@ const AdminDashboard = () => {
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(22);
       doc.text(storeInfo.storeName || "Niyora Gifts", 14, 18);
-      
+
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(209, 250, 229);
@@ -941,14 +941,14 @@ const AdminDashboard = () => {
       }
     }
   }, [
-    activeTab, 
+    activeTab,
     logsSubTab,
-    adminAuth, 
-    logsPage, 
-    logsSearch, 
-    logsUserFilter, 
-    logsActionFilter, 
-    logsStartDate, 
+    adminAuth,
+    logsPage,
+    logsSearch,
+    logsUserFilter,
+    logsActionFilter,
+    logsStartDate,
     logsEndDate,
     loginLogsPage
   ]);
@@ -1268,7 +1268,7 @@ const AdminDashboard = () => {
     }
   };
 
-  
+
   const handleDuplicateProduct = (product) => {
     const { _id, sku, createdAt, updatedAt, __v, ...rest } = product;
     setDuplicateData({
@@ -1854,11 +1854,11 @@ const AdminDashboard = () => {
           </thead>
           <tbody>
             ${invoiceItems.map((item) => {
-              const qty = Number(item.quantity || 0);
-              const price = Number(item.price || 0);
-              const lineTotal = (qty * price).toFixed(2);
-              return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
-            }).join("")}
+      const qty = Number(item.quantity || 0);
+      const price = Number(item.price || 0);
+      const lineTotal = (qty * price).toFixed(2);
+      return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+    }).join("")}
             ${remainingCount > 0 ? `<tr><td colspan="4" class="muted">+ ${remainingCount} more item(s) not shown</td></tr>` : ""}
           </tbody>
         </table>
@@ -2057,11 +2057,11 @@ const AdminDashboard = () => {
               </thead>
               <tbody>
                 ${items.map((item) => {
-                  const qty = Number(item.quantity || 0);
-                  const price = Number(item.price || 0);
-                  const lineTotal = (qty * price).toFixed(2);
-                  return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
-                }).join("")}
+      const qty = Number(item.quantity || 0);
+      const price = Number(item.price || 0);
+      const lineTotal = (qty * price).toFixed(2);
+      return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+    }).join("")}
               </tbody>
             </table>
             <div class="totals">
@@ -2157,18 +2157,17 @@ const AdminDashboard = () => {
               </thead>
               <tbody>
                 ${invoiceItems
-                  .map((item) => {
-                    const qty = Number(item.quantity || 0);
-                    const price = Number(item.price || 0);
-                    const lineTotal = (qty * price).toFixed(2);
-                    return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
-                  })
-                  .join("")}
-                ${
-                  remainingCount > 0
-                    ? `<tr><td colspan="4" class="muted">+ ${remainingCount} more item(s) not shown</td></tr>`
-                    : ""
-                }
+        .map((item) => {
+          const qty = Number(item.quantity || 0);
+          const price = Number(item.price || 0);
+          const lineTotal = (qty * price).toFixed(2);
+          return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+        })
+        .join("")}
+                ${remainingCount > 0
+        ? `<tr><td colspan="4" class="muted">+ ${remainingCount} more item(s) not shown</td></tr>`
+        : ""
+      }
               </tbody>
             </table>
             <div class="totals">
@@ -2521,7 +2520,7 @@ const AdminDashboard = () => {
 
         {/* 4 Stats Cards */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          
+
           <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-xs hover-float hover:shadow-md transition-all duration-300">
             <div className="flex justify-between items-start">
               <div>
@@ -2598,7 +2597,7 @@ const AdminDashboard = () => {
                     <div className="w-full bg-cream dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
                       <div
                         className="bg-gold-500 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (member.totalActions / (Math.max(...teamStats.map(m=>m.totalActions), 1))) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (member.totalActions / (Math.max(...teamStats.map(m => m.totalActions), 1))) * 100)}%` }}
                       />
                     </div>
                   </div>
@@ -2733,11 +2732,11 @@ const AdminDashboard = () => {
 
         {/* Split Console View or General List */}
         <div className="grid gap-6 lg:grid-cols-3">
-          
+
           {/* Tickets List Column */}
           <div className={`${selectedTicket ? "lg:col-span-1" : "lg:col-span-3"} space-y-4`}>
             <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-5 shadow-sm space-y-4">
-              
+
               {/* Header search & filters */}
               <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center">
                 <div className="flex flex-wrap gap-1.5">
@@ -2749,17 +2748,16 @@ const AdminDashboard = () => {
                         setTicketStatusFilter(filter);
                         fetchAdminTickets(filter, ticketSearchQuery);
                       }}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                        ticketStatusFilter === filter
-                          ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
-                          : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500"
-                      }`}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${ticketStatusFilter === filter
+                        ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
+                        : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500"
+                        }`}
                     >
                       {filter}
                     </button>
                   ))}
                 </div>
-                
+
                 <input
                   type="text"
                   placeholder="Search code, subject or user..."
@@ -2784,19 +2782,17 @@ const AdminDashboard = () => {
                         <div
                           key={t._id}
                           onClick={() => fetchAdminTicketDetails(t._id)}
-                          className={`p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                            selectedTicket._id === t._id
-                              ? "border-gold-500 bg-gold-500/5 dark:bg-gold-500/10 shadow-sm shadow-gold-500/5"
-                              : "border-gold-200/10 dark:border-gold-900/10 hover:border-gold-500 bg-[#FAF7F2]/50 dark:bg-white/5"
-                          }`}
+                          className={`p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${selectedTicket._id === t._id
+                            ? "border-gold-500 bg-gold-500/5 dark:bg-gold-500/10 shadow-sm shadow-gold-500/5"
+                            : "border-gold-200/10 dark:border-gold-900/10 hover:border-gold-500 bg-[#FAF7F2]/50 dark:bg-white/5"
+                            }`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-mono text-[10px] font-bold text-luxury-black dark:text-white">{t.ticketCode}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${
-                              t.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
+                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${t.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
                               t.status === "In Progress" ? "bg-gold-500/10 border-gold-500/20 text-gold-600" :
-                              "bg-success-lux/10 border-success-lux/20 text-success-lux"
-                            }`}>
+                                "bg-success-lux/10 border-success-lux/20 text-success-lux"
+                              }`}>
                               {t.status}
                             </span>
                           </div>
@@ -2833,11 +2829,10 @@ const AdminDashboard = () => {
                               {t.order ? `ORD-${t.order.orderCode || t.order._id?.slice(-8)}` : <span className="text-gray-400">&mdash;</span>}
                             </td>
                             <td className="py-3.5 px-4">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                                t.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${t.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
                                 t.status === "In Progress" ? "bg-gold-500/10 border-gold-500/20 text-gold-600" :
-                                "bg-success-lux/10 border-success-lux/20 text-success-lux"
-                              }`}>
+                                  "bg-success-lux/10 border-success-lux/20 text-success-lux"
+                                }`}>
                                 {t.status}
                               </span>
                             </td>
@@ -2869,7 +2864,7 @@ const AdminDashboard = () => {
           {selectedTicket && (
             <div className="lg:col-span-2 space-y-4">
               <div className="rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm flex flex-col min-h-[550px]">
-                
+
                 {/* Header info */}
                 <div className="border-b border-gold-200/10 dark:border-gold-900/10 pb-4 mb-4 flex flex-wrap justify-between items-start gap-4 text-luxury-black dark:text-white">
                   <div>
@@ -2877,16 +2872,15 @@ const AdminDashboard = () => {
                       <span className="font-mono text-xs font-bold bg-gold-500/10 px-2 py-0.5 rounded text-gold-600 border border-gold-500/20">
                         {selectedTicket.ticketCode}
                       </span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                        selectedTicket.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${selectedTicket.status === "Open" ? "bg-warning-lux/10 border-warning-lux/20 text-warning-lux" :
                         selectedTicket.status === "In Progress" ? "bg-gold-500/10 border-gold-500/20 text-gold-600" :
-                        "bg-success-lux/10 border-success-lux/20 text-success-lux"
-                      }`}>
+                          "bg-success-lux/10 border-success-lux/20 text-success-lux"
+                        }`}>
                         {selectedTicket.status}
                       </span>
                     </div>
                     <h3 className="text-base font-semibold">{selectedTicket.subject}</h3>
-                    
+
                     {/* User profile info */}
                     <div className="mt-2 text-[10px] text-gray-lux dark:text-gray-400 font-light space-y-1">
                       <p>
@@ -2958,11 +2952,10 @@ const AdminDashboard = () => {
                           </span>
                         </div>
                         <div
-                          className={`rounded-2xl p-3 text-xs leading-relaxed max-w-lg ${
-                            msg.isAdmin
-                              ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black rounded-tr-none shadow-sm border border-gold-900/10"
-                              : "bg-cream/40 dark:bg-white/5 text-luxury-black dark:text-gray-250 border border-gold-200/15 dark:border-gold-900/10 rounded-tl-none"
-                          }`}
+                          className={`rounded-2xl p-3 text-xs leading-relaxed max-w-lg ${msg.isAdmin
+                            ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black rounded-tr-none shadow-sm border border-gold-900/10"
+                            : "bg-cream/40 dark:bg-white/5 text-luxury-black dark:text-gray-250 border border-gold-200/15 dark:border-gold-900/10 rounded-tl-none"
+                            }`}
                         >
                           {msg.message}
                         </div>
@@ -3042,13 +3035,12 @@ const AdminDashboard = () => {
                       <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{log.browser || "Unknown Browser"}</div>
                     </td>
                     <td className="py-3">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
-                        log.status === "Success"
-                          ? "bg-success-lux/10 border-success-lux/20 text-success-lux"
-                          : log.status === "Failed"
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${log.status === "Success"
+                        ? "bg-success-lux/10 border-success-lux/20 text-success-lux"
+                        : log.status === "Failed"
                           ? "bg-danger-lux/10 border-danger-lux/20 text-danger-lux"
                           : "bg-warning-lux/10 border-warning-lux/20 text-warning-lux"
-                      }`}>
+                        }`}>
                         {log.status}
                       </span>
                     </td>
@@ -3103,22 +3095,20 @@ const AdminDashboard = () => {
             <button
               type="button"
               onClick={() => setLogsSubTab("audit")}
-              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-                logsSubTab === "audit"
-                  ? "border-gold-500 text-gold-500 font-bold"
-                  : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-              }`}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${logsSubTab === "audit"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+                }`}
             >
               System Audit Logs
             </button>
             <button
               type="button"
               onClick={() => setLogsSubTab("login")}
-              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-                logsSubTab === "login"
-                  ? "border-gold-500 text-gold-500 font-bold"
-                  : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-              }`}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${logsSubTab === "login"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+                }`}
             >
               Login History Logs
             </button>
@@ -3129,7 +3119,7 @@ const AdminDashboard = () => {
           <>
             <h3 className="text-xl font-serif font-light text-luxury-black dark:text-white mb-2">System Audit Logs</h3>
             <p className="text-xs text-gray-lux dark:text-gray-400 mb-6 font-light">Trace employee actions, configuration revisions, and security actions.</p>
-            
+
             {/* Filters */}
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-5 mb-6 text-luxury-black dark:text-white">
               <input
@@ -3288,33 +3278,30 @@ const AdminDashboard = () => {
           <button
             type="button"
             onClick={() => setEmployeesSubTab("employees")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-              employeesSubTab === "employees"
-                ? "border-gold-500 text-gold-500 font-bold"
-                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-            }`}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${employeesSubTab === "employees"
+              ? "border-gold-500 text-gold-500 font-bold"
+              : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+              }`}
           >
             Employees List
           </button>
           <button
             type="button"
             onClick={() => setEmployeesSubTab("roles")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-              employeesSubTab === "roles"
-                ? "border-gold-500 text-gold-500 font-bold"
-                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-            }`}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${employeesSubTab === "roles"
+              ? "border-gold-500 text-gold-500 font-bold"
+              : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+              }`}
           >
             Custom Roles Matrix
           </button>
           <button
             type="button"
             onClick={() => setEmployeesSubTab("departments")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-              employeesSubTab === "departments"
-                ? "border-gold-500 text-gold-500 font-bold"
-                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-            }`}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${employeesSubTab === "departments"
+              ? "border-gold-500 text-gold-500 font-bold"
+              : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+              }`}
           >
             Departments
           </button>
@@ -3369,7 +3356,7 @@ const AdminDashboard = () => {
                         <p className="font-medium text-luxury-black dark:text-white">{emp.designation || "Executive"}</p>
                         <p className="text-[10px] text-gray-lux dark:text-gray-400 font-light mt-0.5">{emp.department?.name || "General/Unassigned"}</p>
                       </td>
-                      <td className="py-3 max-w-[200px] truncate" title={emp.roles?.map(r=>r.name).join(", ")}>
+                      <td className="py-3 max-w-[200px] truncate" title={emp.roles?.map(r => r.name).join(", ")}>
                         {emp.roles?.map(r => (
                           <span key={r._id} className="inline-block bg-[#FAF7F2] dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 px-2 py-0.5 rounded text-[9px] font-medium mr-1 mb-1">
                             {r.name}
@@ -3430,11 +3417,10 @@ const AdminDashboard = () => {
                   <div
                     key={r._id}
                     onClick={() => startEditRole(r)}
-                    className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                      editingRoleId === r._id
-                        ? "border-gold-500 bg-gold-500/5 dark:bg-gold-500/10 shadow-sm"
-                        : "border-gold-200/10 dark:border-gold-900/10 hover:border-gold-500 bg-[#FAF7F2]/50 dark:bg-white/5"
-                    }`}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer ${editingRoleId === r._id
+                      ? "border-gold-500 bg-gold-500/5 dark:bg-gold-500/10 shadow-sm"
+                      : "border-gold-200/10 dark:border-gold-900/10 hover:border-gold-500 bg-[#FAF7F2]/50 dark:bg-white/5"
+                      }`}
                   >
                     <div className="flex justify-between items-start text-xs">
                       <span className="font-bold text-luxury-black dark:text-white">{r.name}</span>
@@ -3467,7 +3453,7 @@ const AdminDashboard = () => {
                 {editingRoleId ? `Edit Custom Permissions Matrix: ${roleForm.name}` : "Create Custom Security Role"}
               </h3>
               <p className="text-xs text-gray-lux dark:text-gray-400 mb-4 font-light">Toggle granular access capabilities across features.</p>
-              
+
               <form onSubmit={handleSaveRole} className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <input
@@ -3610,15 +3596,15 @@ const AdminDashboard = () => {
         {showEmployeeModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
-            <div 
-              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity cursor-pointer" 
+            <div
+              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity cursor-pointer"
               onClick={() => {
                 setShowEmployeeModal(false);
                 setEditingEmployeeId("");
                 setEmployeeForm(emptyEmployeeForm);
               }}
             />
-            
+
             {/* Modal Content Box */}
             <div className="relative w-full max-w-lg rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-2xl z-10 overflow-y-auto max-h-[90vh] text-left animate-page-enter">
               <div className="flex justify-between items-center pb-4 mb-4 border-b border-gold-200/10 dark:border-gold-900/10">
@@ -3799,22 +3785,20 @@ const AdminDashboard = () => {
           <button
             type="button"
             onClick={() => setProductsSubTab("inventory")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-              productsSubTab === "inventory"
-                ? "border-gold-500 text-gold-500 font-bold"
-                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-            }`}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${productsSubTab === "inventory"
+              ? "border-gold-500 text-gold-500 font-bold"
+              : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+              }`}
           >
             Inventory List
           </button>
           <button
             type="button"
             onClick={() => setProductsSubTab("add-edit-product")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-              productsSubTab === "add-edit-product"
-                ? "border-gold-500 text-gold-500 font-bold"
-                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-            }`}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${productsSubTab === "add-edit-product"
+              ? "border-gold-500 text-gold-500 font-bold"
+              : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+              }`}
           >
             {editingId ? "Edit Product Details" : "Add New Product"}
           </button>
@@ -3862,11 +3846,10 @@ const AdminDashboard = () => {
               <button
                 type="button"
                 onClick={() => changeProductCategory("All")}
-                className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${
-                  selectedCategory === "All"
-                    ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
-                    : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500 cursor-pointer"
-                }`}
+                className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${selectedCategory === "All"
+                  ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
+                  : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500 cursor-pointer"
+                  }`}
               >
                 All ({products.length})
               </button>
@@ -3882,11 +3865,10 @@ const AdminDashboard = () => {
                     key={category}
                     type="button"
                     onClick={() => changeProductCategory(category)}
-                    className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${
-                      selectedCategory === category
-                        ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
-                        : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500 cursor-pointer"
-                    }`}
+                    className={`shrink-0 rounded-full px-4 py-1.5 font-bold uppercase tracking-wider transition-all duration-300 ${selectedCategory === category
+                      ? "bg-[#1C1C1C] dark:bg-gold-500 text-white dark:text-black border border-[#1C1C1C] dark:border-gold-500 shadow-sm"
+                      : "bg-cream dark:bg-white/5 border border-gold-200/20 dark:border-gold-900/10 text-gray-lux dark:text-gray-300 hover:border-gold-500 cursor-pointer"
+                      }`}
                   >
                     {category} ({count})
                   </button>
@@ -4118,33 +4100,30 @@ const AdminDashboard = () => {
           <button
             type="button"
             onClick={() => setCouponsSubTab("public")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-              couponsSubTab === "public"
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
-            }`}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "public"
+              ? "border-gold-600 text-gold-600 dark:text-gold-450"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+              }`}
           >
             Public Checkout Coupons
           </button>
           <button
             type="button"
             onClick={() => setCouponsSubTab("special")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-              couponsSubTab === "special"
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
-            }`}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "special"
+              ? "border-gold-600 text-gold-600 dark:text-gold-450"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+              }`}
           >
             Retention & Special Coupons
           </button>
           <button
             type="button"
             onClick={() => setCouponsSubTab("store-settings")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
-              couponsSubTab === "store-settings"
-                ? "border-emerald-600 text-emerald-600 dark:text-emerald-450"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
-            }`}
+            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "store-settings"
+              ? "border-gold-600 text-gold-600 dark:text-gold-450"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+              }`}
           >
             Store Settings
           </button>
@@ -4215,7 +4194,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
-      
+
       {/* Sidebar for Desktop */}
       <aside className={`fixed inset-y-0 left-0 z-30 ${sidebarCollapsed ? "w-20" : "w-64"} bg-[#1C1C1C] text-white border-r border-gold-900/10 transform transition-all duration-300 ease-in-out md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-64"}`}>
         <div className="h-full flex flex-col justify-between">
@@ -4243,7 +4222,7 @@ const AdminDashboard = () => {
             {/* Profile Widget */}
             <div className="p-4 border-b border-gold-900/10 flex items-center gap-3 bg-white/5">
               <div className="h-9 w-9 shrink-0 rounded-full bg-gold-500/10 text-gold-505 flex items-center justify-center font-bold text-xs ring-1 ring-gold-500/30 select-none">
-                {adminAuth?.name?.split(" ").map(n=>n[0]).join("").toUpperCase() || "A"}
+                {adminAuth?.name?.split(" ").map(n => n[0]).join("").toUpperCase() || "A"}
               </div>
               {!sidebarCollapsed && (
                 <div className="min-w-0 flex-1">
@@ -4262,11 +4241,10 @@ const AdminDashboard = () => {
                     setActiveTab(item.id);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${sidebarCollapsed ? "justify-center py-3" : "gap-3 px-4 py-2.5"} ${
-                    activeTab === item.id
-                      ? "bg-gold-500 text-white shadow-md shadow-gold-500/15 font-semibold"
-                      : "text-gray-400 hover:bg-white/5 hover:text-white"
-                  }`}
+                  className={`w-full flex items-center rounded-xl text-xs font-medium transition-all duration-200 cursor-pointer ${sidebarCollapsed ? "justify-center py-3" : "gap-3 px-4 py-2.5"} ${activeTab === item.id
+                    ? "bg-gold-500 text-white shadow-md shadow-gold-500/15 font-semibold"
+                    : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
                   title={sidebarCollapsed ? item.label : ""}
                 >
                   <span className="text-sm shrink-0">{item.icon}</span>
@@ -4308,7 +4286,7 @@ const AdminDashboard = () => {
 
       {/* Main Panel Content Container */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarCollapsed ? "md:pl-20" : "md:pl-64"}`}>
-        
+
         {/* Top Navbar */}
         <header className="h-16 flex items-center justify-between px-6 bg-white/80 dark:bg-[#1C1C1C]/80 backdrop-blur-md border-b border-gold-200/20 dark:border-gold-900/20 sticky top-0 z-10 shadow-xs">
           <div className="flex items-center gap-3">
@@ -4335,7 +4313,7 @@ const AdminDashboard = () => {
                 className="w-48 xl:w-64 rounded-full border border-gold-200/50 dark:border-gold-900/40 bg-white/50 dark:bg-white/5 px-8 py-1.5 text-[11px] text-luxury-black dark:text-white transition-all focus:border-gold-500 focus:w-56 xl:focus:w-72 outline-none"
               />
             </div>
-            
+
             <button className="p-2 rounded-full hover:bg-gold-100/50 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 transition cursor-pointer relative text-sm">
               <span>🔔</span>
               <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-danger-lux animate-pulse" />
@@ -4389,1307 +4367,1302 @@ const AdminDashboard = () => {
           {activeTab === "tickets" && renderTicketsTab()}
           {activeTab === "returns-replacements" && <ReturnsReplacementsTab />}
 
-      {activeTab === "coupons" && couponsSubTab === "store-settings" && (
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Store Settings (Sender Details)</h3>
-        <p className="mt-1 text-sm text-gray-500">Used in shipping labels and invoices.</p>
-        <form onSubmit={saveStoreInfo} className="mt-3 grid gap-3 md:grid-cols-2">
-          <input
-            name="storeName"
-            value={storeInfo.storeName}
-            onChange={handleStoreInfoChange}
-            placeholder="Store name"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            required
-          />
-          <input
-            name="storePhone"
-            value={storeInfo.storePhone}
-            onChange={handleStoreInfoChange}
-            placeholder="Store phone"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            required
-          />
-          <textarea
-            name="storeAddress"
-            value={storeInfo.storeAddress}
-            onChange={handleStoreInfoChange}
-            placeholder="Store address"
-            rows={3}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
-            required
-          />
-          <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/30 p-4 shadow-xs">
-            <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-800 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                name="codEnabled"
-                checked={storeInfo.codEnabled !== undefined ? Boolean(storeInfo.codEnabled) : true}
-                onChange={(e) => setStoreInfo((prev) => ({ ...prev, codEnabled: e.target.checked }))}
-                className="rounded text-emerald-600 focus:ring-emerald-600 cursor-pointer h-4 w-4"
-              />
-              Enable Cash on Delivery (COD) website-wide
-            </label>
-          </div>
-          <div className="md:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-            <p className="text-sm font-semibold text-emerald-900">Store Logo</p>
-            <p className="mb-3 text-xs text-emerald-700">Used on shipping labels and invoices.</p>
-            <div className="flex flex-wrap items-center gap-3">
-              {storeInfo.storeLogoUrl ? (
-                <img
-                  src={storeInfo.storeLogoUrl}
-                  alt="Store logo preview"
-                  className="h-14 w-14 rounded-lg border border-emerald-200 bg-white object-contain p-1"
-                />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-emerald-200 bg-white text-sm font-semibold text-emerald-700">
-                  G
-                </div>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleStoreLogoUpload}
-                disabled={uploadingStoreLogo}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                name="storeLogoUrl"
-                value={storeInfo.storeLogoUrl}
-                onChange={handleStoreInfoChange}
-                placeholder="Or paste logo URL"
-                className="min-w-[280px] flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="md:col-span-2 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
-            <p className="text-sm font-semibold text-teal-900">Top Special Offer Banner</p>
-            <p className="mb-3 text-xs text-teal-700">Shown at top of home page for festivals/events.</p>
-            <div className="grid gap-2 md:grid-cols-2">
-              <input
-                value={storeInfo.specialOffer?.eventName || ""}
-                onChange={(e) => handleSpecialOfferChange("eventName", e.target.value)}
-                placeholder="Event name (e.g., Diwali Special)"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                value={storeInfo.specialOffer?.code || ""}
-                onChange={(e) => handleSpecialOfferChange("code", e.target.value.toUpperCase())}
-                placeholder="Offer code"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                value={storeInfo.specialOffer?.title || ""}
-                onChange={(e) => handleSpecialOfferChange("title", e.target.value)}
-                placeholder="Banner title"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
-              />
-              <textarea
-                value={storeInfo.specialOffer?.subtitle || ""}
-                onChange={(e) => handleSpecialOfferChange("subtitle", e.target.value)}
-                placeholder="Banner subtitle"
-                rows={2}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
-              />
-              <input
-                value={storeInfo.specialOffer?.ctaText || ""}
-                onChange={(e) => handleSpecialOfferChange("ctaText", e.target.value)}
-                placeholder="Button text"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                type="date"
-                value={storeInfo.specialOffer?.startDate ? String(storeInfo.specialOffer.startDate).slice(0, 10) : ""}
-                onChange={(e) => handleSpecialOfferChange("startDate", e.target.value)}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <input
-                type="date"
-                value={storeInfo.specialOffer?.endDate ? String(storeInfo.specialOffer.endDate).slice(0, 10) : ""}
-                onChange={(e) => handleSpecialOfferChange("endDate", e.target.value)}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+          {activeTab === "coupons" && couponsSubTab === "store-settings" && (
+            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Store Settings (Sender Details)</h3>
+              <p className="mt-1 text-sm text-gray-500">Used in shipping labels and invoices.</p>
+              <form onSubmit={saveStoreInfo} className="mt-3 grid gap-3 md:grid-cols-2">
                 <input
-                  type="checkbox"
-                  checked={Boolean(storeInfo.specialOffer?.active)}
-                  onChange={(e) => handleSpecialOfferChange("active", e.target.checked)}
+                  name="storeName"
+                  value={storeInfo.storeName}
+                  onChange={handleStoreInfoChange}
+                  placeholder="Store name"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  required
                 />
-                Active on homepage top
-              </label>
-            </div>
-          </div>
-          <div className="md:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-emerald-900">Homepage Offer Cards</p>
-                <p className="text-xs text-emerald-700">These offers appear in a featured section on home page.</p>
-              </div>
-              <button
-                type="button"
-                onClick={addOffer}
-                className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-              >
-                + Add Offer
-              </button>
-            </div>
-            <div className="space-y-3">
-              {(storeInfo.offers || []).map((offer, index) => (
-                <div key={`${offer.code || "offer"}-${index}`} className="rounded-lg border border-emerald-100 bg-white p-3">
+                <input
+                  name="storePhone"
+                  value={storeInfo.storePhone}
+                  onChange={handleStoreInfoChange}
+                  placeholder="Store phone"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  required
+                />
+                <textarea
+                  name="storeAddress"
+                  value={storeInfo.storeAddress}
+                  onChange={handleStoreInfoChange}
+                  placeholder="Store address"
+                  rows={3}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
+                  required
+                />
+                <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/30 p-4 shadow-xs">
+                  <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-800 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      name="codEnabled"
+                      checked={storeInfo.codEnabled !== undefined ? Boolean(storeInfo.codEnabled) : true}
+                      onChange={(e) => setStoreInfo((prev) => ({ ...prev, codEnabled: e.target.checked }))}
+                      className="rounded text-emerald-600 focus:ring-emerald-600 cursor-pointer h-4 w-4"
+                    />
+                    Enable Cash on Delivery (COD) website-wide
+                  </label>
+                </div>
+                <div className="md:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+                  <p className="text-sm font-semibold text-emerald-900">Store Logo</p>
+                  <p className="mb-3 text-xs text-emerald-700">Used on shipping labels and invoices.</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {storeInfo.storeLogoUrl ? (
+                      <img
+                        src={storeInfo.storeLogoUrl}
+                        alt="Store logo preview"
+                        className="h-14 w-14 rounded-lg border border-emerald-200 bg-white object-contain p-1"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-emerald-200 bg-white text-sm font-semibold text-emerald-700">
+                        G
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleStoreLogoUpload}
+                      disabled={uploadingStoreLogo}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    />
+                    <input
+                      name="storeLogoUrl"
+                      value={storeInfo.storeLogoUrl}
+                      onChange={handleStoreInfoChange}
+                      placeholder="Or paste logo URL"
+                      className="min-w-[280px] flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
+                  <p className="text-sm font-semibold text-teal-900">Top Special Offer Banner</p>
+                  <p className="mb-3 text-xs text-teal-700">Shown at top of home page for festivals/events.</p>
                   <div className="grid gap-2 md:grid-cols-2">
                     <input
-                      value={offer.title || ""}
-                      onChange={(e) => handleOfferChange(index, "title", e.target.value)}
-                      placeholder="Offer title"
+                      value={storeInfo.specialOffer?.eventName || ""}
+                      onChange={(e) => handleSpecialOfferChange("eventName", e.target.value)}
+                      placeholder="Event name (e.g., Diwali Special)"
                       className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                     />
                     <input
-                      value={offer.code || ""}
-                      onChange={(e) => handleOfferChange(index, "code", e.target.value.toUpperCase())}
-                      placeholder="Code (optional)"
+                      value={storeInfo.specialOffer?.code || ""}
+                      onChange={(e) => handleSpecialOfferChange("code", e.target.value.toUpperCase())}
+                      placeholder="Offer code"
                       className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                     />
                     <input
-                      value={offer.ctaText || ""}
-                      onChange={(e) => handleOfferChange(index, "ctaText", e.target.value)}
-                      placeholder="Button text (e.g. Shop Now)"
+                      value={storeInfo.specialOffer?.title || ""}
+                      onChange={(e) => handleSpecialOfferChange("title", e.target.value)}
+                      placeholder="Banner title"
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
+                    />
+                    <textarea
+                      value={storeInfo.specialOffer?.subtitle || ""}
+                      onChange={(e) => handleSpecialOfferChange("subtitle", e.target.value)}
+                      placeholder="Banner subtitle"
+                      rows={2}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
+                    />
+                    <input
+                      value={storeInfo.specialOffer?.ctaText || ""}
+                      onChange={(e) => handleSpecialOfferChange("ctaText", e.target.value)}
+                      placeholder="Button text"
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={storeInfo.specialOffer?.startDate ? String(storeInfo.specialOffer.startDate).slice(0, 10) : ""}
+                      onChange={(e) => handleSpecialOfferChange("startDate", e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={storeInfo.specialOffer?.endDate ? String(storeInfo.specialOffer.endDate).slice(0, 10) : ""}
+                      onChange={(e) => handleSpecialOfferChange("endDate", e.target.value)}
                       className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
                     />
                     <label className="flex items-center gap-2 text-sm text-gray-700">
                       <input
                         type="checkbox"
-                        checked={Boolean(offer.active)}
-                        onChange={(e) => handleOfferChange(index, "active", e.target.checked)}
+                        checked={Boolean(storeInfo.specialOffer?.active)}
+                        onChange={(e) => handleSpecialOfferChange("active", e.target.checked)}
                       />
-                      Active on homepage
+                      Active on homepage top
                     </label>
-                    <textarea
-                      value={offer.subtitle || ""}
-                      onChange={(e) => handleOfferChange(index, "subtitle", e.target.value)}
-                      placeholder="Offer subtitle"
-                      rows={2}
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
-                    />
                   </div>
-                  <div className="mt-2">
+                </div>
+                <div className="md:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-900">Homepage Offer Cards</p>
+                      <p className="text-xs text-emerald-700">These offers appear in a featured section on home page.</p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => removeOffer(index)}
-                      className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+                      onClick={addOffer}
+                      className="rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                     >
-                      Remove
+                      + Add Offer
                     </button>
                   </div>
+                  <div className="space-y-3">
+                    {(storeInfo.offers || []).map((offer, index) => (
+                      <div key={`${offer.code || "offer"}-${index}`} className="rounded-lg border border-emerald-100 bg-white p-3">
+                        <div className="grid gap-2 md:grid-cols-2">
+                          <input
+                            value={offer.title || ""}
+                            onChange={(e) => handleOfferChange(index, "title", e.target.value)}
+                            placeholder="Offer title"
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                          />
+                          <input
+                            value={offer.code || ""}
+                            onChange={(e) => handleOfferChange(index, "code", e.target.value.toUpperCase())}
+                            placeholder="Code (optional)"
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                          />
+                          <input
+                            value={offer.ctaText || ""}
+                            onChange={(e) => handleOfferChange(index, "ctaText", e.target.value)}
+                            placeholder="Button text (e.g. Shop Now)"
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                          />
+                          <label className="flex items-center gap-2 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(offer.active)}
+                              onChange={(e) => handleOfferChange(index, "active", e.target.checked)}
+                            />
+                            Active on homepage
+                          </label>
+                          <textarea
+                            value={offer.subtitle || ""}
+                            onChange={(e) => handleOfferChange(index, "subtitle", e.target.value)}
+                            placeholder="Offer subtitle"
+                            rows={2}
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
+                          />
+                        </div>
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={() => removeOffer(index)}
+                            className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={savingStoreInfo}
-              className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
-            >
-              {savingStoreInfo ? "Saving..." : "Save Store Settings"}
-            </button>
-          </div>
-        </form>
-      </div>
-      )}
-
-      {activeTab === "coupons" && couponsSubTab === "special" && (
-        <div className="rounded-3xl border border-violet-150/40 bg-gradient-to-br from-violet-50/20 via-white/80 to-violet-50/10 backdrop-blur-md p-6 shadow-sm">
-        <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Special Retention Coupons</h3>
-        <p className="mt-1 text-xs text-gray-500 font-light leading-relaxed">
-          Generate secure, random coupon codes (prefixed with <span className="font-mono text-xs font-semibold text-violet-800">GN-SP-</span>) for VIP clients or win-back campaigns. These codes remain hidden from the public checkout lists.
-        </p>
-        {lastGeneratedSpecialCode ? (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-violet-200/60 bg-white px-4 py-2.5 shadow-2xs animate-fade-in">
-            <span className="text-xs font-medium text-gray-600">Generated Code:</span>
-            <code className="rounded-md bg-violet-50 border border-violet-100 px-2.5 py-1 font-mono text-sm font-bold text-violet-900">
-              {lastGeneratedSpecialCode}
-            </code>
-            <button
-              type="button"
-              onClick={() => {
-                void navigator.clipboard?.writeText(lastGeneratedSpecialCode);
-                setSuccess("Code copied to clipboard.");
-              }}
-              className="rounded-full bg-violet-950 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-violet-900 transition-all hover-float"
-            >
-              Copy Code
-            </button>
-          </div>
-        ) : null}
-        <form onSubmit={generateSpecialRetentionCoupon} className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Type</label>
-            <select
-              value={specialCouponForm.type}
-              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, type: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-            >
-              <option value="percent">Percentage Off</option>
-              <option value="flat">Flat Discount</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Value</label>
-            <input
-              type="number"
-              min="1"
-              placeholder="e.g. 15 or 500"
-              value={specialCouponForm.value}
-              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, value: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Min Cart Value</label>
-            <input
-              type="number"
-              min="0"
-              placeholder="e.g. 1000"
-              value={specialCouponForm.minCartValue}
-              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, minCartValue: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Discount (Optional)</label>
-            <input
-              type="number"
-              min="0"
-              placeholder="e.g. 150"
-              value={specialCouponForm.maxDiscount}
-              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxDiscount: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Global Uses</label>
-            <input
-              type="number"
-              min="1"
-              placeholder="Unlimited if empty"
-              value={specialCouponForm.maxRedemptions}
-              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxRedemptions: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Uses Per Customer</label>
-            <input
-              type="number"
-              min="1"
-              placeholder="Unlimited if empty"
-              value={specialCouponForm.maxRedemptionsPerUser}
-              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxRedemptionsPerUser: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Valid Until</label>
-            <input
-              type="date"
-              value={specialCouponForm.endDate || ""}
-              onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-            />
-          </div>
-          <div className="flex items-center pt-5">
-            <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={specialCouponForm.active}
-                onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, active: e.target.checked }))}
-                className="rounded text-violet-600 focus:ring-violet-600 cursor-pointer"
-              />
-              <span className="font-medium text-gray-800">Coupon Active</span>
-            </label>
-          </div>
-          
-          <div className="md:col-span-3 border-t border-violet-100/50 my-2 pt-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-violet-900 mb-3">
-              Direct Email Delivery (Optional)
-            </p>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Recipient Email</label>
-                <input
-                  type="email"
-                  autoComplete="off"
-                  placeholder="customer@example.com"
-                  value={specialCouponForm.customerEmail}
-                  onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, customerEmail: e.target.value }))}
-                  className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Recipient Name</label>
-                <input
-                  placeholder="e.g. John Doe"
-                  value={specialCouponForm.customerName}
-                  onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, customerName: e.target.value }))}
-                  className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Personal Note</label>
-                <input
-                  placeholder="e.g. Enjoy this exclusive VIP offer!"
-                  value={specialCouponForm.emailMessage}
-                  onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, emailMessage: e.target.value }))}
-                  className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="md:col-span-3 pt-2">
-            <button
-              type="submit"
-              disabled={generatingSpecial}
-              className="rounded-full bg-violet-900 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-violet-800 transition-all duration-300 disabled:opacity-70 hover-float"
-            >
-              {generatingSpecial ? "Generating…" : "Generate Secure Code & Dispatch"}
-            </button>
-          </div>
-        </form>
-      </div>
-      )}
-
-      {activeTab === "coupons" && couponsSubTab === "public" && (
-        <>
-          <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
-        <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">
-          {editingCouponId ? "Edit Coupon Rule" : "Create Public Coupon"}
-        </h3>
-        <p className="mt-1 text-xs text-gray-500 font-light mb-4">
-          Define standard promotional campaign parameters. These coupons display on active checkout promo lists.
-        </p>
-        <form onSubmit={saveCoupon} className="mt-4 grid gap-4 md:grid-cols-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Code</label>
-            <input
-              placeholder="e.g. FESTIVE15"
-              value={couponForm.code}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all disabled:bg-gray-100 disabled:text-gray-550"
-              required
-              disabled={editingCouponIsSpecial}
-              title={editingCouponIsSpecial ? "System-generated codes cannot be changed" : undefined}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Type</label>
-            <select
-              value={couponForm.type}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, type: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-            >
-              <option value="percent">Percentage Off</option>
-              <option value="flat">Flat Discount</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discount Value</label>
-            <input
-              type="number"
-              min="1"
-              placeholder="e.g. 10 or 250"
-              value={couponForm.value}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, value: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Min Cart Value</label>
-            <input
-              type="number"
-              min="0"
-              placeholder="e.g. 1500"
-              value={couponForm.minCartValue}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, minCartValue: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Discount (Optional)</label>
-            <input
-              type="number"
-              min="0"
-              placeholder="e.g. 300"
-              value={couponForm.maxDiscount}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, maxDiscount: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active From (Date & Time)</label>
-            <input
-              type="datetime-local"
-              value={couponForm.startDate || ""}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, startDate: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-              title="Active start date and time (optional)"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Expires At (Date & Time)</label>
-            <input
-              type="datetime-local"
-              value={couponForm.endDate || ""}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-              title="Expiration date and time (optional)"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Global Redemptions</label>
-            <input
-              type="number"
-              min="1"
-              placeholder="Unlimited if empty"
-              value={couponForm.maxRedemptions}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, maxRedemptions: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-              title="Empty = unlimited redemptions globally"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Uses Per Customer</label>
-            <input
-              type="number"
-              min="1"
-              placeholder="Unlimited if empty"
-              value={couponForm.maxRedemptionsPerUser}
-              onChange={(e) => setCouponForm((prev) => ({ ...prev, maxRedemptionsPerUser: e.target.value }))}
-              className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
-              title="Empty = unlimited uses per account"
-            />
-          </div>
-          <div className="flex items-center pt-5">
-            <label className="flex items-center gap-2 text-xs text-gray-655 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={couponForm.active}
-                onChange={(e) => setCouponForm((prev) => ({ ...prev, active: e.target.checked }))}
-                className="rounded text-emerald-900 focus:ring-emerald-900 cursor-pointer"
-              />
-              <span className="font-medium text-gray-800">Coupon Active</span>
-            </label>
-          </div>
-
-          <div className="md:col-span-3 rounded-2xl border border-gray-200 bg-gray-50/30 p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-700 font-sans">Selective Days of Operation</span>
-                <p className="text-[10px] text-gray-400 font-light mt-0.5 font-sans">Select specific days the coupon is valid. Uncheck all to make it valid every day.</p>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] }))}
-                  className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
-                >
-                  Weekdays
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Saturday", "Sunday"] }))}
-                  className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
-                >
-                  Weekends
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] }))}
-                  className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
-                >
-                  All Days
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: [] }))}
-                  className="rounded-full bg-white border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-100 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
-                >
-                  Clear All
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
-                const activeDays = couponForm.activeDays || [];
-                const isSelected = activeDays.includes(day);
-                return (
+                <div className="md:col-span-2">
                   <button
-                    key={day}
+                    type="submit"
+                    disabled={savingStoreInfo}
+                    className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
+                  >
+                    {savingStoreInfo ? "Saving..." : "Save Store Settings"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {activeTab === "coupons" && couponsSubTab === "special" && (
+            <div className="rounded-3xl border border-violet-150/40 bg-gradient-to-br from-violet-50/20 via-white/80 to-violet-50/10 backdrop-blur-md p-6 shadow-sm">
+              <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Special Retention Coupons</h3>
+              <p className="mt-1 text-xs text-gray-500 font-light leading-relaxed">
+                Generate secure, random coupon codes (prefixed with <span className="font-mono text-xs font-semibold text-violet-800">GN-SP-</span>) for VIP clients or win-back campaigns. These codes remain hidden from the public checkout lists.
+              </p>
+              {lastGeneratedSpecialCode ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-violet-200/60 bg-white px-4 py-2.5 shadow-2xs animate-fade-in">
+                  <span className="text-xs font-medium text-gray-600">Generated Code:</span>
+                  <code className="rounded-md bg-violet-50 border border-violet-100 px-2.5 py-1 font-mono text-sm font-bold text-violet-900">
+                    {lastGeneratedSpecialCode}
+                  </code>
+                  <button
                     type="button"
                     onClick={() => {
-                      setCouponForm((prev) => {
-                        const current = prev.activeDays || [];
-                        const next = current.includes(day)
-                          ? current.filter((d) => d !== day)
-                          : [...current, day];
-                        return { ...prev, activeDays: next };
-                      });
+                      void navigator.clipboard?.writeText(lastGeneratedSpecialCode);
+                      setSuccess("Code copied to clipboard.");
                     }}
-                    className={`rounded-full px-4 py-1.5 text-xs font-semibold border transition duration-200 cursor-pointer ${
-                      isSelected
-                        ? "bg-emerald-950 border-emerald-950 text-white shadow-xs"
-                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
-                    }`}
+                    className="rounded-full bg-violet-950 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-violet-900 transition-all hover-float"
                   >
-                    {day}
+                    Copy Code
                   </button>
-                );
-              })}
-            </div>
-          </div>
-        
-          <div className="md:col-span-3 flex items-center gap-2.5 pt-2">
-            <button
-              type="submit"
-              className="rounded-full bg-emerald-950 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-emerald-900 transition-all duration-300 hover-float"
-            >
-              {editingCouponId ? "Update Coupon Rule" : "Create Coupon"}
-            </button>
-            {editingCouponId ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingCouponId("");
-                  setEditingCouponIsSpecial(false);
-                  setCouponForm(emptyCouponForm);
-                }}
-                className="rounded-full border border-gray-200 bg-white/50 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                Cancel
-              </button>
-            ) : null}
-          </div>
-        </form>
-      </div>
-
-      <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
-        <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Manage Coupons</h3>
-        <p className="mt-1 text-xs text-gray-500 font-light mb-4">
-          Monitor campaign redemptions and usage stats. Use &quot;Email&quot; to send specific codes directly to customer inboxes.
-        </p>
-        
-        {fetchingCoupons ? (
-          <TableSkeleton rows={5} cols={8} />
-        ) : (
-          <>
-            {couponEmailTargetId ? (
-              <form
-            onSubmit={submitCouponEmail}
-            className="mt-4 rounded-2xl border border-sky-100 bg-sky-50/20 p-5 animate-fade-in"
-          >
-            <p className="text-sm font-serif font-medium text-gray-900">
-              Email Coupon Code:{" "}
-              <span className="font-mono text-violet-800 font-semibold">
-                {coupons.find((c) => c._id === couponEmailTargetId)?.code || "—"}
-              </span>
-            </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Customer Email</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="recipient@example.com"
-                  value={couponEmailForm.to}
-                  onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, to: e.target.value }))}
-                  className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Customer Name (Optional)</label>
-                <input
-                  placeholder="e.g. Sarah"
-                  value={couponEmailForm.customerName}
-                  onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, customerName: e.target.value }))}
-                  className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
-                />
-              </div>
-              <div className="sm:col-span-2 flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Personal Note (Optional)</label>
-                <textarea
-                  placeholder="Add a custom note to the email..."
-                  value={couponEmailForm.message}
-                  onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, message: e.target.value }))}
-                  rows={2}
-                  className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
-                />
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2.5">
-              <button
-                type="submit"
-                disabled={sendingCouponEmail}
-                className="rounded-full bg-sky-700 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-sky-600 transition-all disabled:opacity-70 hover-float"
-              >
-                {sendingCouponEmail ? "Sending…" : "Send Email"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCouponEmailTargetId("");
-                  setCouponEmailForm(emptyCouponEmailForm);
-                }}
-                className="rounded-full border border-gray-300 bg-white px-5 py-2 text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : null}
-
-        <div className="mt-4 space-y-3 md:hidden">
-          {coupons.map((coupon) => (
-            <article key={coupon._id} className="rounded-2xl border border-gray-150/40 bg-white/50 p-4 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-serif font-bold text-gray-950 tracking-wide">{coupon.code}</span>
-                  {coupon.isSpecial ? (
-                    <span className="rounded-full bg-violet-50 border border-violet-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-violet-800">
-                      Special
-                    </span>
-                  ) : null}
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{coupon.type}</span>
-              </div>
-              <div className="text-xs space-y-1 font-light text-gray-600">
-                <p>Value: <strong className="font-medium text-gray-900">{coupon.value}</strong> • Min Cart: INR {coupon.minCartValue}</p>
-                <p>Max Discount: {coupon.maxDiscount ? `INR ${coupon.maxDiscount}` : "None"} • Status: {coupon.active ? (
-                  <span className="font-semibold text-emerald-800">Active</span>
-                ) : (
-                  <span className="font-semibold text-gray-500">Inactive</span>
-                )}</p>
-                <p className="text-[11px] text-gray-500">{formatCouponUsage(coupon)}</p>
-                <p className="text-[11px] text-gray-400">
-                  Expiry:{" "}
-                  {coupon.endDate
-                    ? new Date(coupon.endDate).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })
-                    : "No expiry"}
-                </p>
-              </div>
-              <div className="mt-2.5 flex flex-wrap gap-4 border-t border-gray-100 pt-2.5 text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => startEditCoupon(coupon)}
-                  className="text-emerald-800 hover:text-emerald-950 transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openCouponEmailPanel(coupon)}
-                  disabled={!coupon.active}
-                  className="text-sky-800 hover:text-sky-950 transition-colors disabled:opacity-40"
-                >
-                  Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeCoupon(coupon._id)}
-                  className="text-rose-800 hover:text-rose-950 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
-          {coupons.length === 0 ? <p className="text-xs text-gray-400 font-light">No coupons defined yet.</p> : null}
-        </div>
-
-        <div className="mt-4 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[960px] text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-gray-150/40">
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Coupon Code</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Type</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Value</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Min Cart</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Max Discount</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Redemptions Status</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Valid Until</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Status</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {coupons.map((coupon) => (
-                <tr key={coupon._id} className="hover:bg-gray-50/40 transition-colors">
-                  <td className="py-3.5 pr-2">
-                    <span className="font-serif font-bold text-sm text-gray-955 tracking-wide">{coupon.code}</span>
-                    {coupon.isSpecial ? (
-                      <span className="ml-2 inline-flex rounded-full bg-violet-50 border border-violet-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-violet-800">
-                        Special
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="py-3.5 px-1 uppercase font-light text-gray-500">{coupon.type}</td>
-                  <td className="py-3.5 px-1 font-semibold text-gray-955">{coupon.value}</td>
-                  <td className="py-3.5 px-1 font-light text-gray-650">INR {coupon.minCartValue}</td>
-                  <td className="py-3.5 px-1 font-light text-gray-650">{coupon.maxDiscount ? `INR ${coupon.maxDiscount}` : "—"}</td>
-                  <td className="max-w-[220px] py-3.5 px-1 text-xs text-gray-500 font-light">{formatCouponUsage(coupon)}</td>
-                  <td className="py-3.5 px-1 text-gray-500 font-light">
-                    {coupon.endDate
-                      ? new Date(coupon.endDate).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "—"}
-                  </td>
-                  <td className="py-3.5 px-1">
-                    {coupon.active ? (
-                      <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex rounded-full bg-gray-50 border border-gray-150/40 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500">
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3.5 pl-2 text-right">
-                    <div className="flex items-center justify-end gap-3.5 font-semibold text-xs">
-                      <button
-                        type="button"
-                        onClick={() => startEditCoupon(coupon)}
-                        className="text-emerald-800 hover:text-emerald-950 hover:underline transition-colors"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openCouponEmailPanel(coupon)}
-                        disabled={!coupon.active}
-                        className="text-sky-800 hover:text-sky-950 hover:underline transition-colors disabled:opacity-40"
-                      >
-                        Email
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeCoupon(coupon._id)}
-                        className="text-rose-800 hover:text-rose-950 hover:underline transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {coupons.length === 0 ? (
-                <tr>
-                  <td className="py-8 text-center text-gray-400 font-light" colSpan={9}>
-                    No coupons created yet. Use form above to add your first promotion.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-          </>
-        )}
-      </div>
-      </>
-      )}
-
-      {activeTab === "products" && productsSubTab === "add-edit-product" && (
-        <div className="animate-page-enter">
-          <AddProduct
-            initialData={editingId ? products.find(p => p._id === editingId) : duplicateData}
-            onSuccess={async () => {
-              try {
-                const { data } = await api.get("/admin/products", authHeader);
-                setProducts(data);
-              } catch (err) {
-                console.error("Failed to refresh products", err);
-              }
-              setEditingId("");
-              setDuplicateData(null);
-              setProductsSubTab("inventory");
-            }}
-            onCancel={() => {
-              setEditingId("");
-              setDuplicateData(null);
-              setProductsSubTab("inventory");
-            }}
-          />
-        </div>
-      )}
-
-      {activeTab === "orders" && (
-        <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm space-y-4">
-          <h3 className="text-lg font-serif tracking-wide text-luxury-black dark:text-white">Manage Orders</h3>
-          {fetchingOrders ? (
-            <TableSkeleton rows={5} cols={8} />
-          ) : (
-            <>
-              <div className="mt-3 flex overflow-x-auto items-center gap-2.5 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
-          {["all", "active", "archived"].map((view) => (
-            <button
-              key={view}
-              type="button"
-              onClick={() => setOrderViewFilter(view)}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
-                orderViewFilter === view
-                  ? "bg-gold-500 text-white shadow-sm"
-                  : "bg-cream dark:bg-white/5 border border-gold-200/10 dark:border-gold-900/10 text-gold-700 dark:text-gray-300 hover:bg-gold-500/10"
-              }`}
-            >
-              {view === "all"
-                ? `All (${orders.length + archivedOrders.length})`
-                : view === "active"
-                  ? `Active (${orders.length})`
-                  : `Archived (${archivedOrders.length})`}
-            </button>
-          ))}
-          <select
-            value={orderStatusFilter}
-            onChange={(e) => setOrderStatusFilter(e.target.value)}
-            className="shrink-0 rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-gold-700 dark:text-gray-300 outline-none focus:border-gold-500"
-            aria-label="Filter orders by status"
-            title="Filter orders by status"
-          >
-            <option value="all">All statuses</option>
-            {orderStatuses.map((status) => (
-              <option key={status} value={status.toLowerCase()}>
-                {status}
-              </option>
-            ))}
-          </select>
-          <select
-            value={orderPaymentFilter}
-            onChange={(e) => setOrderPaymentFilter(e.target.value)}
-            className="shrink-0 rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-gold-700 dark:text-gray-300 outline-none focus:border-gold-500"
-            aria-label="Filter orders by payment mode"
-            title="Filter orders by payment mode"
-          >
-            <option value="all">All payment modes</option>
-            <option value="online">Online</option>
-            <option value="cod">COD</option>
-          </select>
-        </div>
-        
-        {/* Batch Print Bar */}
-        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-gold-200/30 bg-gold-50/30 dark:bg-white/5 p-4">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-gold-700 dark:text-gold-450 mr-2">
-            {selectedOrderIds.length} Selected ({selectedOrdersForPrint.length} Print-Ready)
-          </p>
-          <select
-            value={labelPrintFilter}
-            onChange={(event) => setLabelPrintFilter(event.target.value)}
-            className="rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white dark:bg-[#1C1C1C] px-3.5 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500"
-            aria-label="Filter selected orders for label printing"
-          >
-            <option value="all">All selected</option>
-            <option value="ready">Shipped/Delivered only</option>
-            <option value="shipped">Shipped only</option>
-            <option value="delivered">Delivered only</option>
-          </select>
-          
-          <button
-            type="button"
-            onClick={toggleSelectAllVisibleOrders}
-            className="rounded-full border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gold-700 dark:text-gray-250 hover:bg-gold-500/10 cursor-pointer transition-all duration-300"
-          >
-            {selectAllButtonLabel}
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => setSelectedOrderIds([])}
-            disabled={selectedOrderIds.length === 0}
-            className="rounded-full border border-gray-200 bg-white dark:bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Clear
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => handlePrintShippingLabelsBatch(selectedOrdersForPrint)}
-            disabled={selectedOrdersForPrint.length === 0}
-            className="rounded-full bg-gold-500 hover:bg-gold-hover px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm"
-          >
-            Print Labels ({selectedOrdersForPrint.length})
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => handlePrintInvoicesBatch(selectedOrdersForPrint)}
-            disabled={selectedOrdersForPrint.length === 0}
-            className="rounded-full bg-gold-600 hover:bg-gold-700 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm"
-          >
-            Print Invoices ({selectedOrdersForPrint.length})
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => handlePrintCombinedA4Batch(selectedOrdersForPrint)}
-            disabled={selectedOrdersForPrint.length === 0}
-            className="rounded-full bg-luxury-black dark:bg-white text-white dark:text-black hover:bg-gold-500 hover:text-white dark:hover:bg-gold-500 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm border border-gold-900/10"
-          >
-            Print Shipping + Invoice ({selectedOrdersForPrint.length})
-          </button>
-        </div>
-        <div className="mt-3 space-y-3 md:hidden">
-          {ordersForViewFiltered.map((order) => (
-            <article key={order._id} className="rounded-xl border border-gold-200/15 dark:border-gold-900/10 bg-white/70 dark:bg-white/5 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedOrderIds.includes(order._id)}
-                    onChange={() => toggleOrderSelection(order._id)}
-                    aria-label={`Select order ${getOrderDisplayId(order)}`}
-                  />
-                  <p className="text-sm font-semibold text-luxury-black dark:text-white">{getOrderDisplayId(order)}</p>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                    order.__isArchived ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-success-lux/10 border border-success-lux/20 text-success-lux"
-                  }`}
-                >
-                  {order.__isArchived ? "Archived" : "Active"}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-gray-lux dark:text-gray-400">{order.address?.fullName || "Guest"} • INR {Number(order.totalPrice || 0).toLocaleString()}</p>
-              <p className="text-xs text-gray-lux dark:text-gray-400">Status: {order.status} | Mode: <span className="font-semibold text-gold-600 uppercase">{order.paymentMethod || "Online"}</span></p>
-              <p className="text-xs text-gray-lux dark:text-gray-400 break-all">Tracking: {order.trackingId || "-"}</p>
-              {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
-                <div className="mt-3 space-y-2 rounded-xl bg-cream/40 dark:bg-white/5 p-2.5 border border-gold-200/15">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-gold-600">Customizations</p>
-                  {order.products?.filter(p => p.customization?.text || p.customization?.uploadedImage).map((p, idx) => (
-                    <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gold-200/15 pt-1.5 first:border-0 first:pt-0">
-                      <p className="font-semibold text-luxury-black dark:text-white line-clamp-1">{p.name}</p>
-                      {p.customization?.text && (
-                        <p className="text-gray-lux">Text: <span className="text-gold-600 font-medium">"{p.customization.text}"</span></p>
-                      )}
-                      {p.customization?.uploadedImage && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <img
-                            src={p.customization.uploadedImage}
-                            alt="Custom uploaded"
-                            className="h-10 w-10 rounded object-cover border border-gold-200/30"
-                            onError={(e) => {
-                              e.target.src = 'https://via.placeholder.com/200x200?text=Error';
-                            }}
-                          />
-                          <a
-                            href={p.customization.uploadedImage}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="rounded-lg border border-gold-300/35 bg-gold-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-600 hover:bg-gold-500/20"
-                          >
-                            View Image
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  ))}
                 </div>
               ) : null}
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button onClick={() => handlePrintShippingLabel(order)} className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600">Label</button>
-                <button onClick={() => handlePrintInvoice(order)} className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600">Invoice</button>
-                {order.__isArchived ? (
-                  <button onClick={() => handleRestoreOrder(order)} className="rounded-lg border border-success-lux/50 bg-success-lux/10 px-3 py-1.5 text-xs text-success-lux">Restore</button>
-                ) : (
-                  <button
-                    onClick={() => handleArchiveOrder(order)}
-                    disabled={order.status === "Cancelled"}
-                    className="rounded-lg border border-warning-lux/50 bg-warning-lux/10 px-3 py-1.5 text-xs text-warning-lux disabled:opacity-50"
+              <form onSubmit={generateSpecialRetentionCoupon} className="mt-6 grid gap-4 md:grid-cols-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Type</label>
+                  <select
+                    value={specialCouponForm.type}
+                    onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, type: e.target.value }))}
+                    className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
                   >
-                    Archive
-                  </button>
-                )}
-                <button
-                  onClick={() => handleDeleteOrder(order)}
-                  disabled={order.status !== "Cancelled" || order.__isArchived}
-                  className="rounded-lg bg-danger-lux px-3 py-1.5 text-xs text-white disabled:opacity-50"
-                >
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
-          {ordersForView.length === 0 ? <p className="text-sm text-gray-lux font-light text-center py-4">No orders found for this filter.</p> : null}
-        </div>
-        
-        {/* Desktop View */}
-        <div className="mt-3 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[1480px] text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-400">
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">
+                    <option value="percent">Percentage Off</option>
+                    <option value="flat">Flat Discount</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Value</label>
                   <input
-                    type="checkbox"
-                    checked={allVisibleOrdersSelected}
-                    onChange={toggleSelectAllVisibleOrders}
-                    aria-label="Select all visible orders"
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 15 or 500"
+                    value={specialCouponForm.value}
+                    onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, value: e.target.value }))}
+                    className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                    required
                   />
-                </th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Order ID</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Payment Mode</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Customization</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Customer</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Shipping Address</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Total</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Update Status</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Tracking ID</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Cancellation</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Shipping Label</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Invoice</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">A4 Combined</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Archive</th>
-                <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Delete</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
-              {ordersForViewFiltered.map((order) => (
-                <tr key={order._id} className="hover:bg-gold-500/5 transition-colors">
-                  <td className="py-3">
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Min Cart Value</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 1000"
+                    value={specialCouponForm.minCartValue}
+                    onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, minCartValue: e.target.value }))}
+                    className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Discount (Optional)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 150"
+                    value={specialCouponForm.maxDiscount}
+                    onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxDiscount: e.target.value }))}
+                    className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Global Uses</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited if empty"
+                    value={specialCouponForm.maxRedemptions}
+                    onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxRedemptions: e.target.value }))}
+                    className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Uses Per Customer</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited if empty"
+                    value={specialCouponForm.maxRedemptionsPerUser}
+                    onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, maxRedemptionsPerUser: e.target.value }))}
+                    className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Valid Until</label>
+                  <input
+                    type="date"
+                    value={specialCouponForm.endDate || ""}
+                    onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                    className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                  />
+                </div>
+                <div className="flex items-center pt-5">
+                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={selectedOrderIds.includes(order._id)}
-                      onChange={() => toggleOrderSelection(order._id)}
-                      aria-label={`Select order ${getOrderDisplayId(order)}`}
+                      checked={specialCouponForm.active}
+                      onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, active: e.target.checked }))}
+                      className="rounded text-violet-600 focus:ring-violet-600 cursor-pointer"
                     />
-                  </td>
-                  <td className="py-3 font-medium">{getOrderDisplayId(order)}</td>
-                  <td className="py-3">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                        order.__isArchived ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-success-lux/10 border border-success-lux/20 text-success-lux"
-                      }`}
-                    >
-                      {order.__isArchived ? "Archived" : "Active"}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                        String(order.paymentMethod).toLowerCase() === "cod" ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-gold-500/10 border border-gold-500/20 text-gold-600"
-                      }`}
-                    >
-                      {order.paymentMethod || "Online"}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
-                      <div className="space-y-3 max-w-[200px]">
-                        {order.products?.filter(p => p.customization?.text || p.customization?.uploadedImage).map((p, idx) => (
-                          <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gold-200/10 pt-1.5 first:border-0 first:pt-0">
-                            <p className="font-semibold text-luxury-black dark:text-white line-clamp-1">{p.name}</p>
-                            {p.customization?.text && (
-                              <p className="text-gray-lux text-[10px]">Text: <span className="text-gold-600 font-medium">"{p.customization.text}"</span></p>
-                            )}
-                            {p.customization?.uploadedImage && (
-                              <div className="flex items-center gap-2 mt-1">
-                                <img
-                                  src={p.customization.uploadedImage}
-                                  alt="Custom uploaded"
-                                  className="h-10 w-10 rounded object-cover border border-gold-200/20"
-                                  onError={(e) => {
-                                    e.target.src = 'https://via.placeholder.com/200x200?text=Error';
-                                  }}
-                                />
-                                <a
-                                  href={p.customization.uploadedImage}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="rounded-lg border border-gold-300/35 bg-gold-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-600 hover:bg-gold-500/20"
-                                >
-                                  View
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-400 font-light">—</span>
-                    )}
-                  </td>
-                  <td className="py-3 font-medium">{order.address?.fullName || "Guest"}</td>
-                  <td className="py-3">
-                    <div className="space-y-0.5 text-[11px] text-gray-lux dark:text-gray-400">
-                      <p className="font-medium text-luxury-black dark:text-white">{order.address?.line1 || "-"}</p>
-                      <p>
-                        {[order.address?.city, order.address?.state, order.address?.postalCode]
-                          .filter(Boolean)
-                          .join(", ") || "-"}
-                      </p>
-                      <p>{order.address?.country || "-"}</p>
-                      <p className="font-mono">{order.address?.phone || "-"}</p>
+                    <span className="font-medium text-gray-800">Coupon Active</span>
+                  </label>
+                </div>
+
+                <div className="md:col-span-3 border-t border-violet-100/50 my-2 pt-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-violet-900 mb-3">
+                    Direct Email Delivery (Optional)
+                  </p>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Recipient Email</label>
+                      <input
+                        type="email"
+                        autoComplete="off"
+                        placeholder="customer@example.com"
+                        value={specialCouponForm.customerEmail}
+                        onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, customerEmail: e.target.value }))}
+                        className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                      />
                     </div>
-                  </td>
-                  <td className="py-3 font-semibold">INR {Number(order.totalPrice || 0).toLocaleString()}</td>
-                  <td className="py-3 text-[11px] font-semibold text-gold-600">{order.status}</td>
-                  <td className="py-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Recipient Name</label>
+                      <input
+                        placeholder="e.g. John Doe"
+                        value={specialCouponForm.customerName}
+                        onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, customerName: e.target.value }))}
+                        className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Personal Note</label>
+                      <input
+                        placeholder="e.g. Enjoy this exclusive VIP offer!"
+                        value={specialCouponForm.emailMessage}
+                        onChange={(e) => setSpecialCouponForm((prev) => ({ ...prev, emailMessage: e.target.value }))}
+                        className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-violet-650 focus:ring-1 focus:ring-violet-650 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={generatingSpecial}
+                    className="rounded-full bg-violet-900 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-violet-800 transition-all duration-300 disabled:opacity-70 hover-float"
+                  >
+                    {generatingSpecial ? "Generating…" : "Generate Secure Code & Dispatch"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {activeTab === "coupons" && couponsSubTab === "public" && (
+            <>
+              <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
+                <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">
+                  {editingCouponId ? "Edit Coupon Rule" : "Create Public Coupon"}
+                </h3>
+                <p className="mt-1 text-xs text-gray-500 font-light mb-4">
+                  Define standard promotional campaign parameters. These coupons display on active checkout promo lists.
+                </p>
+                <form onSubmit={saveCoupon} className="mt-4 grid gap-4 md:grid-cols-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Code</label>
+                    <input
+                      placeholder="e.g. FESTIVE15"
+                      value={couponForm.code}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all disabled:bg-gray-100 disabled:text-gray-550"
+                      required
+                      disabled={editingCouponIsSpecial}
+                      title={editingCouponIsSpecial ? "System-generated codes cannot be changed" : undefined}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Type</label>
                     <select
-                      value={order.status}
-                      disabled={order.__isArchived}
-                      onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
-                      className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={couponForm.type}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, type: e.target.value }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
                     >
+                      <option value="percent">Percentage Off</option>
+                      <option value="flat">Flat Discount</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discount Value</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 10 or 250"
+                      value={couponForm.value}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, value: e.target.value }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Min Cart Value</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 1500"
+                      value={couponForm.minCartValue}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, minCartValue: e.target.value }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Discount (Optional)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 300"
+                      value={couponForm.maxDiscount}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, maxDiscount: e.target.value }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active From (Date & Time)</label>
+                    <input
+                      type="datetime-local"
+                      value={couponForm.startDate || ""}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                      title="Active start date and time (optional)"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Expires At (Date & Time)</label>
+                    <input
+                      type="datetime-local"
+                      value={couponForm.endDate || ""}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                      title="Expiration date and time (optional)"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Global Redemptions</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Unlimited if empty"
+                      value={couponForm.maxRedemptions}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, maxRedemptions: e.target.value }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                      title="Empty = unlimited redemptions globally"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Uses Per Customer</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Unlimited if empty"
+                      value={couponForm.maxRedemptionsPerUser}
+                      onChange={(e) => setCouponForm((prev) => ({ ...prev, maxRedemptionsPerUser: e.target.value }))}
+                      className="rounded-full border border-gray-200 bg-white/50 px-4 py-2 text-xs font-light text-gray-800 focus:border-emerald-950 focus:ring-1 focus:ring-emerald-950 transition-all"
+                      title="Empty = unlimited uses per account"
+                    />
+                  </div>
+                  <div className="flex items-center pt-5">
+                    <label className="flex items-center gap-2 text-xs text-gray-655 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={couponForm.active}
+                        onChange={(e) => setCouponForm((prev) => ({ ...prev, active: e.target.checked }))}
+                        className="rounded text-emerald-900 focus:ring-emerald-900 cursor-pointer"
+                      />
+                      <span className="font-medium text-gray-800">Coupon Active</span>
+                    </label>
+                  </div>
+
+                  <div className="md:col-span-3 rounded-2xl border border-gray-200 bg-gray-50/30 p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2">
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-700 font-sans">Selective Days of Operation</span>
+                        <p className="text-[10px] text-gray-400 font-light mt-0.5 font-sans">Select specific days the coupon is valid. Uncheck all to make it valid every day.</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] }))}
+                          className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
+                        >
+                          Weekdays
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Saturday", "Sunday"] }))}
+                          className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
+                        >
+                          Weekends
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] }))}
+                          className="rounded-full bg-white border border-gray-200 hover:bg-gray-50 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
+                        >
+                          All Days
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCouponForm((prev) => ({ ...prev, activeDays: [] }))}
+                          className="rounded-full bg-white border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-100 px-2.5 py-1 text-[9px] font-bold text-gray-600 transition cursor-pointer"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
+                        const activeDays = couponForm.activeDays || [];
+                        const isSelected = activeDays.includes(day);
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => {
+                              setCouponForm((prev) => {
+                                const current = prev.activeDays || [];
+                                const next = current.includes(day)
+                                  ? current.filter((d) => d !== day)
+                                  : [...current, day];
+                                return { ...prev, activeDays: next };
+                              });
+                            }}
+                            className={`rounded-full px-4 py-1.5 text-xs font-semibold border transition duration-200 cursor-pointer ${isSelected
+                              ? "bg-emerald-950 border-emerald-950 text-white shadow-xs"
+                              : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                              }`}
+                          >
+                            {day}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-3 flex items-center gap-2.5 pt-2">
+                    <button
+                      type="submit"
+                      className="rounded-full bg-emerald-950 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-emerald-900 transition-all duration-300 hover-float"
+                    >
+                      {editingCouponId ? "Update Coupon Rule" : "Create Coupon"}
+                    </button>
+                    {editingCouponId ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingCouponId("");
+                          setEditingCouponIsSpecial(false);
+                          setCouponForm(emptyCouponForm);
+                        }}
+                        className="rounded-full border border-gray-200 bg-white/50 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 transition-all"
+                      >
+                        Cancel
+                      </button>
+                    ) : null}
+                  </div>
+                </form>
+              </div>
+
+              <div className="rounded-3xl border border-gray-150/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
+                <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Manage Coupons</h3>
+                <p className="mt-1 text-xs text-gray-500 font-light mb-4">
+                  Monitor campaign redemptions and usage stats. Use &quot;Email&quot; to send specific codes directly to customer inboxes.
+                </p>
+
+                {fetchingCoupons ? (
+                  <TableSkeleton rows={5} cols={8} />
+                ) : (
+                  <>
+                    {couponEmailTargetId ? (
+                      <form
+                        onSubmit={submitCouponEmail}
+                        className="mt-4 rounded-2xl border border-sky-100 bg-sky-50/20 p-5 animate-fade-in"
+                      >
+                        <p className="text-sm font-serif font-medium text-gray-900">
+                          Email Coupon Code:{" "}
+                          <span className="font-mono text-violet-800 font-semibold">
+                            {coupons.find((c) => c._id === couponEmailTargetId)?.code || "—"}
+                          </span>
+                        </p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Customer Email</label>
+                            <input
+                              type="email"
+                              required
+                              placeholder="recipient@example.com"
+                              value={couponEmailForm.to}
+                              onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, to: e.target.value }))}
+                              className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Customer Name (Optional)</label>
+                            <input
+                              placeholder="e.g. Sarah"
+                              value={couponEmailForm.customerName}
+                              onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, customerName: e.target.value }))}
+                              className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
+                            />
+                          </div>
+                          <div className="sm:col-span-2 flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Personal Note (Optional)</label>
+                            <textarea
+                              placeholder="Add a custom note to the email..."
+                              value={couponEmailForm.message}
+                              onChange={(e) => setCouponEmailForm((prev) => ({ ...prev, message: e.target.value }))}
+                              rows={2}
+                              className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-xs font-light focus:border-sky-650 focus:ring-1 focus:ring-sky-650 transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2.5">
+                          <button
+                            type="submit"
+                            disabled={sendingCouponEmail}
+                            className="rounded-full bg-sky-700 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-sky-600 transition-all disabled:opacity-70 hover-float"
+                          >
+                            {sendingCouponEmail ? "Sending…" : "Send Email"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCouponEmailTargetId("");
+                              setCouponEmailForm(emptyCouponEmailForm);
+                            }}
+                            className="rounded-full border border-gray-300 bg-white px-5 py-2 text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 transition-all"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+
+                    <div className="mt-4 space-y-3 md:hidden">
+                      {coupons.map((coupon) => (
+                        <article key={coupon._id} className="rounded-2xl border border-gray-150/40 bg-white/50 p-4 space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-serif font-bold text-gray-950 tracking-wide">{coupon.code}</span>
+                              {coupon.isSpecial ? (
+                                <span className="rounded-full bg-violet-50 border border-violet-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-violet-800">
+                                  Special
+                                </span>
+                              ) : null}
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{coupon.type}</span>
+                          </div>
+                          <div className="text-xs space-y-1 font-light text-gray-600">
+                            <p>Value: <strong className="font-medium text-gray-900">{coupon.value}</strong> • Min Cart: INR {coupon.minCartValue}</p>
+                            <p>Max Discount: {coupon.maxDiscount ? `INR ${coupon.maxDiscount}` : "None"} • Status: {coupon.active ? (
+                              <span className="font-semibold text-emerald-800">Active</span>
+                            ) : (
+                              <span className="font-semibold text-gray-500">Inactive</span>
+                            )}</p>
+                            <p className="text-[11px] text-gray-500">{formatCouponUsage(coupon)}</p>
+                            <p className="text-[11px] text-gray-400">
+                              Expiry:{" "}
+                              {coupon.endDate
+                                ? new Date(coupon.endDate).toLocaleDateString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                                : "No expiry"}
+                            </p>
+                          </div>
+                          <div className="mt-2.5 flex flex-wrap gap-4 border-t border-gray-100 pt-2.5 text-xs font-semibold">
+                            <button
+                              type="button"
+                              onClick={() => startEditCoupon(coupon)}
+                              className="text-emerald-800 hover:text-emerald-950 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openCouponEmailPanel(coupon)}
+                              disabled={!coupon.active}
+                              className="text-sky-800 hover:text-sky-950 transition-colors disabled:opacity-40"
+                            >
+                              Email
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeCoupon(coupon._id)}
+                              className="text-rose-800 hover:text-rose-950 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                      {coupons.length === 0 ? <p className="text-xs text-gray-400 font-light">No coupons defined yet.</p> : null}
+                    </div>
+
+                    <div className="mt-4 hidden overflow-x-auto md:block">
+                      <table className="w-full min-w-[960px] text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-150/40">
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Coupon Code</th>
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Type</th>
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Value</th>
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Min Cart</th>
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Max Discount</th>
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Redemptions Status</th>
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Valid Until</th>
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans">Status</th>
+                            <th className="pb-3 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-sans text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {coupons.map((coupon) => (
+                            <tr key={coupon._id} className="hover:bg-gray-50/40 transition-colors">
+                              <td className="py-3.5 pr-2">
+                                <span className="font-serif font-bold text-sm text-gray-955 tracking-wide">{coupon.code}</span>
+                                {coupon.isSpecial ? (
+                                  <span className="ml-2 inline-flex rounded-full bg-violet-50 border border-violet-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-violet-800">
+                                    Special
+                                  </span>
+                                ) : null}
+                              </td>
+                              <td className="py-3.5 px-1 uppercase font-light text-gray-500">{coupon.type}</td>
+                              <td className="py-3.5 px-1 font-semibold text-gray-955">{coupon.value}</td>
+                              <td className="py-3.5 px-1 font-light text-gray-650">INR {coupon.minCartValue}</td>
+                              <td className="py-3.5 px-1 font-light text-gray-650">{coupon.maxDiscount ? `INR ${coupon.maxDiscount}` : "—"}</td>
+                              <td className="max-w-[220px] py-3.5 px-1 text-xs text-gray-500 font-light">{formatCouponUsage(coupon)}</td>
+                              <td className="py-3.5 px-1 text-gray-500 font-light">
+                                {coupon.endDate
+                                  ? new Date(coupon.endDate).toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })
+                                  : "—"}
+                              </td>
+                              <td className="py-3.5 px-1">
+                                {coupon.active ? (
+                                  <span className="inline-flex rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                                    Active
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex rounded-full bg-gray-50 border border-gray-150/40 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500">
+                                    Inactive
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3.5 pl-2 text-right">
+                                <div className="flex items-center justify-end gap-3.5 font-semibold text-xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditCoupon(coupon)}
+                                    className="text-emerald-800 hover:text-emerald-950 hover:underline transition-colors"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openCouponEmailPanel(coupon)}
+                                    disabled={!coupon.active}
+                                    className="text-sky-800 hover:text-sky-950 hover:underline transition-colors disabled:opacity-40"
+                                  >
+                                    Email
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCoupon(coupon._id)}
+                                    className="text-rose-800 hover:text-rose-950 hover:underline transition-colors"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {coupons.length === 0 ? (
+                            <tr>
+                              <td className="py-8 text-center text-gray-400 font-light" colSpan={9}>
+                                No coupons created yet. Use form above to add your first promotion.
+                              </td>
+                            </tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
+          {activeTab === "products" && productsSubTab === "add-edit-product" && (
+            <div className="animate-page-enter">
+              <AddProduct
+                initialData={editingId ? products.find(p => p._id === editingId) : duplicateData}
+                onSuccess={async () => {
+                  try {
+                    const { data } = await api.get("/admin/products", authHeader);
+                    setProducts(data);
+                  } catch (err) {
+                    console.error("Failed to refresh products", err);
+                  }
+                  setEditingId("");
+                  setDuplicateData(null);
+                  setProductsSubTab("inventory");
+                }}
+                onCancel={() => {
+                  setEditingId("");
+                  setDuplicateData(null);
+                  setProductsSubTab("inventory");
+                }}
+              />
+            </div>
+          )}
+
+          {activeTab === "orders" && (
+            <div className="rounded-2xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm space-y-4">
+              <h3 className="text-lg font-serif tracking-wide text-luxury-black dark:text-white">Manage Orders</h3>
+              {fetchingOrders ? (
+                <TableSkeleton rows={5} cols={8} />
+              ) : (
+                <>
+                  <div className="mt-3 flex overflow-x-auto items-center gap-2.5 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
+                    {["all", "active", "archived"].map((view) => (
+                      <button
+                        key={view}
+                        type="button"
+                        onClick={() => setOrderViewFilter(view)}
+                        className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${orderViewFilter === view
+                          ? "bg-gold-500 text-white shadow-sm"
+                          : "bg-cream dark:bg-white/5 border border-gold-200/10 dark:border-gold-900/10 text-gold-700 dark:text-gray-300 hover:bg-gold-500/10"
+                          }`}
+                      >
+                        {view === "all"
+                          ? `All (${orders.length + archivedOrders.length})`
+                          : view === "active"
+                            ? `Active (${orders.length})`
+                            : `Archived (${archivedOrders.length})`}
+                      </button>
+                    ))}
+                    <select
+                      value={orderStatusFilter}
+                      onChange={(e) => setOrderStatusFilter(e.target.value)}
+                      className="shrink-0 rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-gold-700 dark:text-gray-300 outline-none focus:border-gold-500"
+                      aria-label="Filter orders by status"
+                      title="Filter orders by status"
+                    >
+                      <option value="all">All statuses</option>
                       {orderStatuses.map((status) => (
-                        <option key={status} value={status}>
+                        <option key={status} value={status.toLowerCase()}>
                           {status}
                         </option>
                       ))}
                     </select>
-                  </td>
-                  <td className="py-3">
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={trackingCarriersByOrder[order._id] || order.trackingCarrier || "generic"}
-                        onChange={(e) => handleTrackingCarrierChange(order._id, e.target.value)}
-                        disabled={order.__isArchived || !isTrackingEditable(order.status)}
-                        className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-[#1C1C1C] px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-white/5"
-                      >
-                        {trackingCarriers.map((carrier) => (
-                          <option key={carrier.value} value={carrier.value}>
-                            {carrier.label}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        value={trackingInputs[order._id] ?? order.trackingId ?? ""}
-                        onChange={(e) => handleTrackingInputChange(order._id, e.target.value)}
-                        placeholder={isTrackingEditable(order.status) ? "Enter tracking ID" : "Status: Shipped required"}
-                        disabled={order.__isArchived || !isTrackingEditable(order.status)}
-                        className="w-40 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-white/5"
-                      />
-                      <button
-                        onClick={() => handleSaveTrackingId(order)}
-                        disabled={order.__isArchived || !isTrackingEditable(order.status)}
-                        className="rounded-lg border border-gold-300 bg-gold-500/10 hover:bg-gold-500 px-3 py-1 text-xs font-semibold text-gold-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </td>
-                  <td className="py-3">
-                    {order.cancellationRequest?.status === "Pending" ? (
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-warning-lux">Pending</p>
-                        <p className="max-w-[220px] text-xs text-gray-lux">{order.cancellationRequest.reason}</p>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleReviewCancellation(order, "approve")}
-                            className="rounded-lg bg-success-lux px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-success-lux/95 transition cursor-pointer"
+                    <select
+                      value={orderPaymentFilter}
+                      onChange={(e) => setOrderPaymentFilter(e.target.value)}
+                      className="shrink-0 rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-gold-700 dark:text-gray-300 outline-none focus:border-gold-500"
+                      aria-label="Filter orders by payment mode"
+                      title="Filter orders by payment mode"
+                    >
+                      <option value="all">All payment modes</option>
+                      <option value="online">Online</option>
+                      <option value="cod">COD</option>
+                    </select>
+                  </div>
+
+                  {/* Batch Print Bar */}
+                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-gold-200/30 bg-gold-50/30 dark:bg-white/5 p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gold-700 dark:text-gold-450 mr-2">
+                      {selectedOrderIds.length} Selected ({selectedOrdersForPrint.length} Print-Ready)
+                    </p>
+                    <select
+                      value={labelPrintFilter}
+                      onChange={(event) => setLabelPrintFilter(event.target.value)}
+                      className="rounded-full border border-gold-200/50 dark:border-gold-900/30 bg-white dark:bg-[#1C1C1C] px-3.5 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500"
+                      aria-label="Filter selected orders for label printing"
+                    >
+                      <option value="all">All selected</option>
+                      <option value="ready">Shipped/Delivered only</option>
+                      <option value="shipped">Shipped only</option>
+                      <option value="delivered">Delivered only</option>
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllVisibleOrders}
+                      className="rounded-full border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gold-700 dark:text-gray-250 hover:bg-gold-500/10 cursor-pointer transition-all duration-300"
+                    >
+                      {selectAllButtonLabel}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderIds([])}
+                      disabled={selectedOrderIds.length === 0}
+                      className="rounded-full border border-gray-200 bg-white dark:bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Clear
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePrintShippingLabelsBatch(selectedOrdersForPrint)}
+                      disabled={selectedOrdersForPrint.length === 0}
+                      className="rounded-full bg-gold-500 hover:bg-gold-hover px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm"
+                    >
+                      Print Labels ({selectedOrdersForPrint.length})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePrintInvoicesBatch(selectedOrdersForPrint)}
+                      disabled={selectedOrdersForPrint.length === 0}
+                      className="rounded-full bg-gold-600 hover:bg-gold-700 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm"
+                    >
+                      Print Invoices ({selectedOrdersForPrint.length})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePrintCombinedA4Batch(selectedOrdersForPrint)}
+                      disabled={selectedOrdersForPrint.length === 0}
+                      className="rounded-full bg-luxury-black dark:bg-white text-white dark:text-black hover:bg-gold-500 hover:text-white dark:hover:bg-gold-500 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-300 shadow-sm border border-gold-900/10"
+                    >
+                      Print Shipping + Invoice ({selectedOrdersForPrint.length})
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-3 md:hidden">
+                    {ordersForViewFiltered.map((order) => (
+                      <article key={order._id} className="rounded-xl border border-gold-200/15 dark:border-gold-900/10 bg-white/70 dark:bg-white/5 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedOrderIds.includes(order._id)}
+                              onChange={() => toggleOrderSelection(order._id)}
+                              aria-label={`Select order ${getOrderDisplayId(order)}`}
+                            />
+                            <p className="text-sm font-semibold text-luxury-black dark:text-white">{getOrderDisplayId(order)}</p>
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${order.__isArchived ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-success-lux/10 border border-success-lux/20 text-success-lux"
+                              }`}
                           >
-                            Approve
-                          </button>
+                            {order.__isArchived ? "Archived" : "Active"}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-lux dark:text-gray-400">{order.address?.fullName || "Guest"} • INR {Number(order.totalPrice || 0).toLocaleString()}</p>
+                        <p className="text-xs text-gray-lux dark:text-gray-400">Status: {order.status} | Mode: <span className="font-semibold text-gold-600 uppercase">{order.paymentMethod || "Online"}</span></p>
+                        <p className="text-xs text-gray-lux dark:text-gray-400 break-all">Tracking: {order.trackingId || "-"}</p>
+                        {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
+                          <div className="mt-3 space-y-2 rounded-xl bg-cream/40 dark:bg-white/5 p-2.5 border border-gold-200/15">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-gold-600">Customizations</p>
+                            {order.products?.filter(p => p.customization?.text || p.customization?.uploadedImage).map((p, idx) => (
+                              <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gold-200/15 pt-1.5 first:border-0 first:pt-0">
+                                <p className="font-semibold text-luxury-black dark:text-white line-clamp-1">{p.name}</p>
+                                {p.customization?.text && (
+                                  <p className="text-gray-lux">Text: <span className="text-gold-600 font-medium">"{p.customization.text}"</span></p>
+                                )}
+                                {p.customization?.uploadedImage && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <img
+                                      src={p.customization.uploadedImage}
+                                      alt="Custom uploaded"
+                                      className="h-10 w-10 rounded object-cover border border-gold-200/30"
+                                      onError={(e) => {
+                                        e.target.src = 'https://via.placeholder.com/200x200?text=Error';
+                                      }}
+                                    />
+                                    <a
+                                      href={p.customization.uploadedImage}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="rounded-lg border border-gold-300/35 bg-gold-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-600 hover:bg-gold-500/20"
+                                    >
+                                      View Image
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <button onClick={() => handlePrintShippingLabel(order)} className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600">Label</button>
+                          <button onClick={() => handlePrintInvoice(order)} className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600">Invoice</button>
+                          {order.__isArchived ? (
+                            <button onClick={() => handleRestoreOrder(order)} className="rounded-lg border border-success-lux/50 bg-success-lux/10 px-3 py-1.5 text-xs text-success-lux">Restore</button>
+                          ) : (
+                            <button
+                              onClick={() => handleArchiveOrder(order)}
+                              disabled={order.status === "Cancelled"}
+                              className="rounded-lg border border-warning-lux/50 bg-warning-lux/10 px-3 py-1.5 text-xs text-warning-lux disabled:opacity-50"
+                            >
+                              Archive
+                            </button>
+                          )}
                           <button
-                            type="button"
-                            onClick={() => handleReviewCancellation(order, "reject")}
-                            className="rounded-lg bg-danger-lux px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-danger-lux/95 transition cursor-pointer"
+                            onClick={() => handleDeleteOrder(order)}
+                            disabled={order.status !== "Cancelled" || order.__isArchived}
+                            className="rounded-lg bg-danger-lux px-3 py-1.5 text-xs text-white disabled:opacity-50"
                           >
-                            Reject
+                            Delete
                           </button>
                         </div>
-                      </div>
-                    ) : order.cancellationRequest?.status && order.cancellationRequest.status !== "None" ? (
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-gray-lux">{order.cancellationRequest.status}</p>
-                        {order.cancellationRequest.reason ? (
-                          <p className="max-w-[220px] text-xs text-gray-lux font-light">{order.cancellationRequest.reason}</p>
+                      </article>
+                    ))}
+                    {ordersForView.length === 0 ? <p className="text-sm text-gray-lux font-light text-center py-4">No orders found for this filter.</p> : null}
+                  </div>
+
+                  {/* Desktop View */}
+                  <div className="mt-3 hidden overflow-x-auto md:block">
+                    <table className="w-full min-w-[1480px] text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-gold-200/10 dark:border-gold-900/10 text-gray-400">
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">
+                            <input
+                              type="checkbox"
+                              checked={allVisibleOrdersSelected}
+                              onChange={toggleSelectAllVisibleOrders}
+                              aria-label="Select all visible orders"
+                            />
+                          </th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Order ID</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Status</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Payment Mode</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Customization</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Customer</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Shipping Address</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Total</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Update Status</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Tracking ID</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Cancellation</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Shipping Label</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Invoice</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">A4 Combined</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Archive</th>
+                          <th className="pb-3 text-[10px] font-bold uppercase tracking-wider font-sans">Delete</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
+                        {ordersForViewFiltered.map((order) => (
+                          <tr key={order._id} className="hover:bg-gold-500/5 transition-colors">
+                            <td className="py-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedOrderIds.includes(order._id)}
+                                onChange={() => toggleOrderSelection(order._id)}
+                                aria-label={`Select order ${getOrderDisplayId(order)}`}
+                              />
+                            </td>
+                            <td className="py-3 font-medium">{getOrderDisplayId(order)}</td>
+                            <td className="py-3">
+                              <span
+                                className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${order.__isArchived ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-success-lux/10 border border-success-lux/20 text-success-lux"
+                                  }`}
+                              >
+                                {order.__isArchived ? "Archived" : "Active"}
+                              </span>
+                            </td>
+                            <td className="py-3">
+                              <span
+                                className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${String(order.paymentMethod).toLowerCase() === "cod" ? "bg-warning-lux/10 border border-warning-lux/20 text-warning-lux" : "bg-gold-500/10 border border-gold-500/20 text-gold-600"
+                                  }`}
+                              >
+                                {order.paymentMethod || "Online"}
+                              </span>
+                            </td>
+                            <td className="py-3">
+                              {order.products?.some(p => p.customization?.text || p.customization?.uploadedImage) ? (
+                                <div className="space-y-3 max-w-[200px]">
+                                  {order.products?.filter(p => p.customization?.text || p.customization?.uploadedImage).map((p, idx) => (
+                                    <div key={idx} className="text-xs space-y-1 mt-1.5 border-t border-gold-200/10 pt-1.5 first:border-0 first:pt-0">
+                                      <p className="font-semibold text-luxury-black dark:text-white line-clamp-1">{p.name}</p>
+                                      {p.customization?.text && (
+                                        <p className="text-gray-lux text-[10px]">Text: <span className="text-gold-600 font-medium">"{p.customization.text}"</span></p>
+                                      )}
+                                      {p.customization?.uploadedImage && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <img
+                                            src={p.customization.uploadedImage}
+                                            alt="Custom uploaded"
+                                            className="h-10 w-10 rounded object-cover border border-gold-200/20"
+                                            onError={(e) => {
+                                              e.target.src = 'https://via.placeholder.com/200x200?text=Error';
+                                            }}
+                                          />
+                                          <a
+                                            href={p.customization.uploadedImage}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="rounded-lg border border-gold-300/35 bg-gold-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-600 hover:bg-gold-500/20"
+                                          >
+                                            View
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400 font-light">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 font-medium">{order.address?.fullName || "Guest"}</td>
+                            <td className="py-3">
+                              <div className="space-y-0.5 text-[11px] text-gray-lux dark:text-gray-400">
+                                <p className="font-medium text-luxury-black dark:text-white">{order.address?.line1 || "-"}</p>
+                                <p>
+                                  {[order.address?.city, order.address?.state, order.address?.postalCode]
+                                    .filter(Boolean)
+                                    .join(", ") || "-"}
+                                </p>
+                                <p>{order.address?.country || "-"}</p>
+                                <p className="font-mono">{order.address?.phone || "-"}</p>
+                              </div>
+                            </td>
+                            <td className="py-3 font-semibold">INR {Number(order.totalPrice || 0).toLocaleString()}</td>
+                            <td className="py-3 text-[11px] font-semibold text-gold-600">{order.status}</td>
+                            <td className="py-3">
+                              <select
+                                value={order.status}
+                                disabled={order.__isArchived}
+                                onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
+                                className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {orderStatuses.map((status) => (
+                                  <option key={status} value={status}>
+                                    {status}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="py-3">
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={trackingCarriersByOrder[order._id] || order.trackingCarrier || "generic"}
+                                  onChange={(e) => handleTrackingCarrierChange(order._id, e.target.value)}
+                                  disabled={order.__isArchived || !isTrackingEditable(order.status)}
+                                  className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-[#1C1C1C] px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-white/5"
+                                >
+                                  {trackingCarriers.map((carrier) => (
+                                    <option key={carrier.value} value={carrier.value}>
+                                      {carrier.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  value={trackingInputs[order._id] ?? order.trackingId ?? ""}
+                                  onChange={(e) => handleTrackingInputChange(order._id, e.target.value)}
+                                  placeholder={isTrackingEditable(order.status) ? "Enter tracking ID" : "Status: Shipped required"}
+                                  disabled={order.__isArchived || !isTrackingEditable(order.status)}
+                                  className="w-40 rounded-lg border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-2 py-1 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-white/5"
+                                />
+                                <button
+                                  onClick={() => handleSaveTrackingId(order)}
+                                  disabled={order.__isArchived || !isTrackingEditable(order.status)}
+                                  className="rounded-lg border border-gold-300 bg-gold-500/10 hover:bg-gold-500 px-3 py-1 text-xs font-semibold text-gold-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-3">
+                              {order.cancellationRequest?.status === "Pending" ? (
+                                <div className="space-y-1">
+                                  <p className="text-xs font-semibold text-warning-lux">Pending</p>
+                                  <p className="max-w-[220px] text-xs text-gray-lux">{order.cancellationRequest.reason}</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReviewCancellation(order, "approve")}
+                                      className="rounded-lg bg-success-lux px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-success-lux/95 transition cursor-pointer"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReviewCancellation(order, "reject")}
+                                      className="rounded-lg bg-danger-lux px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-danger-lux/95 transition cursor-pointer"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : order.cancellationRequest?.status && order.cancellationRequest.status !== "None" ? (
+                                <div className="space-y-1">
+                                  <p className="text-xs font-semibold text-gray-lux">{order.cancellationRequest.status}</p>
+                                  {order.cancellationRequest.reason ? (
+                                    <p className="max-w-[220px] text-xs text-gray-lux font-light">{order.cancellationRequest.reason}</p>
+                                  ) : null}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400 font-light">—</span>
+                              )}
+                            </td>
+                            <td className="py-3">
+                              <button
+                                onClick={() => handlePrintShippingLabel(order)}
+                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
+                              >
+                                Print Label
+                              </button>
+                            </td>
+                            <td className="py-3">
+                              <button
+                                onClick={() => handlePrintInvoice(order)}
+                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
+                              >
+                                Print Invoice
+                              </button>
+                            </td>
+                            <td className="py-3">
+                              <button
+                                onClick={() => handlePrintCombinedA4(order)}
+                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
+                              >
+                                Print A4 Both
+                              </button>
+                            </td>
+                            <td className="py-3">
+                              {order.status !== "Cancelled" ? (
+                                <button
+                                  onClick={() => handleArchiveOrder(order)}
+                                  disabled={order.__isArchived}
+                                  className="rounded-full border border-warning-lux/40 bg-warning-lux/5 px-3 py-1 text-xs font-semibold text-warning-lux hover:bg-warning-lux hover:text-white transition cursor-pointer"
+                                >
+                                  Archive
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-400 font-light">-</span>
+                              )}
+                            </td>
+                            <td className="py-3">
+                              {order.__isArchived ? (
+                                <button
+                                  onClick={() => handleRestoreOrder(order)}
+                                  className="rounded-full border border-success-lux/40 bg-success-lux/5 px-3 py-1 text-xs font-semibold text-success-lux hover:bg-success-lux hover:text-white transition cursor-pointer"
+                                >
+                                  Restore
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleDeleteOrder(order)}
+                                  disabled={order.status !== "Cancelled"}
+                                  className="rounded-full bg-danger-lux px-3 py-1 text-xs font-semibold text-white hover:bg-danger-lux/95 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                        {ordersForViewFiltered.length === 0 ? (
+                          <tr>
+                            <td className="py-6 text-gray-500 text-center font-light" colSpan={16}>
+                              No orders found for this filter.
+                            </td>
+                          </tr>
                         ) : null}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-400 font-light">—</span>
-                    )}
-                  </td>
-                  <td className="py-3">
-                    <button
-                      onClick={() => handlePrintShippingLabel(order)}
-                      className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
-                    >
-                      Print Label
-                    </button>
-                  </td>
-                  <td className="py-3">
-                    <button
-                      onClick={() => handlePrintInvoice(order)}
-                      className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
-                    >
-                      Print Invoice
-                    </button>
-                  </td>
-                  <td className="py-3">
-                    <button
-                      onClick={() => handlePrintCombinedA4(order)}
-                      className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
-                    >
-                      Print A4 Both
-                    </button>
-                  </td>
-                  <td className="py-3">
-                    {order.status !== "Cancelled" ? (
-                      <button
-                        onClick={() => handleArchiveOrder(order)}
-                        disabled={order.__isArchived}
-                        className="rounded-full border border-warning-lux/40 bg-warning-lux/5 px-3 py-1 text-xs font-semibold text-warning-lux hover:bg-warning-lux hover:text-white transition cursor-pointer"
-                      >
-                        Archive
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-400 font-light">-</span>
-                    )}
-                  </td>
-                  <td className="py-3">
-                    {order.__isArchived ? (
-                      <button
-                        onClick={() => handleRestoreOrder(order)}
-                        className="rounded-full border border-success-lux/40 bg-success-lux/5 px-3 py-1 text-xs font-semibold text-success-lux hover:bg-success-lux hover:text-white transition cursor-pointer"
-                      >
-                        Restore
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleDeleteOrder(order)}
-                        disabled={order.status !== "Cancelled"}
-                        className="rounded-full bg-danger-lux px-3 py-1 text-xs font-semibold text-white hover:bg-danger-lux/95 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {ordersForViewFiltered.length === 0 ? (
-                <tr>
-                  <td className="py-6 text-gray-500 text-center font-light" colSpan={16}>
-                    No orders found for this filter.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-            </>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
           )}
-      </div>
-      )}
 
         </main>
       </div>
@@ -5746,7 +5719,7 @@ const NewsletterSubscribersSection = ({ authHeader }) => {
       return;
     }
     const emailsList = subscribers.map((sub) => sub.email).join(", ");
-    
+
     // Quick copy to clipboard
     navigator.clipboard.writeText(emailsList)
       .then(() => {

@@ -107,6 +107,7 @@ const normalizeProductPayload = (source = {}, existingProduct = null) => {
     nonReturnableConditions: parseDelimitedList(source.nonReturnableConditions),
     returnInstructions: String(source.returnInstructions || existingProduct?.returnInstructions || "").trim(),
     replacementInstructions: String(source.replacementInstructions || existingProduct?.replacementInstructions || "").trim(),
+    careInstructions: String(source.careInstructions || existingProduct?.careInstructions || "").trim(),
   };
 };
 
@@ -321,6 +322,7 @@ const createProduct = async (req, res) => {
       nonReturnableConditions,
       returnInstructions,
       replacementInstructions,
+      careInstructions,
       returnShipping,
       replacementShipping,
     } = {
@@ -399,6 +401,7 @@ const createProduct = async (req, res) => {
       nonReturnableConditions: Array.isArray(nonReturnableConditions) ? nonReturnableConditions.map(c => String(c).trim()).filter(Boolean) : [],
       returnInstructions: String(returnInstructions || "").trim(),
       replacementInstructions: String(replacementInstructions || "").trim(),
+      careInstructions: String(careInstructions || "").trim(),
     });
 
     if (req.user) {

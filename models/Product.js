@@ -259,6 +259,11 @@ const productSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    careInstructions: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     rating: {
       type: Number,
       default: 0,
