@@ -100,6 +100,18 @@ const returnRequestSchema = new mongoose.Schema(
       refundDate: { type: Date, default: null },
       transactionReference: { type: String, default: "" },
     },
+    codRefundMethod: {
+      type: String,
+      enum: ["", "Bank Transfer", "UPI"],
+      default: "",
+    },
+    codRefundDetails: {
+      upiId: { type: String, default: "" },
+      bankName: { type: String, default: "" },
+      accountHolderName: { type: String, default: "" },
+      accountNumber: { type: String, default: "" },
+      ifscCode: { type: String, default: "" },
+    },
   },
   { timestamps: true }
 );

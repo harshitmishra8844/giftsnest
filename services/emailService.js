@@ -1316,6 +1316,30 @@ const sendReturnRequestSubmitted = async (user, order, returnRequest) => {
 
   const title = `Return Requested: ${code}`;
   const headline = `Return Request Submitted`;
+  
+  const codDetailsHtml = returnRequest.codRefundMethod ? `
+    <tr>
+      <td><strong>Refund Method (COD):</strong></td>
+      <td align="right">${escapeHtml(returnRequest.codRefundMethod)}</td>
+    </tr>
+    ${returnRequest.codRefundMethod === "UPI" ? `
+      <tr>
+        <td><strong>UPI ID:</strong></td>
+        <td align="right">${escapeHtml(returnRequest.codRefundDetails?.upiId)}</td>
+      </tr>
+    ` : `
+      <tr>
+        <td><strong>Bank Details:</strong></td>
+        <td align="right">
+          ${escapeHtml(returnRequest.codRefundDetails?.accountHolderName)}<br/>
+          ${escapeHtml(returnRequest.codRefundDetails?.bankName)}<br/>
+          A/c: ${escapeHtml(returnRequest.codRefundDetails?.accountNumber)}<br/>
+          IFSC: ${escapeHtml(returnRequest.codRefundDetails?.ifscCode?.toUpperCase())}
+        </td>
+      </tr>
+    `}
+  ` : "";
+
   const bodyHtml = `
     <p>Hi ${escapeHtml(user.name)},</p>
     <p>Your return request <strong>${code}</strong> for order <strong>#${escapeHtml(orderCode)}</strong> has been successfully submitted and is now under review.</p>
@@ -1328,6 +1352,7 @@ const sendReturnRequestSubmitted = async (user, order, returnRequest) => {
         <td><strong>Reason:</strong></td>
         <td align="right">${escapeHtml(returnRequest.reason)}</td>
       </tr>
+      ${codDetailsHtml}
       <tr>
         <td><strong>Status:</strong></td>
         <td align="right" style="color: #785D19; font-weight: bold;">Pending Review</td>
@@ -1548,6 +1573,30 @@ const sendAdminReturnRequestAlertV2 = async (returnRequest, order) => {
 
   const title = `[Admin Alert] New Return Request: ${code}`;
   const headline = `New Return Claim submitted`;
+
+  const codDetailsHtml = returnRequest.codRefundMethod ? `
+    <tr>
+      <td><strong>Refund Method (COD):</strong></td>
+      <td align="right">${escapeHtml(returnRequest.codRefundMethod)}</td>
+    </tr>
+    ${returnRequest.codRefundMethod === "UPI" ? `
+      <tr>
+        <td><strong>UPI ID:</strong></td>
+        <td align="right">${escapeHtml(returnRequest.codRefundDetails?.upiId)}</td>
+      </tr>
+    ` : `
+      <tr>
+        <td><strong>Bank Details:</strong></td>
+        <td align="right">
+          ${escapeHtml(returnRequest.codRefundDetails?.accountHolderName)}<br/>
+          ${escapeHtml(returnRequest.codRefundDetails?.bankName)}<br/>
+          A/c: ${escapeHtml(returnRequest.codRefundDetails?.accountNumber)}<br/>
+          IFSC: ${escapeHtml(returnRequest.codRefundDetails?.ifscCode?.toUpperCase())}
+        </td>
+      </tr>
+    `}
+  ` : "";
+
   const bodyHtml = `
     <p>A new return request has been submitted by customer and is pending review.</p>
     <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
@@ -1559,6 +1608,7 @@ const sendAdminReturnRequestAlertV2 = async (returnRequest, order) => {
         <td><strong>Reason:</strong></td>
         <td align="right">${escapeHtml(returnRequest.reason)}</td>
       </tr>
+      ${codDetailsHtml}
       <tr>
         <td><strong>Description:</strong></td>
         <td align="right">${escapeHtml(returnRequest.description)}</td>

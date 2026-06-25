@@ -132,6 +132,14 @@ const MyProfile = () => {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [orderProductsDetails, setOrderProductsDetails] = useState({});
 
+  // COD refund fields
+  const [codRefundMethod, setCodRefundMethod] = useState("UPI");
+  const [codUpiId, setCodUpiId] = useState("");
+  const [codBankName, setCodBankName] = useState("");
+  const [codAccountHolderName, setCodAccountHolderName] = useState("");
+  const [codAccountNumber, setCodAccountNumber] = useState("");
+  const [codIfscCode, setCodIfscCode] = useState("");
+
   // Chat attachment states
   const [chatAttachment, setChatAttachment] = useState(null); // { name, url, fileType }
   const [uploadingChatAttachment, setUploadingChatAttachment] = useState(false);
@@ -259,6 +267,12 @@ const MyProfile = () => {
     setReturnImages([]);
     setReturnVideo(null);
     setReturnPolicyChecked(false);
+    setCodRefundMethod("UPI");
+    setCodUpiId("");
+    setCodBankName("");
+    setCodAccountHolderName("");
+    setCodAccountNumber("");
+    setCodIfscCode("");
     setError("");
     setSuccessMessage("");
     
@@ -377,6 +391,24 @@ const MyProfile = () => {
       return;
     }
 
+    if (returnResolution === "Refund" && returnOrder.paymentMethod === "COD") {
+      if (!codRefundMethod) {
+        setError("Please select a refund method for COD.");
+        return;
+      }
+      if (codRefundMethod === "UPI") {
+        if (!codUpiId.trim()) {
+          setError("Please provide a UPI ID.");
+          return;
+        }
+      } else if (codRefundMethod === "Bank Transfer") {
+        if (!codBankName.trim() || !codAccountHolderName.trim() || !codAccountNumber.trim() || !codIfscCode.trim()) {
+          setError("Please fill all bank account details.");
+          return;
+        }
+      }
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -397,6 +429,14 @@ const MyProfile = () => {
         reason: returnReason,
         description: returnDescription.trim(),
         images: returnImages,
+        codRefundMethod: (returnResolution === "Refund" && returnOrder.paymentMethod === "COD") ? codRefundMethod : "",
+        codRefundDetails: (returnResolution === "Refund" && returnOrder.paymentMethod === "COD") ? {
+          upiId: codUpiId.trim(),
+          bankName: codBankName.trim(),
+          accountHolderName: codAccountHolderName.trim(),
+          accountNumber: codAccountNumber.trim(),
+          ifscCode: codIfscCode.trim(),
+        } : undefined,
       };
 
       let endpoint = "/returns/requests";
@@ -932,6 +972,100 @@ const MyProfile = () => {
               </div>
             </div>
 
+            {returnResolution === "Refund" && returnOrder.paymentMethod === "COD" && (
+              <div className="rounded-2xl border border-gold-300/40 bg-gold-50/10 p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-champagne/30 pb-2">
+                  <span className="text-base">💳</span>
+                  <div>
+                    <h4 className="text-xs font-serif font-bold text-luxury-black">COD Refund Details</h4>
+                    <p className="text-[9px] text-text-secondary font-light uppercase tracking-wider">Provide details to receive your refund</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 items-center">
+                  <span className="text-xs text-luxury-black font-semibold">Refund Via:</span>
+                  <label className="flex items-center gap-1.5 text-xs text-luxury-black cursor-pointer">
+                    <input
+                      type="radio"
+                      name="codRefundMethod"
+                      value="UPI"
+                      checked={codRefundMethod === "UPI"}
+                      onChange={(e) => setCodRefundMethod(e.target.value)}
+                      className="accent-gold-600"
+                    />
+                    UPI ID
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-luxury-black cursor-pointer">
+                    <input
+                      type="radio"
+                      name="codRefundMethod"
+                      value="Bank Transfer"
+                      checked={codRefundMethod === "Bank Transfer"}
+                      onChange={(e) => setCodRefundMethod(e.target.value)}
+                      className="accent-gold-600"
+                    />
+                    Bank Account Transfer
+                  </label>
+                </div>
+
+                {codRefundMethod === "UPI" ? (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-luxury-black">UPI ID *</label>
+                    <input
+                      type="text"
+                      value={codUpiId}
+                      onChange={(e) => setCodUpiId(e.target.value)}
+                      placeholder="e.g. user@bank"
+                      className="w-full rounded-xl border border-champagne bg-white px-3.5 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/15 focus:ring-1 focus:ring-gold-500/20 placeholder:text-gray-400 font-light text-luxury-black"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-luxury-black">Account Holder Name *</label>
+                      <input
+                        type="text"
+                        value={codAccountHolderName}
+                        onChange={(e) => setCodAccountHolderName(e.target.value)}
+                        placeholder="Name as in Bank Account"
+                        className="w-full rounded-xl border border-champagne bg-white px-3.5 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/15 focus:ring-1 focus:ring-gold-500/20 placeholder:text-gray-400 font-light text-luxury-black"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-luxury-black">Bank Name *</label>
+                      <input
+                        type="text"
+                        value={codBankName}
+                        onChange={(e) => setCodBankName(e.target.value)}
+                        placeholder="e.g. HDFC Bank"
+                        className="w-full rounded-xl border border-champagne bg-white px-3.5 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/15 focus:ring-1 focus:ring-gold-500/20 placeholder:text-gray-400 font-light text-luxury-black"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-luxury-black">Account Number *</label>
+                      <input
+                        type="text"
+                        value={codAccountNumber}
+                        onChange={(e) => setCodAccountNumber(e.target.value)}
+                        placeholder="Bank Account Number"
+                        className="w-full rounded-xl border border-champagne bg-white px-3.5 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/15 focus:ring-1 focus:ring-gold-500/20 placeholder:text-gray-400 font-light text-luxury-black"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-luxury-black">IFSC Code *</label>
+                      <input
+                        type="text"
+                        value={codIfscCode}
+                        onChange={(e) => setCodIfscCode(e.target.value)}
+                        placeholder="e.g. HDFC0001234"
+                        className="w-full rounded-xl border border-champagne bg-white px-3.5 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/15 focus:ring-1 focus:ring-gold-500/20 placeholder:text-gray-400 font-light text-luxury-black"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">
                 Detailed Description *
@@ -1220,6 +1354,23 @@ const MyProfile = () => {
                     <div className="mt-2 text-[10px] bg-gold-50/20 border border-gold-200/30 p-2 rounded-xl">
                       <p>Replacement Created: <strong>Order #{selectedReturn.replacementOrder.orderCode || selectedReturn.replacementOrder._id.slice(-8)}</strong></p>
                       <p>Fulfillment Status: <strong>{selectedReturn.replacementOrder.status}</strong></p>
+                    </div>
+                  )}
+
+                  {selectedReturn.codRefundMethod && (
+                    <div className="mt-2 text-[10px] bg-gold-50/15 border border-gold-200/20 p-2.5 rounded-xl space-y-1">
+                      <p className="font-bold text-gold-800 uppercase tracking-wider text-[8px] border-b border-champagne/15 pb-0.5">COD Refund Method</p>
+                      <p>Method: <strong>{selectedReturn.codRefundMethod}</strong></p>
+                      {selectedReturn.codRefundMethod === "UPI" ? (
+                        <p>UPI ID: <strong>{selectedReturn.codRefundDetails?.upiId}</strong></p>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <p>Holder: <strong>{selectedReturn.codRefundDetails?.accountHolderName}</strong></p>
+                          <p>Bank: <strong>{selectedReturn.codRefundDetails?.bankName}</strong></p>
+                          <p>Account: <strong>{selectedReturn.codRefundDetails?.accountNumber}</strong></p>
+                          <p>IFSC: <strong className="uppercase">{selectedReturn.codRefundDetails?.ifscCode}</strong></p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

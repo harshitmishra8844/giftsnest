@@ -224,6 +224,23 @@ const ReturnsReplacementsTab = () => {
                   </p>
                 </div>
 
+                {req.codRefundMethod && (
+                  <div className="rounded-xl border border-gold-300/30 bg-gold-50/5 dark:bg-gold-950/5 p-3 space-y-1.5 mt-2">
+                    <p className="text-[10px] font-bold uppercase text-gold-600 dark:text-gold-400 tracking-wider border-b border-gold-200/10 dark:border-gold-900/10 pb-1">💸 COD Refund Details</p>
+                    <p className="text-xs">Method: <strong className="text-luxury-black dark:text-white">{req.codRefundMethod}</strong></p>
+                    {req.codRefundMethod === "UPI" ? (
+                      <p className="text-xs">UPI ID: <strong className="text-luxury-black dark:text-white">{req.codRefundDetails?.upiId}</strong></p>
+                    ) : (
+                      <div className="space-y-0.5 text-xs">
+                        <p>Holder: <strong className="text-luxury-black dark:text-white">{req.codRefundDetails?.accountHolderName}</strong></p>
+                        <p>Bank: <strong className="text-luxury-black dark:text-white">{req.codRefundDetails?.bankName}</strong></p>
+                        <p>Account: <strong className="text-luxury-black dark:text-white">{req.codRefundDetails?.accountNumber}</strong></p>
+                        <p>IFSC: <strong className="text-luxury-black dark:text-white uppercase">{req.codRefundDetails?.ifscCode}</strong></p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {req.images && req.images.length > 0 && (
                   <div>
                     <p className="text-[10px] font-bold uppercase text-gray-400 mb-1.5">

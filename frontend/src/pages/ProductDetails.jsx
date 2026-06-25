@@ -760,74 +760,14 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* Return & Replacement Policy Card */}
-            {(product.returnAvailable || product.replacementAvailable) && (
-              <div className="rounded-2xl border border-gold-300/40 bg-gradient-to-br from-gold-50/10 via-white to-gold-50/5 p-5 shadow-xs space-y-3.5 animate-[fadeIn_0.3s_ease-out]">
-                <div className="flex items-center gap-2 border-b border-champagne/30 pb-2">
-                  <span className="text-base">🔄</span>
-                  <div>
-                    <h3 className="text-xs font-serif font-bold text-luxury-black">Return & Replacement Policy</h3>
-                    <p className="text-[9px] text-text-secondary font-light uppercase tracking-wider">Hassle-Free Post-Purchase Guarantees</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {product.returnAvailable && (
-                    <div className="flex items-center gap-2 rounded-xl bg-gold-50/30 border border-gold-200/40 p-2.5">
-                      <span className="text-gold-600 font-bold">✓</span>
-                      <div>
-                        <p className="font-semibold text-luxury-black text-[11px]">{product.returnWindow} Return</p>
-                        <p className="text-[9px] text-text-secondary font-light">
-                          {product.returnConditions?.some(c => c.startsWith("Return Shipping:")) 
-                            ? product.returnConditions.find(c => c.startsWith("Return Shipping:"))?.replace("Return Shipping: ", "")
-                            : "Terms Apply"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {product.replacementAvailable && (
-                    <div className="flex items-center gap-2 rounded-xl bg-gold-50/30 border border-gold-200/40 p-2.5">
-                      <span className="text-gold-600 font-bold">✓</span>
-                      <div>
-                        <p className="font-semibold text-luxury-black text-[11px]">{product.replacementWindow} Replacement</p>
-                        <p className="text-[9px] text-text-secondary font-light">
-                          {product.replacementConditions?.some(c => c.startsWith("Replacement Shipping:"))
-                            ? product.replacementConditions.find(c => c.startsWith("Replacement Shipping:"))?.replace("Replacement Shipping: ", "")
-                            : "Free Pickup & Drop"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2 text-[10px]">
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
-                    ✓ Damaged Product Covered
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
-                    ✓ Wrong Product Covered
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-gold-50 px-2 py-0.5 font-medium text-gold-700">
-                    ✓ Easy Digital Process
-                  </span>
-                </div>
-
-                {(product.returnInstructions || product.replacementInstructions) && (
-                  <p className="text-[10px] text-text-secondary leading-relaxed font-light italic">
-                    Note: {product.returnInstructions || product.replacementInstructions}
-                  </p>
-                )}
-              </div>
-            )}
-
             {/* Highlights */}
             <div className="rounded-2xl border border-champagne bg-white p-5 shadow-xs">
-              <h2 className="text-sm font-serif font-semibold text-luxury-black border-b border-champagne/30 pb-2">Highlights</h2>
-              <ul className="mt-3.5 grid gap-2.5 text-xs text-text-secondary leading-relaxed font-light">
+              <h2 className="text-sm font-serif font-bold text-luxury-black border-b border-champagne/30 pb-3">Highlights</h2>
+              <ul className="mt-4 grid gap-3 text-[11px] text-text-secondary leading-relaxed font-medium">
                 {highlights.map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gold-500" />
-                    <span>{item}</span>
+                  <li key={item} className="flex items-start gap-3">
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gold-500 shadow-sm shadow-gold-500/50" />
+                    <span className="pt-0.5 text-luxury-black/80">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -856,6 +796,68 @@ const ProductDetails = () => {
                 ))}
               </div>
             </div>
+
+            {/* Return & Replacement Policy Card */}
+            {(product.returnAvailable || product.replacementAvailable) && (
+              <div className="rounded-2xl border border-gold-300/40 bg-white p-5 shadow-xs space-y-4">
+                <div className="flex items-center gap-3 border-b border-champagne/30 pb-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold-50 text-gold-600">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-serif font-bold text-luxury-black">Return & Replacement Policy</h3>
+                    <p className="text-[9px] text-text-secondary font-light uppercase tracking-wider mt-0.5">Hassle-Free Post-Purchase Guarantees</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  {product.returnAvailable && (
+                    <div className="flex items-start gap-3 rounded-xl border border-gold-100 bg-gold-50/20 p-3 transition-colors hover:bg-gold-50/40">
+                      <span className="text-gold-500 font-bold text-lg leading-none">✓</span>
+                      <div>
+                        <p className="font-semibold text-luxury-black text-[11px]">{product.returnWindow} Return</p>
+                        <p className="text-[9px] text-text-secondary font-light mt-0.5">
+                          {product.returnConditions?.some(c => c.startsWith("Return Shipping:")) 
+                            ? product.returnConditions.find(c => c.startsWith("Return Shipping:"))?.replace("Return Shipping: ", "")
+                            : "Terms Apply"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {product.replacementAvailable && (
+                    <div className="flex items-start gap-3 rounded-xl border border-gold-100 bg-gold-50/20 p-3 transition-colors hover:bg-gold-50/40">
+                      <span className="text-gold-500 font-bold text-lg leading-none">✓</span>
+                      <div>
+                        <p className="font-semibold text-luxury-black text-[11px]">{product.replacementWindow} Replacement</p>
+                        <p className="text-[9px] text-text-secondary font-light mt-0.5">
+                          {product.replacementConditions?.some(c => c.startsWith("Replacement Shipping:"))
+                            ? product.replacementConditions.find(c => c.startsWith("Replacement Shipping:"))?.replace("Replacement Shipping: ", "")
+                            : "Free Pickup & Drop"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1 text-[9px]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 border border-emerald-100/50">
+                    <span className="text-[10px]">✓</span> Damaged Product Covered
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 border border-emerald-100/50">
+                    <span className="text-[10px]">✓</span> Wrong Product Covered
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gold-50 px-2.5 py-1 font-medium text-gold-700 border border-gold-100/50">
+                    <span className="text-[10px]">✓</span> Easy Digital Process
+                  </span>
+                </div>
+                
+                <p className="text-[9px] text-text-secondary/70 italic mt-2 leading-relaxed">
+                  Note: Returns accepted within {product.returnWindow || "7 Days"}. Product must be unused and in original packaging. Personalized products are non-returnable. Refund processed after quality inspection.
+                </p>
+              </div>
+            )}
 
             {/* Services info merged at the bottom of specifications */}
             <div className="rounded-2xl border border-champagne bg-white p-5 shadow-xs">

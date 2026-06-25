@@ -600,7 +600,7 @@ const generateReplacementRequestCode = () => {
 
 const createReturnRequest = async (req, res) => {
   try {
-    const { orderId, items, reason, description, images, video } = req.body;
+    const { orderId, items, reason, description, images, video, codRefundMethod, codRefundDetails } = req.body;
     const customerId = req.user._id;
 
     if (!orderId || !reason || !description) {
@@ -614,6 +614,26 @@ const createReturnRequest = async (req, res) => {
     const order = await Order.findOne({ _id: orderId, userId: customerId });
     if (!order) {
       return res.status(404).json({ message: "Order not found." });
+    }
+
+    if (order.paymentMethod === "COD") {
+      if (!codRefundMethod) {
+        return res.status(400).json({ message: "Refund method is required for COD orders." });
+      }
+      if (codRefundMethod === "UPI") {
+        if (!codRefundDetails?.upiId || !codRefundDetails.upiId.trim()) {
+          return res.status(400).json({ message: "UPI ID is required for UPI refund." });
+        }
+      } else if (codRefundMethod === "Bank Transfer") {
+        if (!codRefundDetails?.bankName || !codRefundDetails.bankName.trim() ||
+            !codRefundDetails?.accountHolderName || !codRefundDetails.accountHolderName.trim() ||
+            !codRefundDetails?.accountNumber || !codRefundDetails.accountNumber.trim() ||
+            !codRefundDetails?.ifscCode || !codRefundDetails.ifscCode.trim()) {
+          return res.status(400).json({ message: "All bank account fields are required for Bank Transfer refund." });
+        }
+      } else {
+        return res.status(400).json({ message: "Invalid refund method selected." });
+      }
     }
 
     const returnCode = generateReturnRequestCode();
@@ -634,6 +654,14 @@ const createReturnRequest = async (req, res) => {
       video: video ? { url: video.url, publicId: video.publicId } : undefined,
       status: "Pending",
       refundStatus: "Pending",
+      codRefundMethod: order.paymentMethod === "COD" ? codRefundMethod : "",
+      codRefundDetails: order.paymentMethod === "COD" ? {
+        upiId: codRefundMethod === "UPI" ? codRefundDetails?.upiId : "",
+        bankName: codRefundMethod === "Bank Transfer" ? codRefundDetails?.bankName : "",
+        accountHolderName: codRefundMethod === "Bank Transfer" ? codRefundDetails?.accountHolderName : "",
+        accountNumber: codRefundMethod === "Bank Transfer" ? codRefundDetails?.accountNumber : "",
+        ifscCode: codRefundMethod === "Bank Transfer" ? codRefundDetails?.ifscCode : "",
+      } : undefined,
       statusHistory: [{ status: "Pending", note: "Return request submitted." }]
     });
 

@@ -444,6 +444,7 @@ const AdminDashboard = () => {
   const [trackingCarriersByOrder, setTrackingCarriersByOrder] = useState({});
   const [stockDrafts, setStockDrafts] = useState({});
   const [savingStockId, setSavingStockId] = useState("");
+  const [duplicateData, setDuplicateData] = useState(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [labelPrintFilter, setLabelPrintFilter] = useState("all");
 
@@ -1265,6 +1266,17 @@ const AdminDashboard = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  
+  const handleDuplicateProduct = (product) => {
+    const { _id, sku, createdAt, updatedAt, __v, ...rest } = product;
+    setDuplicateData({
+      ...rest,
+      name: `${rest.name} (Copy)`
+    });
+    setEditingId("");
+    setProductsSubTab("add-edit-product");
   };
 
   const startEditProduct = (product) => {
@@ -5200,7 +5212,7 @@ const AdminDashboard = () => {
       {activeTab === "products" && productsSubTab === "add-edit-product" && (
         <div className="animate-page-enter">
           <AddProduct
-            initialData={products.find(p => p._id === editingId) || null}
+            initialData={editingId ? products.find(p => p._id === editingId) : duplicateData}
             onSuccess={async () => {
               try {
                 const { data } = await api.get("/admin/products", authHeader);
@@ -5209,10 +5221,12 @@ const AdminDashboard = () => {
                 console.error("Failed to refresh products", err);
               }
               setEditingId("");
+              setDuplicateData(null);
               setProductsSubTab("inventory");
             }}
             onCancel={() => {
               setEditingId("");
+              setDuplicateData(null);
               setProductsSubTab("inventory");
             }}
           />
