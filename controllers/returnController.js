@@ -838,7 +838,7 @@ const adminUpdateReturnRequest = async (req, res) => {
 const adminUpdateReplacementRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, note, shippingDetails, createReplacementOrder } = req.body;
+    const { status, note, pickupDetails, shippingDetails, createReplacementOrder } = req.body;
 
     const replacementRequest = await ReplacementRequest.findById(id)
       .populate("customerId", "name email")
@@ -849,6 +849,10 @@ const adminUpdateReplacementRequest = async (req, res) => {
     }
 
     const prevStatus = replacementRequest.status;
+
+    if (pickupDetails) {
+      replacementRequest.pickupDetails = { ...replacementRequest.pickupDetails, ...pickupDetails };
+    }
 
     if (shippingDetails) {
       replacementRequest.shippingDetails = { ...replacementRequest.shippingDetails, ...shippingDetails };

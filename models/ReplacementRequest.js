@@ -60,7 +60,20 @@ const replacementRequestSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["Pending", "Approved", "Replacement Packed", "Shipped", "Delivered"],
+      enum: [
+        "Pending",
+        "Under Review",
+        "Investigation In Progress",
+        "Evidence Verified",
+        "Approved",
+        "Pickup Scheduled",
+        "Item Picked Up",
+        "Item Received & Verified",
+        "Replacement Packed",
+        "Shipped",
+        "Delivered",
+        "Rejected",
+      ],
       default: "Pending",
     },
     statusHistory: [
@@ -71,6 +84,12 @@ const replacementRequestSchema = new mongoose.Schema(
         updatedAt: { type: Date, default: Date.now },
       },
     ],
+    pickupDetails: {
+      courier: { type: String, default: "" },
+      trackingId: { type: String, default: "" },
+      pickupDate: { type: Date, default: null },
+      note: { type: String, default: "" },
+    },
     shippingDetails: {
       courier: { type: String, default: "" },
       trackingId: { type: String, default: "" },

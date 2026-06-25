@@ -1271,11 +1271,13 @@ const MyProfile = () => {
               {/* Status Timeline */}
               <div className="rounded-2xl border border-gold-200/25 bg-gold-50/5 p-4 space-y-3.5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">{selectedReturn.type} Process Tracker</h4>
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className={`grid ${selectedReturn.type === "Replacement" ? "grid-cols-6" : "grid-cols-4"} gap-1.5`}>
                   {(selectedReturn.type === "Replacement" ? [
-                    { label: "Request Submitted", test: ["Pending", "Approved", "Replacement Packed", "Shipped", "Delivered"] },
-                    { label: "Approved", test: ["Approved", "Replacement Packed", "Shipped", "Delivered"] },
-                    { label: "Replacement Shipped", test: ["Shipped", "Delivered"] },
+                    { label: "Submitted", test: ["Pending", "Under Review", "Investigation In Progress", "Evidence Verified", "Approved", "Pickup Scheduled", "Item Picked Up", "Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
+                    { label: "Approved", test: ["Approved", "Pickup Scheduled", "Item Picked Up", "Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
+                    { label: "Pickup Scheduled", test: ["Pickup Scheduled", "Item Picked Up", "Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
+                    { label: "Returned & Verified", test: ["Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
+                    { label: "Shipped", test: ["Shipped", "Delivered"] },
                     { label: "Delivered", test: ["Delivered"] }
                   ] : [
                     { label: "Request Submitted", test: ["Pending", "Under Review", "Approved", "Pickup Scheduled", "Item Received", "Refund Processed"] },
@@ -1385,6 +1387,23 @@ const MyProfile = () => {
                     )}
                     {selectedReturn.pickupDetails.note && (
                       <p className="text-[10px] text-gray-400">Note: {selectedReturn.pickupDetails.note}</p>
+                    )}
+                  </div>
+                )}
+
+                {selectedReturn.shippingDetails?.trackingId && (
+                  <div className="rounded-2xl border border-champagne/35 p-3.5 bg-white space-y-1.5">
+                    <h5 className="font-bold text-luxury-black uppercase tracking-widest text-[9px] border-b border-champagne/15 pb-1">Replacement Forward Logistics</h5>
+                    <p>Courier: <strong>{selectedReturn.shippingDetails.courier || "Registered Partner"}</strong></p>
+                    <p>AWB Tracking ID: <strong>{selectedReturn.shippingDetails.trackingId}</strong></p>
+                    {selectedReturn.shippingDetails.shippedDate && (
+                      <p>Shipped Date: <strong>{new Date(selectedReturn.shippingDetails.shippedDate).toLocaleDateString("en-IN")}</strong></p>
+                    )}
+                    {selectedReturn.shippingDetails.deliveredDate && (
+                      <p>Delivered Date: <strong>{new Date(selectedReturn.shippingDetails.deliveredDate).toLocaleDateString("en-IN")}</strong></p>
+                    )}
+                    {selectedReturn.shippingDetails.note && (
+                      <p className="text-[10px] text-gray-400">Note: {selectedReturn.shippingDetails.note}</p>
                     )}
                   </div>
                 )}

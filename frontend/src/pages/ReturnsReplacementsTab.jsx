@@ -82,7 +82,13 @@ const ReturnsReplacementsTab = () => {
   const replacementStatusFilters = [
     "All",
     "Pending",
+    "Under Review",
+    "Investigation In Progress",
+    "Evidence Verified",
     "Approved",
+    "Pickup Scheduled",
+    "Item Picked Up",
+    "Item Received & Verified",
     "Replacement Packed",
     "Shipped",
     "Delivered",
@@ -277,6 +283,31 @@ const ReturnsReplacementsTab = () => {
                     />
                   </div>
                 )}
+
+                {req.pickupDetails?.trackingId && (
+                  <div className="rounded-xl border border-gold-300/30 bg-gold-50/5 dark:bg-gold-950/5 p-3 space-y-1.5 mt-2">
+                    <p className="text-[10px] font-bold uppercase text-gold-600 dark:text-gold-400 tracking-wider border-b border-gold-200/10 dark:border-gold-900/10 pb-1">📦 Reverse Pickup Logistics</p>
+                    <p className="text-xs text-luxury-black dark:text-white">Courier: <strong>{req.pickupDetails.courier || "Registered Partner"}</strong></p>
+                    <p className="text-xs text-luxury-black dark:text-white">AWB Tracking ID: <strong>{req.pickupDetails.trackingId}</strong></p>
+                    {req.pickupDetails.pickupDate && (
+                      <p className="text-xs text-luxury-black dark:text-white">Scheduled: <strong>{new Date(req.pickupDetails.pickupDate).toLocaleDateString()}</strong></p>
+                    )}
+                  </div>
+                )}
+
+                {req.shippingDetails?.trackingId && (
+                  <div className="rounded-xl border border-gold-300/30 bg-gold-50/5 dark:bg-gold-950/5 p-3 space-y-1.5 mt-2">
+                    <p className="text-[10px] font-bold uppercase text-gold-600 dark:text-gold-400 tracking-wider border-b border-gold-200/10 dark:border-gold-900/10 pb-1">🚚 Forward Shipping Logistics</p>
+                    <p className="text-xs text-luxury-black dark:text-white">Courier: <strong>{req.shippingDetails.courier || "Registered Partner"}</strong></p>
+                    <p className="text-xs text-luxury-black dark:text-white">AWB Tracking ID: <strong>{req.shippingDetails.trackingId}</strong></p>
+                    {req.shippingDetails.shippedDate && (
+                      <p className="text-xs text-luxury-black dark:text-white">Shipped: <strong>{new Date(req.shippingDetails.shippedDate).toLocaleDateString()}</strong></p>
+                    )}
+                    {req.shippingDetails.deliveredDate && (
+                      <p className="text-xs text-luxury-black dark:text-white">Delivered: <strong>{new Date(req.shippingDetails.deliveredDate).toLocaleDateString()}</strong></p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -290,7 +321,35 @@ const ReturnsReplacementsTab = () => {
                   </button>
                 )}
 
-                {req.status === "Under Review" || req.status === "Pending" ? (
+                {activeSubTab === "replacements" && req.status === "Pending" && (
+                  <button
+                    onClick={() => handleUpdateStatus(req._id, "Under Review")}
+                    className="w-full rounded-full border border-gold-500 text-gold-600 dark:text-gold-400 py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-gold-500/10 cursor-pointer transition"
+                  >
+                    Mark as Under Review
+                  </button>
+                )}
+
+                {activeSubTab === "replacements" && req.status === "Under Review" && (
+                  <button
+                    onClick={() => handleUpdateStatus(req._id, "Investigation In Progress")}
+                    className="w-full rounded-full border border-gold-500 text-gold-600 dark:text-gold-400 py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-gold-500/10 cursor-pointer transition mb-2"
+                  >
+                    Start Investigation
+                  </button>
+                )}
+
+                {activeSubTab === "replacements" && req.status === "Investigation In Progress" && (
+                  <button
+                    onClick={() => handleUpdateStatus(req._id, "Evidence Verified")}
+                    className="w-full rounded-full border border-gold-500 text-gold-600 dark:text-gold-400 py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-gold-500/10 cursor-pointer transition mb-2"
+                  >
+                    Mark Evidence Verified
+                  </button>
+                )}
+
+                {((activeSubTab === "returns" && (req.status === "Pending" || req.status === "Under Review")) ||
+                  (activeSubTab === "replacements" && (req.status === "Pending" || req.status === "Under Review" || req.status === "Investigation In Progress" || req.status === "Evidence Verified"))) ? (
                   <>
                     {activeSubTab === "replacements" && (
                       <div className="mb-3 flex items-center gap-2">
@@ -375,9 +434,44 @@ const ReturnsReplacementsTab = () => {
                 {/* Replacement Specific Steps */}
                 {activeSubTab === "replacements" && req.status === "Approved" && (
                   <button
+                    onClick={() => setShowShipForm(req._id)}
+                    className="w-full rounded-full bg-gold-500 text-white py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-gold-hover cursor-pointer transition"
+                  >
+                    Schedule Reverse Pickup
+                  </button>
+                )}
+
+                {activeSubTab === "replacements" && req.status === "Pickup Scheduled" && (
+                  <button
+                    onClick={() =>
+                      handleUpdateStatus(req._id, "Item Picked Up", {
+                        note: "Item picked up from customer.",
+                      })
+                    }
+                    className="w-full rounded-full bg-gold-500 text-white py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-gold-hover cursor-pointer transition"
+                  >
+                    Mark as Picked Up
+                  </button>
+                )}
+
+                {activeSubTab === "replacements" && req.status === "Item Picked Up" && (
+                  <button
+                    onClick={() =>
+                      handleUpdateStatus(req._id, "Item Received & Verified", {
+                        note: "Item received at warehouse and verified.",
+                      })
+                    }
+                    className="w-full rounded-full bg-gold-500 text-white py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-gold-hover cursor-pointer transition"
+                  >
+                    Verify & Receive Item
+                  </button>
+                )}
+
+                {activeSubTab === "replacements" && req.status === "Item Received & Verified" && (
+                  <button
                     onClick={() =>
                       handleUpdateStatus(req._id, "Replacement Packed", {
-                        note: "Replacement packaged and ready.",
+                        note: "Replacement product packaged and ready.",
                       })
                     }
                     className="w-full rounded-full bg-gold-500 text-white py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-gold-hover cursor-pointer transition"
@@ -391,7 +485,7 @@ const ReturnsReplacementsTab = () => {
                     onClick={() => setShowShipForm(req._id)}
                     className="w-full rounded-full bg-gold-500 text-white py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-gold-hover cursor-pointer transition"
                   >
-                    Dispatch / Ship
+                    Dispatch / Ship Replacement
                   </button>
                 )}
 
@@ -426,7 +520,7 @@ const ReturnsReplacementsTab = () => {
                 {showShipForm === req._id && (
                   <div className="mt-3 rounded-xl border border-gold-200/50 bg-gold-50/30 p-3 space-y-2">
                     <p className="text-[10px] font-bold uppercase text-gold-600">
-                      {activeSubTab === "returns" ? "Pickup Details" : "Shipping Details"}
+                      {(activeSubTab === "returns" || (activeSubTab === "replacements" && req.status === "Approved")) ? "Reverse Pickup Details" : "Forward Shipping Details"}
                     </p>
                     <input
                       placeholder="Courier Name"
@@ -444,7 +538,7 @@ const ReturnsReplacementsTab = () => {
                       <button
                         onClick={() => {
                           if (!courier || !trackingId) return;
-                          if (activeSubTab === "returns") {
+                          if (activeSubTab === "returns" || (activeSubTab === "replacements" && req.status === "Approved")) {
                             handleUpdateStatus(req._id, "Pickup Scheduled", {
                               pickupDetails: {
                                 courier,
