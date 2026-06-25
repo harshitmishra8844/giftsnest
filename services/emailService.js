@@ -1305,6 +1305,310 @@ const sendCustomerCancellationReview = async (order, isApproved, adminNote = "")
   return queueEmail(customerEmail, title, htmlContent, textContent, "customer_order_cancelled", order._id, "Order");
 };
 
+/* ==========================================================================
+   2. RETURN & REPLACEMENT REQUEST TEMPLATE GENERATORS
+   ========================================================================== */
+
+const sendReturnRequestSubmitted = async (user, order, returnRequest) => {
+  const storeInfo = await getStoreDetails();
+  const code = returnRequest.returnCode;
+  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+
+  const title = `Return Requested: ${code}`;
+  const headline = `Return Request Submitted`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Your return request <strong>${code}</strong> for order <strong>#${escapeHtml(orderCode)}</strong> has been successfully submitted and is now under review.</p>
+    <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
+      <tr>
+        <td width="40%"><strong>Return Code:</strong></td>
+        <td align="right"><strong>${code}</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Reason:</strong></td>
+        <td align="right">${escapeHtml(returnRequest.reason)}</td>
+      </tr>
+      <tr>
+        <td><strong>Status:</strong></td>
+        <td align="right" style="color: #785D19; font-weight: bold;">Pending Review</td>
+      </tr>
+    </table>
+  `;
+
+  const shopUrl = getShopUrl();
+  const actionBtnHtml = `
+    <a href="${shopUrl}/my-profile" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C;">View Dashboard</a>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
+  const textContent = `Hi ${user.name},\nYour return request ${code} for order #${orderCode} has been submitted. Status: Pending.`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
+};
+
+const sendReturnRequestApproved = async (user, order, returnRequest) => {
+  const storeInfo = await getStoreDetails();
+  const code = returnRequest.returnCode;
+
+  const title = `Return Approved: ${code}`;
+  const headline = `Your Return Request has been Approved`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>We are pleased to inform you that your return request <strong>${code}</strong> has been approved.</p>
+    <p>Please prepare the package in its original condition. We will coordinate the reverse pickup shortly.</p>
+  `;
+
+  const shopUrl = getShopUrl();
+  const actionBtnHtml = `
+    <a href="${shopUrl}/my-profile" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C;">View Details</a>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
+  const textContent = `Hi ${user.name},\nYour return request ${code} has been approved. Please pack the items in original condition.`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_approved", returnRequest._id, "ReturnRequest");
+};
+
+const sendReturnRequestRejected = async (user, order, returnRequest, note = "") => {
+  const storeInfo = await getStoreDetails();
+  const code = returnRequest.returnCode;
+
+  const title = `Return Request Rejected: ${code}`;
+  const headline = `Return Request Update`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Your return request <strong>${code}</strong> has been declined.</p>
+    ${note ? `<p><strong>Reason:</strong> ${escapeHtml(note)}</p>` : ""}
+  `;
+
+  const shopUrl = getShopUrl();
+  const actionBtnHtml = `
+    <a href="mailto:niyoragifts@gmail.com" style="display: inline-block; background-color: #1C1C1C; color: #FAF4E5; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center;">Contact Support</a>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
+  const textContent = `Hi ${user.name},\nYour return request ${code} was declined. Reason: ${note}.`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
+};
+
+const sendReturnRequestPickupScheduled = async (user, returnRequest) => {
+  const storeInfo = await getStoreDetails();
+  const code = returnRequest.returnCode;
+  const p = returnRequest.pickupDetails || {};
+  const dateStr = p.pickupDate ? new Date(p.pickupDate).toLocaleDateString("en-IN", { dateStyle: "long" }) : "Soon";
+
+  const title = `Return Pickup Scheduled: ${code}`;
+  const headline = `Pickup Scheduled`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>A reverse pickup has been scheduled for your return request <strong>${code}</strong>.</p>
+    <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
+      <tr>
+        <td width="40%"><strong>Courier:</strong></td>
+        <td align="right">${escapeHtml(p.courier || "Courier Partner")}</td>
+      </tr>
+      <tr>
+        <td><strong>Tracking ID:</strong></td>
+        <td align="right"><strong>${escapeHtml(p.trackingId || "Pending")}</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Pickup Date:</strong></td>
+        <td align="right" style="color: #047857; font-weight: bold;">${dateStr}</td>
+      </tr>
+    </table>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
+  const textContent = `Hi ${user.name},\nYour return pickup is scheduled for ${dateStr} via ${p.courier}. AWB: ${p.trackingId}`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
+};
+
+const sendReturnRequestRefundCompleted = async (user, returnRequest) => {
+  const storeInfo = await getStoreDetails();
+  const code = returnRequest.returnCode;
+  const refundAmount = returnRequest.refundDetails?.refundAmount || 0;
+
+  const title = `Refund Processed: ${code}`;
+  const headline = `Refund Completed successfully`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>A refund of <strong>₹${refundAmount.toFixed(2)}</strong> has been successfully processed for your return request <strong>${code}</strong>.</p>
+    <p>The amount has been credited back to your original payment source and should reflect in your account within 5-7 business days.</p>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
+  const textContent = `Hi ${user.name},\nRefund of ₹${refundAmount} has been processed for return request ${code}.`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
+};
+
+const sendReplacementRequestSubmitted = async (user, order, replacementRequest) => {
+  const storeInfo = await getStoreDetails();
+  const code = replacementRequest.replacementCode;
+  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+
+  const title = `Replacement Requested: ${code}`;
+  const headline = `Replacement Request Submitted`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Your replacement request <strong>${code}</strong> for order <strong>#${escapeHtml(orderCode)}</strong> has been submitted and is under review.</p>
+    <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
+      <tr>
+        <td width="40%"><strong>Code:</strong></td>
+        <td align="right"><strong>${code}</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Reason:</strong></td>
+        <td align="right">${escapeHtml(replacementRequest.reason)}</td>
+      </tr>
+      <tr>
+        <td><strong>Status:</strong></td>
+        <td align="right" style="color: #785D19; font-weight: bold;">Pending Review</td>
+      </tr>
+    </table>
+  `;
+
+  const shopUrl = getShopUrl();
+  const actionBtnHtml = `
+    <a href="${shopUrl}/my-profile" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C;">View Details</a>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
+  const textContent = `Hi ${user.name},\nYour replacement request ${code} for order #${orderCode} has been submitted.`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", replacementRequest._id, "ReplacementRequest");
+};
+
+const sendReplacementRequestApproved = async (user, order, replacementRequest) => {
+  const storeInfo = await getStoreDetails();
+  const code = replacementRequest.replacementCode;
+
+  const title = `Replacement Approved: ${code}`;
+  const headline = `Your Replacement Request has been Approved`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>We are pleased to inform you that your replacement request <strong>${code}</strong> has been approved.</p>
+    <p>We are preparing your replacement items now and will notify you as soon as they are packed and shipped.</p>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
+  const textContent = `Hi ${user.name},\nYour replacement request ${code} has been approved. We are preparing the replacement items.`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_approved", replacementRequest._id, "ReplacementRequest");
+};
+
+const sendReplacementRequestShipped = async (user, replacementRequest, replacementOrderCode) => {
+  const storeInfo = await getStoreDetails();
+  const code = replacementRequest.replacementCode;
+
+  const title = `Replacement Order Shipped: ${code}`;
+  const headline = `Your Replacement is on the Way!`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Your replacement items under request <strong>${code}</strong> have been shipped.</p>
+    <p>Replacement Order Code: <strong>${escapeHtml(replacementOrderCode)}</strong></p>
+    <p>You can track the delivery status using the order code above in your profile dashboard.</p>
+  `;
+
+  const shopUrl = getShopUrl();
+  const actionBtnHtml = `
+    <a href="${shopUrl}/track-order?orderId=${replacementOrderCode}&email=${encodeURIComponent(user.email)}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C;">Track Delivery</a>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
+  const textContent = `Hi ${user.name},\nReplacement items for ${code} have been shipped. New order: ${replacementOrderCode}`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_order_shipped", replacementRequest._id, "ReplacementRequest");
+};
+
+const sendReplacementRequestDelivered = async (user, replacementRequest) => {
+  const storeInfo = await getStoreDetails();
+  const code = replacementRequest.replacementCode;
+
+  const title = `Replacement Order Delivered: ${code}`;
+  const headline = `Your Replacement has been Delivered`;
+  const bodyHtml = `
+    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Your replacement order under request <strong>${code}</strong> has been successfully delivered.</p>
+    <p>We hope the replacement product meets your expectations. Thank you for your patience and for choosing ${escapeHtml(storeInfo.storeName)}!</p>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
+  const textContent = `Hi ${user.name},\nReplacement order for ${code} has been delivered successfully.`;
+
+  return queueEmail(user.email, title, htmlContent, textContent, "customer_order_delivered", replacementRequest._id, "ReplacementRequest");
+};
+
+const sendAdminReturnRequestAlertV2 = async (returnRequest, order) => {
+  const storeInfo = await getStoreDetails();
+  const settings = await getEmailSettings();
+  const code = returnRequest.returnCode;
+
+  const title = `[Admin Alert] New Return Request: ${code}`;
+  const headline = `New Return Claim submitted`;
+  const bodyHtml = `
+    <p>A new return request has been submitted by customer and is pending review.</p>
+    <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
+      <tr>
+        <td width="40%"><strong>Return Code:</strong></td>
+        <td align="right"><strong>${code}</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Reason:</strong></td>
+        <td align="right">${escapeHtml(returnRequest.reason)}</td>
+      </tr>
+      <tr>
+        <td><strong>Description:</strong></td>
+        <td align="right">${escapeHtml(returnRequest.description)}</td>
+      </tr>
+    </table>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
+  const textContent = `New Return Request ${code} submitted. Reason: ${returnRequest.reason}`;
+
+  const adminEmails = settings.adminEmails || [];
+  for (const email of adminEmails) {
+    await queueEmail(email, title, htmlContent, textContent, "admin_return_request", returnRequest._id, "ReturnRequest");
+  }
+};
+
+const sendAdminReplacementRequestAlertV2 = async (replacementRequest, order) => {
+  const storeInfo = await getStoreDetails();
+  const settings = await getEmailSettings();
+  const code = replacementRequest.replacementCode;
+
+  const title = `[Admin Alert] New Replacement Request: ${code}`;
+  const headline = `New Replacement Claim submitted`;
+  const bodyHtml = `
+    <p>A new replacement request has been submitted by customer and is pending review.</p>
+    <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
+      <tr>
+        <td width="40%"><strong>Replacement Code:</strong></td>
+        <td align="right"><strong>${code}</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Reason:</strong></td>
+        <td align="right">${escapeHtml(replacementRequest.reason)}</td>
+      </tr>
+      <tr>
+        <td><strong>Description:</strong></td>
+        <td align="right">${escapeHtml(replacementRequest.description)}</td>
+      </tr>
+    </table>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
+  const textContent = `New Replacement Request ${code} submitted. Reason: ${replacementRequest.reason}`;
+
+  const adminEmails = settings.adminEmails || [];
+  for (const email of adminEmails) {
+    await queueEmail(email, title, htmlContent, textContent, "admin_return_request", replacementRequest._id, "ReplacementRequest");
+  }
+};
+
 module.exports = {
   queueEmail,
   retryEmail,
@@ -1331,4 +1635,17 @@ module.exports = {
   sendAdminCancelRequestAlert,
   sendAdminReturnRequestAlert,
   sendSupportNotification,
+
+  // Return & Replacement Request V2 templates
+  sendReturnRequestSubmitted,
+  sendReturnRequestApproved,
+  sendReturnRequestRejected,
+  sendReturnRequestPickupScheduled,
+  sendReturnRequestRefundCompleted,
+  sendReplacementRequestSubmitted,
+  sendReplacementRequestApproved,
+  sendReplacementRequestShipped,
+  sendReplacementRequestDelivered,
+  sendAdminReturnRequestAlertV2,
+  sendAdminReplacementRequestAlertV2,
 };

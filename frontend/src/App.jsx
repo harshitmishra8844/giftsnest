@@ -86,8 +86,8 @@ function App() {
     } else if (path === "/shipping-policy") {
       title = "Shipping Policy | Niyora Gifts";
       description = "Read about Niyora Gifts' delivery times, priority prep services, midnight deliveries, and shipping rates across cities.";
-    } else if (path === "/returns-refunds") {
-      title = "Returns & Refunds | Niyora Gifts";
+    } else if (path === "/returns-refunds" || path === "/return-replacement" || path === "/returns-replacement" || path === "/return-and-replacement") {
+      title = "Returns, Refunds & Replacement | Niyora Gifts";
       description = "Review our policy on returns, refunds, damaged product checks, and custom gift replacements at Niyora Gifts.";
     } else if (path === "/personalized-mug") {
       title = "Personalized Mug | Niyora Gifts";
@@ -450,6 +450,9 @@ function App() {
           <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/shipping-policy" element={<ShippingPolicy />} />
           <Route path="/returns-refunds" element={<ReturnsRefunds />} />
+          <Route path="/return-replacement" element={<Navigate to="/returns-refunds" replace />} />
+          <Route path="/returns-replacement" element={<Navigate to="/returns-refunds" replace />} />
+          <Route path="/return-and-replacement" element={<Navigate to="/returns-refunds" replace />} />
           <Route path="/personalized-mug" element={<PersonalizedMug />} />
         </Routes>
       </main>
@@ -499,7 +502,7 @@ function App() {
               <ul className="space-y-3 text-sm text-gray-400">
                 <li><Link to="/track-order" className="hover:text-gold-500 transition">Track Order</Link></li>
                 <li><Link to="/shipping-policy" className="hover:text-gold-500 transition">Shipping Policy</Link></li>
-                <li><Link to="/returns-refunds" className="hover:text-gold-500 transition">Returns & Refunds</Link></li>
+                <li><Link to="/returns-refunds" className="hover:text-gold-500 transition">Returns, Refunds & Replacement</Link></li>
                 <li><a href="mailto:niyoragifts@gmail.com" className="hover:text-gold-500 transition">niyoragifts@gmail.com</a></li>
                 <li className="text-gray-400">+91 90000 00000</li>
               </ul>

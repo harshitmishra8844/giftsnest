@@ -6,6 +6,8 @@ const Ticket = require("../models/Ticket");
 const Order = require("../models/Order");
 const User = require("../models/User");
 const Product = require("../models/Product");
+const ReturnRequest = require("../models/ReturnRequest");
+const ReplacementRequest = require("../models/ReplacementRequest");
 const { logActivity } = require("../services/logService");
 const {
   sendCustomerReturnSubmitted,
@@ -586,6 +588,306 @@ const updateReturnSettings = async (req, res) => {
   }
 };
 
+// Helper to generate a unique Return Request Code
+const generateReturnRequestCode = () => {
+  return "REQ-RET-" + crypto.randomBytes(4).toString("hex").toUpperCase();
+};
+
+// Helper to generate a unique Replacement Request Code
+const generateReplacementRequestCode = () => {
+  return "REQ-REP-" + crypto.randomBytes(4).toString("hex").toUpperCase();
+};
+
+const createReturnRequest = async (req, res) => {
+  try {
+    const { orderId, items, reason, description, images, video } = req.body;
+    const customerId = req.user._id;
+
+    if (!orderId || !reason || !description) {
+      return res.status(400).json({ message: "Please fill all required fields." });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Please select at least one item to return." });
+    }
+
+    const order = await Order.findOne({ _id: orderId, userId: customerId });
+    if (!order) {
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    const returnCode = generateReturnRequestCode();
+    const returnRequest = await ReturnRequest.create({
+      returnCode,
+      orderId,
+      customerId,
+      items: items.map(item => ({
+        productId: item.productId,
+        name: item.name,
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+        image: item.image || "",
+      })),
+      reason,
+      description: description.trim(),
+      images: Array.isArray(images) ? images.map(img => ({ url: img.url, publicId: img.publicId })) : [],
+      video: video ? { url: video.url, publicId: video.publicId } : undefined,
+      status: "Pending",
+      refundStatus: "Pending",
+      statusHistory: [{ status: "Pending", note: "Return request submitted." }]
+    });
+
+    // Send emails
+    const { sendReturnRequestSubmitted, sendAdminReturnRequestAlertV2 } = require("../services/emailService");
+    sendReturnRequestSubmitted(req.user, order, returnRequest).catch(err => console.error(err));
+    sendAdminReturnRequestAlertV2(returnRequest, order).catch(err => console.error(err));
+
+    res.status(201).json({ message: "Return request submitted successfully.", returnRequest });
+  } catch (error) {
+    console.error("Create return request error:", error.message);
+    res.status(500).json({ message: error.message || "Failed to submit return request." });
+  }
+};
+
+const createReplacementRequest = async (req, res) => {
+  try {
+    const { orderId, items, reason, description, images } = req.body;
+    const customerId = req.user._id;
+
+    if (!orderId || !reason || !description) {
+      return res.status(400).json({ message: "Please fill all required fields." });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Please select at least one item for replacement." });
+    }
+
+    const order = await Order.findOne({ _id: orderId, userId: customerId });
+    if (!order) {
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    const replacementCode = generateReplacementRequestCode();
+    const replacementRequest = await ReplacementRequest.create({
+      replacementCode,
+      orderId,
+      customerId,
+      items: items.map(item => ({
+        productId: item.productId,
+        name: item.name,
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+        image: item.image || "",
+      })),
+      reason,
+      description: description.trim(),
+      images: Array.isArray(images) ? images.map(img => ({ url: img.url, publicId: img.publicId })) : [],
+      status: "Pending",
+      statusHistory: [{ status: "Pending", note: "Replacement request submitted." }]
+    });
+
+    // Send emails
+    const { sendReplacementRequestSubmitted, sendAdminReplacementRequestAlertV2 } = require("../services/emailService");
+    sendReplacementRequestSubmitted(req.user, order, replacementRequest).catch(err => console.error(err));
+    sendAdminReplacementRequestAlertV2(replacementRequest, order).catch(err => console.error(err));
+
+    res.status(201).json({ message: "Replacement request submitted successfully.", replacementRequest });
+  } catch (error) {
+    console.error("Create replacement request error:", error.message);
+    res.status(500).json({ message: error.message || "Failed to submit replacement request." });
+  }
+};
+
+const getMyReturnRequests = async (req, res) => {
+  try {
+    const list = await ReturnRequest.find({ customerId: req.user._id })
+      .populate("orderId", "orderCode totalPrice createdAt status")
+      .sort({ createdAt: -1 });
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to load return requests." });
+  }
+};
+
+const getMyReplacementRequests = async (req, res) => {
+  try {
+    const list = await ReplacementRequest.find({ customerId: req.user._id })
+      .populate("orderId", "orderCode totalPrice createdAt status")
+      .sort({ createdAt: -1 });
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to load replacement requests." });
+  }
+};
+
+const adminGetReturnRequests = async (req, res) => {
+  try {
+    const list = await ReturnRequest.find()
+      .populate("orderId", "orderCode totalPrice createdAt status")
+      .populate("customerId", "name email mobileNumber")
+      .sort({ createdAt: -1 });
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to load return requests for admin." });
+  }
+};
+
+const adminGetReplacementRequests = async (req, res) => {
+  try {
+    const list = await ReplacementRequest.find()
+      .populate("orderId", "orderCode totalPrice createdAt status")
+      .populate("customerId", "name email mobileNumber")
+      .sort({ createdAt: -1 });
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to load replacement requests for admin." });
+  }
+};
+
+const adminUpdateReturnRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, note, pickupDetails, refundDetails } = req.body;
+
+    const returnRequest = await ReturnRequest.findById(id)
+      .populate("customerId", "name email")
+      .populate("orderId", "orderCode");
+
+    if (!returnRequest) {
+      return res.status(404).json({ message: "Return request not found." });
+    }
+
+    const prevStatus = returnRequest.status;
+
+    if (pickupDetails) {
+      returnRequest.pickupDetails = { ...returnRequest.pickupDetails, ...pickupDetails };
+    }
+
+    if (refundDetails) {
+      returnRequest.refundDetails = { ...returnRequest.refundDetails, ...refundDetails };
+      if (refundDetails.refundStatus === "Refunded") {
+        returnRequest.refundStatus = "Refunded";
+      }
+    }
+
+    if (status && status !== prevStatus) {
+      returnRequest.status = status;
+      returnRequest.statusHistory.push({
+        status,
+        note: note || `Status updated to ${status}`,
+        updatedBy: req.user._id,
+      });
+
+      // Send appropriate emails
+      const {
+        sendReturnRequestApproved,
+        sendReturnRequestRejected,
+        sendReturnRequestPickupScheduled,
+        sendReturnRequestRefundCompleted
+      } = require("../services/emailService");
+
+      if (status === "Approved") {
+        await sendReturnRequestApproved(returnRequest.customerId, returnRequest.orderId, returnRequest);
+      } else if (status === "Rejected") {
+        await sendReturnRequestRejected(returnRequest.customerId, returnRequest.orderId, returnRequest, note);
+      } else if (status === "Pickup Scheduled") {
+        await sendReturnRequestPickupScheduled(returnRequest.customerId, returnRequest);
+      } else if (status === "Refund Processed" || status === "Refund Completed") {
+        returnRequest.refundStatus = "Refunded";
+        if (returnRequest.refundDetails) returnRequest.refundDetails.refundDate = new Date();
+        await sendReturnRequestRefundCompleted(returnRequest.customerId, returnRequest);
+      }
+    }
+
+    await returnRequest.save();
+    res.json({ message: "Return request updated successfully.", returnRequest });
+  } catch (error) {
+    console.error("Update return request error:", error.message);
+    res.status(500).json({ message: error.message || "Failed to update return request." });
+  }
+};
+
+const adminUpdateReplacementRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, note, shippingDetails, createReplacementOrder } = req.body;
+
+    const replacementRequest = await ReplacementRequest.findById(id)
+      .populate("customerId", "name email")
+      .populate("orderId", "orderCode products address");
+
+    if (!replacementRequest) {
+      return res.status(404).json({ message: "Replacement request not found." });
+    }
+
+    const prevStatus = replacementRequest.status;
+
+    if (shippingDetails) {
+      replacementRequest.shippingDetails = { ...replacementRequest.shippingDetails, ...shippingDetails };
+    }
+
+    // Auto-create replacement order if requested and approved
+    if (createReplacementOrder && !replacementRequest.replacementOrderId) {
+      const crypto = require("crypto");
+      const newOrderCode = "ORD-REP-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+      const newOrder = await Order.create({
+        orderCode: newOrderCode,
+        userId: replacementRequest.customerId._id,
+        products: replacementRequest.items.map(item => ({
+          productId: item.productId,
+          name: item.name + " (Replacement)",
+          price: 0,
+          quantity: item.quantity,
+          image: item.image,
+          customization: {},
+        })),
+        totalPrice: 0,
+        subtotal: 0,
+        discountAmount: 0,
+        address: replacementRequest.orderId.address,
+        status: "Order Confirmed",
+        paymentStatus: "Paid",
+        paymentMethod: "Online",
+      });
+
+      replacementRequest.replacementOrderId = newOrder._id;
+    }
+
+    if (status && status !== prevStatus) {
+      replacementRequest.status = status;
+      replacementRequest.statusHistory.push({
+        status,
+        note: note || `Status updated to ${status}`,
+        updatedBy: req.user._id,
+      });
+
+      // Send emails
+      const {
+        sendReplacementRequestApproved,
+        sendReplacementRequestShipped,
+        sendReplacementRequestDelivered
+      } = require("../services/emailService");
+
+      if (status === "Approved") {
+        await sendReplacementRequestApproved(replacementRequest.customerId, replacementRequest.orderId, replacementRequest);
+      } else if (status === "Shipped") {
+        const orderCode = replacementRequest.replacementOrderId
+          ? (await Order.findById(replacementRequest.replacementOrderId))?.orderCode
+          : "REP-SHIP";
+        await sendReplacementRequestShipped(replacementRequest.customerId, replacementRequest, orderCode);
+      } else if (status === "Delivered") {
+        await sendReplacementRequestDelivered(replacementRequest.customerId, replacementRequest);
+      }
+    }
+
+    await replacementRequest.save();
+    res.json({ message: "Replacement request updated successfully.", replacementRequest });
+  } catch (error) {
+    console.error("Update replacement request error:", error.message);
+    res.status(500).json({ message: error.message || "Failed to update replacement request." });
+  }
+};
+
 module.exports = {
   createReturn,
   getMyReturns,
@@ -595,4 +897,14 @@ module.exports = {
   addInternalNote,
   getReturnSettings,
   updateReturnSettings,
+
+  // Return & Replacement Requests V2
+  createReturnRequest,
+  createReplacementRequest,
+  getMyReturnRequests,
+  getMyReplacementRequests,
+  adminGetReturnRequests,
+  adminGetReplacementRequests,
+  adminUpdateReturnRequest,
+  adminUpdateReplacementRequest,
 };

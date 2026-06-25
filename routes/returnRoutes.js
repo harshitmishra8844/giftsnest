@@ -18,6 +18,14 @@ const {
   addInternalNote,
   getReturnSettings,
   updateReturnSettings,
+  createReturnRequest,
+  createReplacementRequest,
+  getMyReturnRequests,
+  getMyReplacementRequests,
+  adminGetReturnRequests,
+  adminGetReplacementRequests,
+  adminUpdateReturnRequest,
+  adminUpdateReplacementRequest,
 } = require("../controllers/returnController");
 
 const router = express.Router();
@@ -117,18 +125,29 @@ router.post("/upload", protect, rateLimiter(25, 5 * 60 * 1000), (req, res) => {
           }
 
           if (isCloudinaryConfigured()) {
-            // Upload to Cloudinary
-            const result = await new Promise((resolve, reject) => {
-              const stream = cloudinary.uploader.upload_stream(
-                { folder: "gift-store/returns", resource_type: "image" },
-                (error, uploaded) => {
-                  if (error) reject(error);
-                  else resolve(uploaded);
-                }
-              );
-              stream.end(file.buffer);
-            });
-            responseData.images.push({ url: result.secure_url, publicId: result.public_id });
+            // Upload to Cloudinary with local fallback on error
+            try {
+              const result = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                  { folder: "gift-store/returns", resource_type: "image" },
+                  (error, uploaded) => {
+                    if (error) reject(error);
+                    else resolve(uploaded);
+                  }
+                );
+                stream.end(file.buffer);
+              });
+              responseData.images.push({ url: result.secure_url, publicId: result.public_id });
+            } catch (cloudErr) {
+              console.error("Cloudinary return image upload failed, falling back to local:", cloudErr.message);
+              const localDir = path.join(process.cwd(), "uploads", "returns");
+              await ensureDirectoryExists(localDir);
+              const ext = getExtension(file.mimetype, file.originalname);
+              const fileName = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${ext}`;
+              await fs.promises.writeFile(path.join(localDir, fileName), file.buffer);
+              const fileUrl = `${protocol}://${req.get("host")}/uploads/returns/${fileName}`;
+              responseData.images.push({ url: fileUrl, publicId: null });
+            }
           } else {
             // Local fallback
             const localDir = path.join(process.cwd(), "uploads", "returns");
@@ -151,17 +170,28 @@ router.post("/upload", protect, rateLimiter(25, 5 * 60 * 1000), (req, res) => {
         }
 
         if (isCloudinaryConfigured()) {
-          const result = await new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-              { folder: "gift-store/returns", resource_type: "video" },
-              (error, uploaded) => {
-                if (error) reject(error);
-                else resolve(uploaded);
-              }
-            );
-            stream.end(file.buffer);
-          });
-          responseData.video = { url: result.secure_url, publicId: result.public_id };
+          try {
+            const result = await new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                { folder: "gift-store/returns", resource_type: "video" },
+                (error, uploaded) => {
+                  if (error) reject(error);
+                  else resolve(uploaded);
+                }
+              );
+              stream.end(file.buffer);
+            });
+            responseData.video = { url: result.secure_url, publicId: result.public_id };
+          } catch (cloudErr) {
+            console.error("Cloudinary return video upload failed, falling back to local:", cloudErr.message);
+            const localDir = path.join(process.cwd(), "uploads", "returns");
+            await ensureDirectoryExists(localDir);
+            const ext = getExtension(file.mimetype, file.originalname);
+            const fileName = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${ext}`;
+            await fs.promises.writeFile(path.join(localDir, fileName), file.buffer);
+            const fileUrl = `${protocol}://${req.get("host")}/uploads/returns/${fileName}`;
+            responseData.video = { url: fileUrl, publicId: null };
+          }
         } else {
           const localDir = path.join(process.cwd(), "uploads", "returns");
           await ensureDirectoryExists(localDir);
@@ -203,17 +233,27 @@ router.post("/upload-attachment", protect, rateLimiter(20, 5 * 60 * 1000), (req,
       let url = "";
 
       if (isCloudinaryConfigured()) {
-        const result = await new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder: "gift-store/tickets", resource_type: "auto" },
-            (error, uploaded) => {
-              if (error) reject(error);
-              else resolve(uploaded);
-            }
-          );
-          stream.end(file.buffer);
-        });
-        url = result.secure_url;
+        try {
+          const result = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              { folder: "gift-store/tickets", resource_type: "auto" },
+              (error, uploaded) => {
+                if (error) reject(error);
+                else resolve(uploaded);
+              }
+            );
+            stream.end(file.buffer);
+          });
+          url = result.secure_url;
+        } catch (cloudErr) {
+          console.error("Cloudinary ticket attachment upload failed, falling back to local:", cloudErr.message);
+          const localDir = path.join(process.cwd(), "uploads", "tickets");
+          await ensureDirectoryExists(localDir);
+          const ext = getExtension(file.mimetype, file.originalname);
+          const fileName = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${ext}`;
+          await fs.promises.writeFile(path.join(localDir, fileName), file.buffer);
+          url = `${protocol}://${req.get("host")}/uploads/tickets/${fileName}`;
+        }
       } else {
         const localDir = path.join(process.cwd(), "uploads", "tickets");
         await ensureDirectoryExists(localDir);
@@ -242,10 +282,20 @@ router.get("/my", protect, getMyReturns);
 router.get("/my/:id", protect, getReturnDetails);
 router.get("/settings", getReturnSettings);
 
+// New Return & Replacement endpoints
+router.post("/requests", protect, rateLimiter(10, 5 * 60 * 1000), createReturnRequest);
+router.post("/replacements", protect, rateLimiter(10, 5 * 60 * 1000), createReplacementRequest);
+router.get("/my-requests", protect, getMyReturnRequests);
+router.get("/my-replacements", protect, getMyReplacementRequests);
+
 // Admin returns endpoints (superadmin and employee support roles check)
 router.get("/admin", protect, checkPermission(["ORDERS_RETURNS", "TICKETS_MANAGE"]), adminGetReturns);
+router.get("/admin-requests", protect, checkPermission(["ORDERS_RETURNS"]), adminGetReturnRequests);
+router.get("/admin-replacements", protect, checkPermission(["ORDERS_RETURNS"]), adminGetReplacementRequests);
 router.get("/admin/:id", protect, checkPermission(["ORDERS_RETURNS", "TICKETS_MANAGE"]), getReturnDetails);
 router.put("/admin/:id", protect, checkPermission("ORDERS_RETURNS"), adminUpdateReturn);
+router.put("/admin-requests/:id", protect, checkPermission("ORDERS_RETURNS"), adminUpdateReturnRequest);
+router.put("/admin-replacements/:id", protect, checkPermission("ORDERS_RETURNS"), adminUpdateReplacementRequest);
 router.post("/admin/:id/notes", protect, checkPermission("ORDERS_RETURNS"), addInternalNote);
 router.put("/settings", protect, adminOnly, checkPermission("ORDERS_RETURNS"), updateReturnSettings);
 

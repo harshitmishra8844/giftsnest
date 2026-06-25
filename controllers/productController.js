@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const crypto = require("crypto");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const { logActivity } = require("../services/logService");
@@ -27,6 +28,86 @@ const sanitizeSpecifications = (value) => {
     }))
     .filter((item) => item.label && item.value)
     .slice(0, 20);
+};
+
+const parseDelimitedList = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+  return String(value || "")
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const toBoolean = (value, fallback = false) => {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  const normalized = String(value).trim().toLowerCase();
+  return ["true", "1", "yes", "on"].includes(normalized);
+};
+
+const toNumber = (value, fallback = 0) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const generateSku = (name) => {
+  const base = slugify(name).replace(/-/g, "").toUpperCase().slice(0, 8) || "ITEM";
+  return `NG-${base}-${crypto.randomBytes(2).toString("hex").toUpperCase()}`;
+};
+
+const normalizeProductPayload = (source = {}, existingProduct = null) => {
+  const categoryList = parseDelimitedList(source.categories ?? source.category);
+  const tagList = parseDelimitedList(source.tags);
+  const inputTypes = parseDelimitedList(source.personalizationInputTypes);
+  const priceNum = toNumber(source.price, existingProduct?.price ?? 0);
+  const originalPriceNum = source.originalPrice !== undefined && source.originalPrice !== ""
+    ? toNumber(source.originalPrice, priceNum)
+    : priceNum;
+  const sku = String(source.sku || "").trim() || existingProduct?.sku || generateSku(source.name || existingProduct?.name || "Product");
+
+  return {
+    name: String(source.name || existingProduct?.name || "").trim(),
+    price: priceNum,
+    originalPrice: originalPriceNum,
+    category: categoryList.length ? categoryList.join(", ") : String(source.category || existingProduct?.category || "").trim(),
+    categories: categoryList,
+    tags: tagList,
+    sku,
+    brand: String(source.brand || existingProduct?.brand || "Niyora Gifts").trim(),
+    productType: String(source.productType || existingProduct?.productType || "").trim(),
+    codEnabled: toBoolean(source.codEnabled, existingProduct?.codEnabled ?? true),
+    isPersonalized: toBoolean(source.isPersonalized, existingProduct?.isPersonalized ?? false),
+    personalizationTextLabel: String(source.personalizationTextLabel || existingProduct?.personalizationTextLabel || "").trim(),
+    personalizationTextLimit: Math.max(1, Math.floor(toNumber(source.personalizationTextLimit, existingProduct?.personalizationTextLimit ?? 20))),
+    personalizationImageRequired: toBoolean(source.personalizationImageRequired, existingProduct?.personalizationImageRequired ?? false),
+    personalizationImageLabel: String(source.personalizationImageLabel || existingProduct?.personalizationImageLabel || "").trim(),
+    personalizationInputTypes: inputTypes.length ? inputTypes : (existingProduct?.personalizationInputTypes || ["Text"]),
+    stock: Math.max(0, Math.floor(toNumber(source.stock, existingProduct?.stock ?? 10))),
+    lowStockAlert: Math.max(0, Math.floor(toNumber(source.lowStockAlert, existingProduct?.lowStockAlert ?? 5))),
+    stockStatus: String(source.stockStatus || existingProduct?.stockStatus || "In Stock").trim(),
+    outOfStockNotification: toBoolean(source.outOfStockNotification, existingProduct?.outOfStockNotification ?? false),
+    gst: toNumber(source.gst, existingProduct?.gst ?? 0),
+    shippingCharges: toNumber(source.shippingCharges, existingProduct?.shippingCharges ?? 0),
+    returnShipping: String(source.returnShipping || existingProduct?.returnShipping || "Customer Pays").trim(),
+    replacementShipping: String(source.replacementShipping || existingProduct?.replacementShipping || "Customer Pays").trim(),
+    weight: String(source.weight || existingProduct?.weight || "").trim(),
+    length: String(source.length || existingProduct?.length || "").trim(),
+    width: String(source.width || existingProduct?.width || "").trim(),
+    height: String(source.height || existingProduct?.height || "").trim(),
+    deliveryTime: String(source.deliveryTime || existingProduct?.deliveryTime || "").trim(),
+    returnAvailable: toBoolean(source.returnAvailable, existingProduct?.returnAvailable ?? false),
+    replacementAvailable: toBoolean(source.replacementAvailable, existingProduct?.replacementAvailable ?? false),
+    returnWindow: String(source.returnWindow || existingProduct?.returnWindow || "No Return").trim(),
+    replacementWindow: String(source.replacementWindow || existingProduct?.replacementWindow || "No Replacement").trim(),
+    returnConditions: parseDelimitedList(source.returnConditions),
+    replacementConditions: parseDelimitedList(source.replacementConditions),
+    nonReturnableConditions: parseDelimitedList(source.nonReturnableConditions),
+    returnInstructions: String(source.returnInstructions || existingProduct?.returnInstructions || "").trim(),
+    replacementInstructions: String(source.replacementInstructions || existingProduct?.replacementInstructions || "").trim(),
+  };
 };
 
 const getProducts = async (req, res) => {
@@ -198,9 +279,11 @@ const getReviewEligibility = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
+    const normalized = normalizeProductPayload(req.body);
     const {
       name,
       price,
+      originalPrice,
       image,
       images,
       description,
@@ -213,8 +296,37 @@ const createProduct = async (req, res) => {
       personalizationTextLimit,
       personalizationImageRequired,
       personalizationImageLabel,
+      personalizationInputTypes,
       codEnabled,
-    } = req.body;
+      sku,
+      brand,
+      tags,
+      productType,
+      gst,
+      shippingCharges,
+      lowStockAlert,
+      stockStatus,
+      outOfStockNotification,
+      weight,
+      length,
+      width,
+      height,
+      deliveryTime,
+      returnAvailable,
+      replacementAvailable,
+      returnWindow,
+      replacementWindow,
+      returnConditions,
+      replacementConditions,
+      nonReturnableConditions,
+      returnInstructions,
+      replacementInstructions,
+      returnShipping,
+      replacementShipping,
+    } = {
+      ...req.body,
+      ...normalized,
+    };
     const normalizedImages = Array.isArray(images)
       ? images.map((item) => String(item || "").trim()).filter(Boolean)
       : [];
@@ -233,9 +345,15 @@ const createProduct = async (req, res) => {
       return res.status(400).json({ message: "Stock must be a valid number" });
     }
 
+    const priceNum = Number(price);
+    const origPriceNum = originalPrice ? Number(originalPrice) : priceNum;
+    const discPct = priceNum && origPriceNum && origPriceNum > priceNum 
+      ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100) 
+      : 0;
+
     const product = await Product.create({
       name,
-      price: Number(price),
+      price: priceNum,
       slug: slugify(name),
       image: primaryImage,
       images: [primaryImage, ...normalizedImages.filter((item) => item !== primaryImage)],
@@ -250,7 +368,37 @@ const createProduct = async (req, res) => {
       personalizationTextLimit: personalizationTextLimit ? Number(personalizationTextLimit) : 20,
       personalizationImageRequired: Boolean(personalizationImageRequired),
       personalizationImageLabel: String(personalizationImageLabel || "").trim(),
+      personalizationInputTypes: Array.isArray(personalizationInputTypes) && personalizationInputTypes.length
+        ? personalizationInputTypes
+        : ["Text"],
       codEnabled: codEnabled !== undefined ? Boolean(codEnabled) : true,
+      sku: String(sku || "").trim(),
+      brand: String(brand || "Niyora Gifts").trim(),
+      tags: Array.isArray(tags) ? tags.map(t => String(t).trim()).filter(Boolean) : [],
+      productType: String(productType || "").trim(),
+      originalPrice: origPriceNum,
+      discountPercentage: discPct,
+      gst: gst ? Number(gst) : 0,
+      shippingCharges: shippingCharges ? Number(shippingCharges) : 0,
+      returnShipping: String(returnShipping || "Customer Pays").trim(),
+      replacementShipping: String(replacementShipping || "Customer Pays").trim(),
+      lowStockAlert: lowStockAlert ? Number(lowStockAlert) : 5,
+      stockStatus: String(stockStatus || "In Stock").trim(),
+      outOfStockNotification: Boolean(outOfStockNotification),
+      weight: String(weight || "").trim(),
+      length: String(length || "").trim(),
+      width: String(width || "").trim(),
+      height: String(height || "").trim(),
+      deliveryTime: String(deliveryTime || "").trim(),
+      returnAvailable: Boolean(returnAvailable),
+      replacementAvailable: Boolean(replacementAvailable),
+      returnWindow: String(returnWindow || "No Return").trim(),
+      replacementWindow: String(replacementWindow || "No Replacement").trim(),
+      returnConditions: Array.isArray(returnConditions) ? returnConditions.map(c => String(c).trim()).filter(Boolean) : [],
+      replacementConditions: Array.isArray(replacementConditions) ? replacementConditions.map(c => String(c).trim()).filter(Boolean) : [],
+      nonReturnableConditions: Array.isArray(nonReturnableConditions) ? nonReturnableConditions.map(c => String(c).trim()).filter(Boolean) : [],
+      returnInstructions: String(returnInstructions || "").trim(),
+      replacementInstructions: String(replacementInstructions || "").trim(),
     });
 
     if (req.user) {
@@ -275,6 +423,12 @@ const updateProduct = async (req, res) => {
     const { id } = req.params;
     const updates = { ...req.body };
     delete updates._id;
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    const normalized = normalizeProductPayload({ ...existingProduct.toObject(), ...updates }, existingProduct);
+    Object.assign(updates, normalized);
     if (updates.name) updates.slug = slugify(updates.name);
     if (updates.price !== undefined) updates.price = Number(updates.price);
     if (updates.images !== undefined) {
@@ -304,14 +458,20 @@ const updateProduct = async (req, res) => {
     if (updates.specifications !== undefined) {
       updates.specifications = sanitizeSpecifications(updates.specifications);
     }
+
+    // Auto-calculate discount percentage on update
+    if (existingProduct) {
+      const updatedPrice = updates.price !== undefined ? Number(updates.price) : existingProduct.price;
+      const updatedOriginalPrice = updates.originalPrice !== undefined ? Number(updates.originalPrice) : existingProduct.originalPrice;
+      updates.discountPercentage = updatedPrice && updatedOriginalPrice && updatedOriginalPrice > updatedPrice
+        ? Math.round(((updatedOriginalPrice - updatedPrice) / updatedOriginalPrice) * 100)
+        : 0;
+    }
+
     const product = await Product.findByIdAndUpdate(id, updates, {
       returnDocument: 'after',
       runValidators: true,
     });
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
 
     if (req.user) {
       await logActivity(

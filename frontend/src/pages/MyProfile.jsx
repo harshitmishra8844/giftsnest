@@ -130,6 +130,7 @@ const MyProfile = () => {
   const [returnVideo, setReturnVideo] = useState(null); // { url, publicId }
   const [returnPolicyChecked, setReturnPolicyChecked] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [orderProductsDetails, setOrderProductsDetails] = useState({});
 
   // Chat attachment states
   const [chatAttachment, setChatAttachment] = useState(null); // { name, url, fileType }
@@ -139,8 +140,26 @@ const MyProfile = () => {
     try {
       setLoadingReturns(true);
       setError("");
-      const { data } = await api.get("/returns/my");
-      setReturnsList(data);
+      const [returnsRes, replacementsRes] = await Promise.all([
+        api.get("/returns/my-requests"),
+        api.get("/returns/my-replacements"),
+      ]);
+      const formattedReturns = returnsRes.data.map(item => ({
+        ...item,
+        type: "Return",
+        code: item.returnCode,
+        order: item.orderId
+      }));
+      const formattedReplacements = replacementsRes.data.map(item => ({
+        ...item,
+        type: "Replacement",
+        code: item.replacementCode,
+        order: item.orderId
+      }));
+      const combined = [...formattedReturns, ...formattedReplacements].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      setReturnsList(combined);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load returns.");
     } finally {
@@ -232,7 +251,7 @@ const MyProfile = () => {
     }
   };
 
-  const openReturnModal = (order) => {
+  const openReturnModal = async (order) => {
     setReturnOrder(order);
     setReturnReason("");
     setReturnDescription("");
@@ -255,6 +274,28 @@ const MyProfile = () => {
     setReturnItemQuantities(itemsQtys);
     
     setReturnModalOpen(true);
+
+    // Fetch product details for these items to validate returns/replacements policies
+    const productDetailMap = {};
+    try {
+      setUploadingFiles(true);
+      await Promise.all(
+        order.products.map(async (p) => {
+          const key = p.productId || p._id;
+          try {
+            const { data } = await api.get(`/products/${key}`);
+            productDetailMap[key] = data;
+          } catch (e) {
+            console.error("Failed to load product details for return validation:", e);
+          }
+        })
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadingFiles(false);
+    }
+    setOrderProductsDetails(productDetailMap);
   };
 
   const handleReturnFileUpload = async (e) => {
@@ -356,19 +397,24 @@ const MyProfile = () => {
         reason: returnReason,
         description: returnDescription.trim(),
         images: returnImages,
-        video: returnVideo || undefined,
-        preferredResolution: returnResolution,
       };
 
-      const { data } = await api.post("/returns", payload);
-      setSuccessMessage(data.message || "Return request submitted successfully!");
+      let endpoint = "/returns/requests";
+      if (returnResolution === "Replacement") {
+        endpoint = "/returns/replacements";
+      } else {
+        payload.video = returnVideo || undefined;
+      }
+
+      const { data } = await api.post(endpoint, payload);
+      setSuccessMessage(data.message || "Request submitted successfully!");
       setReturnModalOpen(false);
       setReturnOrder(null);
       
       // Refresh lists
       await Promise.all([fetchReturns(), fetchTickets(), api.get("/orders/my").then(res => setOrders(res.data))]);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit return request.");
+      setError(err.response?.data?.message || "Failed to submit request.");
     } finally {
       setLoading(false);
     }
@@ -415,11 +461,11 @@ const MyProfile = () => {
     });
     if (hasExisting) return false;
     
-    // Check 7-day return window from updatedAt
+    // Check 30-day return window from updatedAt
     const deliveryDate = new Date(order.updatedAt);
     const diffTime = Math.abs(new Date() - deliveryDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 7;
+    return diffDays <= 30;
   };
 
   const getOrderReturn = (orderId) => {
@@ -492,14 +538,13 @@ const MyProfile = () => {
         setLoading(true);
         setError("");
         setSuccessMessage("");
-        const [ordersRes, addressesRes, returnsRes] = await Promise.all([
+        const [ordersRes, addressesRes] = await Promise.all([
           api.get("/orders/my"),
           api.get("/user/addresses"),
-          api.get("/returns/my"),
         ]);
         setOrders(ordersRes.data);
         setAddresses(addressesRes.data);
-        setReturnsList(returnsRes.data);
+        await fetchReturns();
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load your profile data");
       } finally {
@@ -698,6 +743,41 @@ const MyProfile = () => {
   const renderReturnModal = () => {
     if (!returnModalOpen || !returnOrder) return null;
 
+    const getEligibleResolutions = () => {
+      let canReturn = false;
+      let canReplace = false;
+
+      const selectedKeys = Object.keys(selectedReturnItems).filter(k => selectedReturnItems[k]);
+      if (selectedKeys.length === 0) return { canReturn: true, canReplace: true };
+
+      selectedKeys.forEach(key => {
+        const prodDetails = orderProductsDetails[key];
+        if (!prodDetails) {
+          canReturn = true;
+          canReplace = true;
+          return;
+        }
+        const deliveryDate = new Date(returnOrder.updatedAt);
+        const elapsedDays = Math.ceil(Math.abs(new Date() - deliveryDate) / (1000 * 60 * 60 * 24));
+
+        const rAvailable = prodDetails.returnAvailable;
+        const rWindow = prodDetails.returnWindow;
+        const rDays = rWindow === "3 Days" ? 3 : rWindow === "7 Days" ? 7 : rWindow === "10 Days" ? 10 : rWindow === "15 Days" ? 15 : rWindow === "30 Days" ? 30 : 0;
+        if (rAvailable && elapsedDays <= rDays) {
+          canReturn = true;
+        }
+
+        const repAvailable = prodDetails.replacementAvailable;
+        const repWindow = prodDetails.replacementWindow;
+        const repDays = repWindow === "3 Days" ? 3 : repWindow === "7 Days" ? 7 : repWindow === "10 Days" ? 10 : repWindow === "15 Days" ? 15 : repWindow === "30 Days" ? 30 : 0;
+        if (repAvailable && elapsedDays <= repDays) {
+          canReplace = true;
+        }
+      });
+
+      return { canReturn, canReplace };
+    };
+
     const selectedCount = returnOrder.products.filter(p => selectedReturnItems[p.productId || p._id]).length;
 
     return (
@@ -727,7 +807,7 @@ const MyProfile = () => {
             {/* Products Selection */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block">
-                Select Items to Return *
+                Select Items *
               </label>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1 border border-champagne/30 rounded-2xl p-2 bg-gold-50/5">
                 {returnOrder.products.map((product) => {
@@ -736,16 +816,33 @@ const MyProfile = () => {
                   const maxQty = product.quantity || 1;
                   const selectedQty = returnItemQuantities[key] || 1;
 
+                  const prodDetails = orderProductsDetails[key];
+                  const deliveryDate = new Date(returnOrder.updatedAt);
+                  const elapsedDays = Math.ceil(Math.abs(new Date() - deliveryDate) / (1000 * 60 * 60 * 24));
+
+                  const returnAvailable = prodDetails ? prodDetails.returnAvailable : true;
+                  const returnWindow = prodDetails ? prodDetails.returnWindow : "7 Days";
+                  const returnDays = returnWindow === "3 Days" ? 3 : returnWindow === "7 Days" ? 7 : returnWindow === "10 Days" ? 10 : returnWindow === "15 Days" ? 15 : returnWindow === "30 Days" ? 30 : 7;
+                  const isReturnEligible = returnAvailable && elapsedDays <= returnDays;
+
+                  const replacementAvailable = prodDetails ? prodDetails.replacementAvailable : true;
+                  const replacementWindow = prodDetails ? prodDetails.replacementWindow : "7 Days";
+                  const replacementDays = replacementWindow === "3 Days" ? 3 : replacementWindow === "7 Days" ? 7 : replacementWindow === "10 Days" ? 10 : replacementWindow === "15 Days" ? 15 : replacementWindow === "30 Days" ? 30 : 7;
+                  const isReplacementEligible = replacementAvailable && elapsedDays <= replacementDays;
+
+                  const isEligible = isReturnEligible || isReplacementEligible;
+
                   return (
-                    <div key={key} className="flex items-center justify-between p-2.5 rounded-xl border border-champagne/20 bg-white hover:border-gold-200/40 transition duration-200">
+                    <div key={key} className={`flex items-center justify-between p-2.5 rounded-xl border transition duration-200 ${!isEligible ? 'opacity-50 bg-gray-50 border-gray-200' : 'border-champagne/20 bg-white hover:border-gold-200/40'}`}>
                       <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
-                          checked={isChecked}
+                          checked={isChecked && isEligible}
+                          disabled={!isEligible}
                           onChange={(e) => {
                             setSelectedReturnItems(prev => ({ ...prev, [key]: e.target.checked }));
                           }}
-                          className="h-4.5 w-4.5 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer"
+                          className="h-4.5 w-4.5 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer disabled:cursor-not-allowed"
                         />
                         {product.image && (
                           <img
@@ -756,11 +853,14 @@ const MyProfile = () => {
                         )}
                         <div>
                           <p className="text-xs font-semibold text-luxury-black line-clamp-1">{product.name}</p>
-                          <p className="text-[10px] text-text-secondary">INR {product.price} &bull; Qty Ordered: {maxQty}</p>
+                          <p className="text-[10px] text-text-secondary">
+                            INR {product.price} &bull; Qty Ordered: {maxQty}
+                            {!isEligible && <span className="text-red-500 font-bold ml-2">(Policy Check: Outside eligibility window)</span>}
+                          </p>
                         </div>
                       </div>
 
-                      {isChecked && maxQty > 1 && (
+                      {isChecked && isEligible && maxQty > 1 && (
                         <div className="flex items-center gap-1.5">
                           <label className="text-[9px] text-text-secondary font-bold uppercase">Qty:</label>
                           <select
@@ -816,9 +916,18 @@ const MyProfile = () => {
                   required
                   className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none cursor-pointer"
                 >
-                  <option value="Refund">Refund (Original Source)</option>
-                  <option value="Store Credit">Store Credit (Gift Wallet)</option>
-                  <option value="Replacement">Product Replacement</option>
+                  {(() => {
+                    const res = getEligibleResolutions();
+                    const options = [];
+                    if (res.canReturn) {
+                      options.push(<option key="Refund" value="Refund">Refund (Original Source)</option>);
+                      options.push(<option key="Store Credit" value="Store Credit">Store Credit (Gift Wallet)</option>);
+                    }
+                    if (res.canReplace) {
+                      options.push(<option key="Replacement" value="Replacement">Product Replacement</option>);
+                    }
+                    return options.length > 0 ? options : <option value="">No options available</option>;
+                  })()}
                 </select>
               </div>
             </div>
@@ -1027,14 +1136,19 @@ const MyProfile = () => {
 
               {/* Status Timeline */}
               <div className="rounded-2xl border border-gold-200/25 bg-gold-50/5 p-4 space-y-3.5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">Return Process Tracker</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">{selectedReturn.type} Process Tracker</h4>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {[
-                    { label: "Request Submitted", test: ["Return Requested", "Under Review", "Approved", "Pickup Scheduled", "Product Received", "Refund Processing", "Refunded", "Completed", "Replacement Shipped"] },
-                    { label: "QA Assessment", test: ["Under Review", "Approved", "Pickup Scheduled", "Product Received", "Refund Processing", "Refunded", "Completed", "Replacement Shipped"] },
-                    { label: "Pickup Scheduled", test: ["Pickup Scheduled", "Product Received", "Refund Processing", "Refunded", "Completed", "Replacement Shipped"] },
-                    { label: "Refund / Shipped", test: ["Refunded", "Completed", "Replacement Shipped"] }
-                  ].map((step, idx) => {
+                  {(selectedReturn.type === "Replacement" ? [
+                    { label: "Request Submitted", test: ["Pending", "Approved", "Replacement Packed", "Shipped", "Delivered"] },
+                    { label: "Approved", test: ["Approved", "Replacement Packed", "Shipped", "Delivered"] },
+                    { label: "Replacement Shipped", test: ["Shipped", "Delivered"] },
+                    { label: "Delivered", test: ["Delivered"] }
+                  ] : [
+                    { label: "Request Submitted", test: ["Pending", "Under Review", "Approved", "Pickup Scheduled", "Item Received", "Refund Processed"] },
+                    { label: "Under Review", test: ["Under Review", "Approved", "Pickup Scheduled", "Item Received", "Refund Processed"] },
+                    { label: "Pickup Scheduled", test: ["Pickup Scheduled", "Item Received", "Refund Processed"] },
+                    { label: "Refund Processed", test: ["Refund Processed"] }
+                  ]).map((step, idx) => {
                     const reached = step.test.includes(selectedReturn.status) && selectedReturn.status !== "Rejected";
                     const isRejected = selectedReturn.status === "Rejected";
                     return (

@@ -6,6 +6,8 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import SEO from "../components/SEO";
+import AddProduct from "./AddProduct";
+import ReturnsReplacementsTab from "./ReturnsReplacementsTab";
 import {
   PremiumRingLoader,
   LoadingOverlay,
@@ -4154,6 +4156,7 @@ const AdminDashboard = () => {
     { id: "overview", label: "Overview", icon: "📊", permission: null },
     { id: "products", label: "Products & Stock", icon: "🛍️", permission: ["PRODUCTS_VIEW", "INVENTORY_VIEW"] },
     { id: "orders", label: "Orders", icon: "📦", permission: "ORDERS_VIEW" },
+    { id: "returns-replacements", label: "Returns & Replacements", icon: "🔄", permission: "ORDERS_RETURNS" },
     { id: "tickets", label: "Support Tickets", icon: "💬", permission: ["TICKETS_MANAGE", "SUPPORT_CHAT"] },
     { id: "coupons", label: "Coupons & Settings", icon: "🎟️", permission: ["COUPONS_MANAGE", "BUSINESS_ANALYTICS_VIEW", "CONTENT_HOMEPAGE"] },
     { id: "newsletter", label: "Newsletter", icon: "✉️", permission: "MARKETING_CAMPAIGNS" },
@@ -4372,6 +4375,7 @@ const AdminDashboard = () => {
           {activeTab === "coupons" && renderCouponsTab()}
           {activeTab === "orders" && renderOrdersTab()}
           {activeTab === "tickets" && renderTicketsTab()}
+          {activeTab === "returns-replacements" && <ReturnsReplacementsTab />}
 
       {activeTab === "coupons" && couponsSubTab === "store-settings" && (
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
@@ -5194,433 +5198,25 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === "products" && productsSubTab === "add-edit-product" && (
-        <>
-          <div className="rounded-3xl border border-gray-200/40 bg-white/70 backdrop-blur-md p-6 shadow-sm">
-        <h3 className="text-xl font-serif font-light tracking-tight text-gray-950">Catalog Categories</h3>
-        <p className="mt-1 text-xs text-gray-500 font-light mb-4">Filter visible products below or set default category configuration for new entries.</p>
-        <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1 whitespace-nowrap scroll-smooth w-full">
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory("All");
-              if (!editingId) {
-                setForm((prev) => ({ ...prev, category: "" }));
+        <div className="animate-page-enter">
+          <AddProduct
+            initialData={products.find(p => p._id === editingId) || null}
+            onSuccess={async () => {
+              try {
+                const { data } = await api.get("/admin/products", authHeader);
+                setProducts(data);
+              } catch (err) {
+                console.error("Failed to refresh products", err);
               }
+              setEditingId("");
+              setProductsSubTab("inventory");
             }}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-              selectedCategory === "All"
-                ? "bg-emerald-950 text-white border border-emerald-950 shadow-sm scale-102"
-                : "bg-white/50 border border-gray-200 text-gray-650 hover:border-emerald-950/40 hover:text-emerald-950 cursor-pointer"
-            }`}
-          >
-            All ({products.length})
-          </button>
-          {productCategories.map((category) => {
-            const count = products.filter((product) => {
-              const productCat = String(product.category || "").toLowerCase();
-              const selectedCat = category.toLowerCase();
-              const categoriesList = productCat.split(",").map(c => c.trim());
-              return categoriesList.includes(selectedCat);
-            }).length;
-            return (
-              <button
-                key={category}
-                type="button"
-                onClick={() => {
-                  setSelectedCategory(category);
-                  if (!editingId) {
-                    setForm((prev) => ({ ...prev, category }));
-                  }
-                }}
-                className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-                  selectedCategory === category
-                    ? "bg-emerald-950 text-white border border-emerald-950 shadow-sm scale-102"
-                    : "bg-white/50 border border-gray-200 text-gray-650 hover:border-emerald-950/40 hover:text-emerald-950 cursor-pointer"
-                }`}
-              >
-                {category} ({count})
-              </button>
-            );
-          })}
+            onCancel={() => {
+              setEditingId("");
+              setProductsSubTab("inventory");
+            }}
+          />
         </div>
-      </div>
-
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {editingId ? "Edit Product" : "Add Product"} {selectedCategory !== "All" ? `- ${selectedCategory}` : ""}
-        </h3>
-        <form onSubmit={handleSaveProduct} className="mt-3 grid gap-3 md:grid-cols-2">
-          <input name="name" value={form.name} onChange={handleFormChange} placeholder="Name" required className="rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-          <input name="price" type="number" min="1" value={form.price} onChange={handleFormChange} placeholder="Price" required className="rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-          <input
-            name="stock"
-            type="number"
-            min="0"
-            value={form.stock}
-            onChange={handleFormChange}
-            placeholder="Stock quantity"
-            required
-            title="Units available to sell"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            name="category"
-            value={form.category}
-            onChange={handleFormChange}
-            placeholder={selectedCategory !== "All" ? `Category (${selectedCategory})` : "Category"}
-            required
-            list="category-suggestions"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <datalist id="category-suggestions">
-            {productCategories.map((cat) => (
-              <option key={cat} value={cat} />
-            ))}
-          </datalist>
-          <div className="md:col-span-2 space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-              Select Categories (click to toggle multiple)
-            </label>
-            <div className="flex flex-wrap gap-2 p-3 bg-white/40 rounded-2xl border border-gray-200/40 shadow-inner">
-              {productCategories.map((cat) => {
-                const isSelected = String(form.category || "")
-                  .split(",")
-                  .map((item) => item.trim())
-                  .includes(cat);
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => handleToggleCategorySelection(cat)}
-                    className={`rounded-full px-3.5 py-1 text-xs transition cursor-pointer select-none border ${
-                      isSelected
-                        ? "bg-emerald-950 text-white border-emerald-950 shadow-sm font-semibold"
-                        : "bg-white/80 border-gray-200 text-gray-650 font-light hover:border-emerald-900/40 hover:text-emerald-900"
-                    }`}
-                  >
-                    {isSelected ? `✓ ${cat}` : `+ ${cat}`}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Personalization Options */}
-          <div className="md:col-span-2 rounded-xl border border-teal-100 bg-teal-50/40 p-4 space-y-3 shadow-xs">
-            <label className="flex items-center gap-2 text-sm font-semibold text-teal-900 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                name="isPersonalized"
-                checked={Boolean(form.isPersonalized)}
-                onChange={handleFormChange}
-                className="rounded text-teal-600 focus:ring-teal-600 cursor-pointer"
-              />
-              Requires Personalization (FNP-style Customization)
-            </label>
-            
-            {form.isPersonalized && (
-              <div className="grid gap-3 sm:grid-cols-2 pt-2.5 border-t border-teal-200/30">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Custom Text Input Label</label>
-                  <input
-                    name="personalizationTextLabel"
-                    value={form.personalizationTextLabel || ""}
-                    onChange={handleFormChange}
-                    placeholder="e.g., Name on mug, Custom Message"
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs focus:ring-1 focus:ring-teal-950 focus:border-teal-950 outline-none"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Characters Limit</label>
-                  <input
-                    type="number"
-                    min="1"
-                    name="personalizationTextLimit"
-                    value={form.personalizationTextLimit || "20"}
-                    onChange={handleFormChange}
-                    placeholder="e.g., 20"
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs focus:ring-1 focus:ring-teal-950 focus:border-teal-950 outline-none"
-                  />
-                </div>
-                <div className="flex items-center pt-3.5 sm:col-span-2 gap-4">
-                  <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      name="personalizationImageRequired"
-                      checked={Boolean(form.personalizationImageRequired)}
-                      onChange={handleFormChange}
-                      className="rounded text-teal-600 focus:ring-teal-600 cursor-pointer"
-                    />
-                    <span className="font-medium text-gray-800">Require Photo Upload</span>
-                  </label>
-                  {form.personalizationImageRequired && (
-                    <input
-                      name="personalizationImageLabel"
-                      value={form.personalizationImageLabel || ""}
-                      onChange={handleFormChange}
-                      placeholder="e.g., Upload photo to print"
-                      className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs focus:ring-1 focus:ring-teal-950 focus:border-teal-950 outline-none"
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* COD Option */}
-          <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/30 p-4 space-y-3 shadow-xs">
-            <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-800 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                name="codEnabled"
-                checked={form.codEnabled !== undefined ? Boolean(form.codEnabled) : true}
-                onChange={handleFormChange}
-                className="rounded text-emerald-600 focus:ring-emerald-600 cursor-pointer h-4 w-4"
-              />
-              Enable Cash on Delivery (COD) for this product
-            </label>
-          </div>
-
-          <div className="md:col-span-2">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Upload Product Images</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-              {imageFile ? (
-                <p className="text-xs text-gray-600">Selected: {imageFile.name}</p>
-              ) : null}
-              <button
-                type="button"
-                onClick={handleImageUpload}
-                disabled={uploadingImage}
-                className="rounded-full border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-70"
-              >
-                {uploadingImage ? "Uploading..." : "Upload Image"}
-              </button>
-            </div>
-            {form.image ? (
-              <p className="mt-2 text-xs text-gray-500">Primary image set. You can upload more images.</p>
-            ) : (
-              <p className="mt-2 text-xs text-amber-600">Upload at least one image to continue.</p>
-            )}
-          </div>
-          
-          {allFormImages.length > 0 ? (
-            <div className="md:col-span-2 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Image Gallery Previews</p>
-              <div className="flex flex-wrap gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                {allFormImages.map((url, idx) => {
-                  const isPrimary = form.image === url;
-                  return (
-                    <div key={idx} className="relative group w-24 h-24 md:w-28 md:h-28 rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center shadow-sm">
-                      <img src={url} alt={`Preview ${idx + 1}`} className="max-w-full max-h-full object-contain p-1" />
-                      {isPrimary && (
-                        <span className="absolute top-0 left-0 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm">
-                          Primary
-                        </span>
-                      )}
-                      {/* Hover controls */}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        {!isPrimary && (
-                          <button
-                            type="button"
-                            onClick={() => handleSetPrimaryFormImage(url)}
-                            title="Set as primary image"
-                            className="p-1.5 rounded-full bg-white text-emerald-600 hover:bg-emerald-50 transition shadow"
-                          >
-                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteFormImage(url)}
-                          title="Remove image"
-                          className="p-1.5 rounded-full bg-white text-red-600 hover:bg-red-50 transition shadow"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          <textarea
-            name="imagesText"
-            value={form.imagesText}
-            onChange={handleFormChange}
-            placeholder="Additional image URLs (one per line or comma separated)"
-            rows={3}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
-          />
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleFormChange}
-            placeholder="Description"
-            required
-            rows={3}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
-          />
-          <textarea
-            name="highlightsText"
-            value={form.highlightsText}
-            onChange={handleFormChange}
-            placeholder={"Highlights (one point per line)\nPremium finish\nSame-day gifting option\nCustom message included"}
-            rows={4}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <textarea
-            name="specificationsText"
-            value={form.specificationsText}
-            onChange={handleFormChange}
-            placeholder={"Specifications (one per line: Label: Value)\nBrand: Niyora Gifts\nMaterial: Ceramic\nOccasion: Birthday"}
-            rows={4}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            name="deliveryTime"
-            value={form.deliveryTime}
-            onChange={handleFormChange}
-            placeholder="Delivery time (e.g. 2-4 days)"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            name="material"
-            value={form.material}
-            onChange={handleFormChange}
-            placeholder="Material (e.g. Ceramic, MDF Wood)"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            name="dimensions"
-            value={form.dimensions}
-            onChange={handleFormChange}
-            placeholder="Dimensions (e.g. 10 x 8 x 4 inch)"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            name="weight"
-            value={form.weight}
-            onChange={handleFormChange}
-            placeholder="Weight (e.g. 450g)"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <input
-            name="occasion"
-            value={form.occasion}
-            onChange={handleFormChange}
-            placeholder="Occasion (e.g. Birthday, Anniversary)"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          />
-          <textarea
-            name="careInstructions"
-            value={form.careInstructions}
-            onChange={handleFormChange}
-            placeholder="Care instructions (e.g. Keep away from water, wipe with dry cloth)"
-            rows={2}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
-          />
-          <div className="flex items-center gap-2 md:col-span-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
-            >
-              {saving ? "Saving..." : editingId ? "Update Product" : "Create Product"}
-            </button>
-            {editingId ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingId("");
-                  setForm(emptyForm);
-                  setImageFile(null);
-                }}
-                className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700"
-              >
-                Cancel
-              </button>
-            ) : null}
-          </div>
-        </form>
-      </div>
-
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Manage Products {selectedCategory !== "All" ? `- ${selectedCategory}` : ""}
-        </h3>
-        <div className="mt-3 space-y-3 md:hidden">
-          {filteredProducts.map((product) => (
-            <article key={product._id} className="rounded-xl border border-gray-200 p-3">
-              <p className="text-sm font-semibold text-gray-900">{product.name}</p>
-              <p className="mt-1 text-xs text-gray-600">
-                {product.category} • INR {product.price} • Stock: {product.stock ?? 0}
-              </p>
-              <div className="mt-2 flex gap-3 text-xs">
-                <button onClick={() => startEditProduct(product)} className="text-blue-600 hover:underline">
-                  Edit
-                </button>
-                <button onClick={() => handleDeleteProduct(product._id)} className="text-red-600 hover:underline">
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
-          {filteredProducts.length === 0 ? <p className="text-sm text-gray-500">No products in this category.</p> : null}
-        </div>
-        <div className="mt-3 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[700px] text-left text-sm">
-            <thead className="text-gray-500">
-              <tr>
-                <th className="py-2">Name</th>
-                <th className="py-2">Category</th>
-                <th className="py-2">Price</th>
-                <th className="py-2">Stock</th>
-                <th className="py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((product) => (
-                <tr key={product._id} className="border-t border-gray-100">
-                  <td className="py-2">{product.name}</td>
-                  <td className="py-2">{product.category}</td>
-                  <td className="py-2">INR {product.price}</td>
-                  <td className="py-2 tabular-nums">{product.stock ?? 0}</td>
-                  <td className="py-2">
-                    <div className="flex gap-2">
-                      <button onClick={() => startEditProduct(product)} className="text-blue-600 hover:underline">
-                        Edit
-                      </button>
-                      <button onClick={() => handleDeleteProduct(product._id)} className="text-red-600 hover:underline">
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredProducts.length === 0 ? (
-                <tr>
-                  <td className="py-4 text-gray-500" colSpan={5}>
-                    No products in this category.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </div>
-        </>
       )}
 
       {activeTab === "orders" && (

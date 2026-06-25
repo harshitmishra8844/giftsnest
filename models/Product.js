@@ -126,6 +126,139 @@ const productSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    personalizationInputTypes: {
+      type: [String],
+      default: ["Text"],
+    },
+    sku: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    brand: {
+      type: String,
+      default: "Niyora Gifts",
+      trim: true,
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    productType: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    originalPrice: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    discountPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    gst: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    shippingCharges: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    returnShipping: {
+      type: String,
+      default: "Customer Pays",
+      trim: true,
+    },
+    replacementShipping: {
+      type: String,
+      default: "Customer Pays",
+      trim: true,
+    },
+    lowStockAlert: {
+      type: Number,
+      default: 5,
+      min: 0,
+    },
+    stockStatus: {
+      type: String,
+      default: "In Stock",
+      trim: true,
+    },
+    outOfStockNotification: {
+      type: Boolean,
+      default: false,
+    },
+    weight: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    length: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    width: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    height: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    deliveryTime: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    returnAvailable: {
+      type: Boolean,
+      default: false,
+    },
+    replacementAvailable: {
+      type: Boolean,
+      default: false,
+    },
+    returnWindow: {
+      type: String,
+      default: "No Return",
+      trim: true,
+    },
+    replacementWindow: {
+      type: String,
+      default: "No Replacement",
+      trim: true,
+    },
+    returnConditions: {
+      type: [String],
+      default: [],
+    },
+    replacementConditions: {
+      type: [String],
+      default: [],
+    },
+    nonReturnableConditions: {
+      type: [String],
+      default: [],
+    },
+    returnInstructions: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    replacementInstructions: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     rating: {
       type: Number,
       default: 0,
