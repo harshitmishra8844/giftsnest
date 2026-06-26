@@ -261,7 +261,20 @@ const mapInitialDataToForm = (data) => {
     imagesText: Array.isArray(data.images) ? data.images.join("\n") : (data.image || ""),
     highlightsText: Array.isArray(data.highlights) ? data.highlights.join("\n") : "",
     specificationsText: Array.isArray(data.specifications) 
-      ? data.specifications.map(s => `${s.label}: ${s.value}`).join("\n") 
+      ? data.specifications
+          .filter((s) => {
+            const label = String(s.label || "").trim().toLowerCase();
+            return ![
+              "care instructions",
+              "delivery time",
+              "weight",
+              "length",
+              "width",
+              "height"
+            ].includes(label);
+          })
+          .map((s) => `${s.label}: ${s.value}`)
+          .join("\n") 
       : "",
     price: String(data.price || ""),
     originalPrice: String(data.originalPrice || ""),
