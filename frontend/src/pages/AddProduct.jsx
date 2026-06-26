@@ -257,7 +257,6 @@ const mapInitialDataToForm = (data) => {
     ...emptyForm,
     ...data,
     categoriesText: Array.isArray(data.categories) ? data.categories.join(", ") : (data.category || ""),
-    categoryInput: Array.isArray(data.categories) ? data.categories.join(", ") : (data.category || ""),
     tagsText: Array.isArray(data.tags) ? data.tags.join(", ") : "",
     imagesText: Array.isArray(data.images) ? data.images.join("\n") : (data.image || ""),
     highlightsText: Array.isArray(data.highlights) ? data.highlights.join("\n") : "",
@@ -356,7 +355,7 @@ const AddProduct = ({ initialData, onSuccess, onCancel }) => {
     const checks = [
       form.name,
       form.sku,
-      form.categoryInput,
+      form.categoriesText,
       form.price,
       form.originalPrice,
       parsedImages.length > 0,
@@ -482,7 +481,7 @@ const AddProduct = ({ initialData, onSuccess, onCancel }) => {
   const getValidationMessage = () => {
     if (!auth?.token) return "Admin login is required to create products.";
     if (!form.name.trim()) return "Product name is required.";
-    if (!form.categoryInput.trim()) return "At least one category is required.";
+    if (!form.categoriesText?.trim()) return "At least one category is required.";
     if (!form.price || Number(form.price) <= 0) return "Selling price must be greater than zero.";
     if (!form.originalPrice || Number(form.originalPrice) <= 0) return "Original price is required.";
     if (Number(form.originalPrice) < Number(form.price)) return "Original price should be greater than or equal to selling price.";
@@ -510,8 +509,8 @@ const AddProduct = ({ initialData, onSuccess, onCancel }) => {
         sku: form.sku.trim(),
         brand: form.brand.trim() || "Niyora Gifts",
         productType: form.productType.trim(),
-        category: parseDelimitedList(form.categoriesText || form.categoryInput).join(", "),
-        categories: parseDelimitedList(form.categoriesText || form.categoryInput),
+        category: parseDelimitedList(form.categoriesText).join(", "),
+        categories: parseDelimitedList(form.categoriesText),
         tags: parseDelimitedList(form.tagsText),
         price: Number(form.price),
         originalPrice: Number(form.originalPrice),
