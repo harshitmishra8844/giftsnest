@@ -115,6 +115,21 @@ function App() {
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [subStatus, setSubStatus] = useState("idle"); // idle, loading, success, error
   const [subMessage, setSubMessage] = useState("");
+  const [products, setProducts] = useState(mockGiftProducts);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const { data } = await api.get("/products");
+        if (Array.isArray(data) && data.length > 0) {
+          setProducts(data);
+        }
+      } catch (err) {
+        console.error("Failed to load products for global search:", err);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
@@ -280,7 +295,7 @@ function App() {
             {/* Global Search Bar */}
             <div className="w-full max-w-md md:max-w-lg lg:max-w-xl mx-auto flex-1 px-1.5 md:px-0">
               <SearchBar
-                products={mockGiftProducts}
+                products={products}
                 trendingSearches={trendingSearches}
                 onSearch={handleSearch}
               />

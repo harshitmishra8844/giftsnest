@@ -51,7 +51,7 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
       if (productName && !seen.has(`product-${productName.toLowerCase()}`)) {
         seen.add(`product-${productName.toLowerCase()}`);
         items.push({
-          id: `product-${product.id}`,
+          id: `product-${product._id || product.id}`,
           label: productName,
           type: "Product",
           price: product.price,
@@ -60,14 +60,20 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
         });
       }
 
-      const category = String(product.category || "").trim();
-      if (category && !seen.has(`category-${category.toLowerCase()}`)) {
-        seen.add(`category-${category.toLowerCase()}`);
-        items.push({
-          id: `category-${category}`,
-          label: category,
-          type: "Category",
-        });
+      if (product.category) {
+        String(product.category)
+          .split(",")
+          .forEach((cat) => {
+            const trimmed = cat.trim();
+            if (trimmed && !seen.has(`category-${trimmed.toLowerCase()}`)) {
+              seen.add(`category-${trimmed.toLowerCase()}`);
+              items.push({
+                id: `category-${trimmed}`,
+                label: trimmed,
+                type: "Category",
+              });
+            }
+          });
       }
     });
 
