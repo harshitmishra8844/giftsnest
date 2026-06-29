@@ -616,6 +616,14 @@ const createReturnRequest = async (req, res) => {
       return res.status(404).json({ message: "Order not found." });
     }
 
+    // Verify that none of the products are personalized
+    for (const item of items) {
+      const product = await Product.findById(item.productId);
+      if (product && product.isPersonalized) {
+        return res.status(400).json({ message: `Product "${product.name}" is a personalized product and is non-returnable.` });
+      }
+    }
+
     if (order.paymentMethod === "COD") {
       if (!codRefundMethod) {
         return res.status(400).json({ message: "Refund method is required for COD orders." });

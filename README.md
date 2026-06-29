@@ -1,6 +1,6 @@
-# GiftNest - Personalized Gift E-Commerce
+# Niyoragifts - Personalized Gift E-Commerce
 
-GiftNest is a full-stack e-commerce web app for personalized gifts with customer shopping, secure authentication, cart + checkout, online payment, image upload, and admin management.
+Niyoragifts is a full-stack e-commerce web app for personalized gifts with customer shopping, secure authentication, cart + checkout, online payment, image upload, and admin management.
 
 ## Tech Stack
 

@@ -231,17 +231,20 @@ const Textarea = (props) => (
   />
 );
 
-const Toggle = ({ checked, onChange, label, description }) => (
+const Toggle = ({ checked, onChange, label, description, disabled }) => (
   <button
     type="button"
+    disabled={disabled}
     onClick={() => onChange(!checked)}
     className={`flex w-full items-start gap-3 rounded-3xl border px-4 py-4 text-left transition ${
-      checked
+      disabled
+        ? "border-gray-200 bg-gray-50/50 cursor-not-allowed opacity-60"
+        : checked
         ? "border-gold-300 bg-gold-50/60"
         : "border-champagne bg-white hover:border-gold-200/70"
     }`}
   >
-    <span className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${checked ? "border-gold-500 bg-gold-500 text-white" : "border-gray-300 bg-white text-transparent"}`}>
+    <span className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${checked && !disabled ? "border-gold-500 bg-gold-500 text-white" : "border-gray-300 bg-white text-transparent"}`}>
       ✓
     </span>
     <span>
@@ -1043,7 +1046,13 @@ const AddProduct = ({ initialData, onSuccess, onCancel }) => {
           <div className="space-y-5">
             <Toggle
               checked={Boolean(form.isPersonalized)}
-              onChange={(next) => setForm((prev) => ({ ...prev, isPersonalized: next }))}
+              onChange={(next) => setForm((prev) => {
+                const updated = { ...prev, isPersonalized: next };
+                if (next) {
+                  updated.returnAvailable = false;
+                }
+                return updated;
+              })}
               label="Personalization required"
               description="Turn on when the customer must add custom text or upload an image."
             />
@@ -1155,7 +1164,8 @@ const AddProduct = ({ initialData, onSuccess, onCancel }) => {
                   checked={Boolean(form.returnAvailable)}
                   onChange={(next) => setForm((prev) => ({ ...prev, returnAvailable: next }))}
                   label="Return available"
-                  description="Customers can request a return for this product."
+                  description={form.isPersonalized ? "Returns are disabled for personalized products." : "Customers can request a return for this product."}
+                  disabled={Boolean(form.isPersonalized)}
                 />
                 <Toggle
                   checked={Boolean(form.replacementAvailable)}

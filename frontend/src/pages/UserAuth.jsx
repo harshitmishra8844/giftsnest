@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
 import { saveUserAuth } from "../services/userAuth";
 
 const UserAuth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,8 @@ const UserAuth = () => {
       const payload = mode === "login" ? { email: form.email, password: form.password } : form;
       const { data } = await api.post(endpoint, payload);
       saveUserAuth(data);
-      navigate("/my-profile");
+      const redirectTo = location.state?.redirectTo || "/my-profile";
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Authentication failed");
     } finally {

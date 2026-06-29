@@ -5,6 +5,7 @@ import About from "./pages/About";
 import Products from "./pages/Products";
 import ProductDetails from "./pages/ProductDetails";
 import Cart from "./pages/Cart";
+import Wishlist from "./pages/Wishlist";
 import Checkout from "./pages/Checkout";
 import UserAuth from "./pages/UserAuth";
 import MyProfile from "./pages/MyProfile";
@@ -16,6 +17,7 @@ import ShippingPolicy from "./pages/ShippingPolicy";
 import ReturnsRefunds from "./pages/ReturnsRefunds";
 import PersonalizedMug from "./pages/PersonalizedMug";
 import { useCart } from "./context/CartContext";
+import { useWishlist } from "./context/WishlistContext";
 import { getUserAuth } from "./services/userAuth";
 import SearchBar from "./components/search/SearchBar";
 import { mockGiftProducts, trendingSearches } from "./data/mockGiftProducts";
@@ -36,6 +38,7 @@ const UserProtectedRoute = ({ children }) => {
 
 function App() {
   const { itemCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -71,6 +74,9 @@ function App() {
     } else if (path === "/cart") {
       title = "Cart | Niyora Gifts";
       description = "Review your luxury curated gifts, select personalization options, and prepare to place your order on Niyora Gifts.";
+    } else if (path === "/wishlist") {
+      title = "My Wishlist | Niyora Gifts";
+      description = "View your saved luxury curated gifts, select options, and move items to your cart on Niyora Gifts.";
     } else if (path === "/checkout") {
       title = "Checkout | Niyora Gifts";
       description = "Complete your purchase securely. Enter shipping address, payment details, and complete order fulfillment at Niyora Gifts.";
@@ -256,6 +262,26 @@ function App() {
               </span>
               <div className="ml-2 flex items-center gap-2 md:hidden">
                 <NavLink
+                  to="/wishlist"
+                  aria-label={`Wishlist (${wishlistCount})`}
+                  title={`Wishlist (${wishlistCount})`}
+                  className="relative shrink-0 rounded-full bg-white border border-champagne p-2.5 text-luxury-black transition hover:bg-gold-50 shadow-sm flex items-center justify-center"
+                >
+                  <span className="inline-flex items-center">
+                    <svg className="h-4 w-4 fill-red-500 stroke-red-500 animate-pulse-subtle" viewBox="0 0 24 24">
+                      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                    </svg>
+                  </span>
+                  {wishlistCount > 0 ? (
+                    <span
+                      key={`wishlist-count-mobile-${wishlistCount}`}
+                      className="cart-badge-bump absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold leading-4 text-white shadow-sm"
+                    >
+                      {wishlistCount > 99 ? "99+" : wishlistCount}
+                    </span>
+                  ) : null}
+                </NavLink>
+                <NavLink
                   to="/cart"
                   aria-label={`Cart (${itemCount})`}
                   title={`Cart (${itemCount})`}
@@ -313,6 +339,26 @@ function App() {
               </NavLink>
               <NavLink to="/my-profile" className={navLinkClass}>
                 Profile
+              </NavLink>
+              <NavLink
+                to="/wishlist"
+                aria-label={`Wishlist (${wishlistCount})`}
+                title={`Wishlist (${wishlistCount})`}
+                className="relative shrink-0 rounded-full bg-white hover:bg-gold-50 px-5 py-2 text-luxury-black hover:text-gold-600 border border-champagne transition hover:scale-102 hover:shadow-md flex items-center gap-2 font-semibold"
+              >
+                <span>
+                  <svg className="h-4 w-4 fill-red-500 stroke-red-500" viewBox="0 0 24 24">
+                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                  </svg>
+                </span>
+                {wishlistCount > 0 ? (
+                  <span
+                    key={`wishlist-count-desktop-${wishlistCount}`}
+                    className="cart-badge-bump inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-[10px] font-extrabold leading-3 text-white"
+                  >
+                    {wishlistCount > 99 ? "99+" : wishlistCount}
+                  </span>
+                ) : null}
               </NavLink>
               <NavLink
                 to="/cart"
@@ -420,6 +466,26 @@ function App() {
                 >
                   My Profile
                 </NavLink>
+                <NavLink
+                  to="/wishlist"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
+                      isActive
+                        ? "bg-gold-500 text-white shadow-sm"
+                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
+                    }`
+                  }
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="text-red-500">❤️</span> Wishlist
+                  </span>
+                  {wishlistCount > 0 && (
+                    <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-[10px] font-bold leading-3 text-white">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </NavLink>
               </nav>
             </div>
 
@@ -438,6 +504,7 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:idOrSlug" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route
             path="/checkout"
             element={

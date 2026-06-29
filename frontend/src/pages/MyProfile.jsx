@@ -800,7 +800,7 @@ const MyProfile = () => {
         const deliveryDate = new Date(returnOrder.updatedAt);
         const elapsedDays = Math.ceil(Math.abs(new Date() - deliveryDate) / (1000 * 60 * 60 * 24));
 
-        const rAvailable = prodDetails.returnAvailable;
+        const rAvailable = prodDetails.isPersonalized ? false : prodDetails.returnAvailable;
         const rWindow = prodDetails.returnWindow;
         const rDays = rWindow === "3 Days" ? 3 : rWindow === "7 Days" ? 7 : rWindow === "10 Days" ? 10 : rWindow === "15 Days" ? 15 : rWindow === "30 Days" ? 30 : 0;
         if (rAvailable && elapsedDays <= rDays) {
@@ -860,7 +860,7 @@ const MyProfile = () => {
                   const deliveryDate = new Date(returnOrder.updatedAt);
                   const elapsedDays = Math.ceil(Math.abs(new Date() - deliveryDate) / (1000 * 60 * 60 * 24));
 
-                  const returnAvailable = prodDetails ? prodDetails.returnAvailable : true;
+                  const returnAvailable = prodDetails ? (prodDetails.isPersonalized ? false : prodDetails.returnAvailable) : true;
                   const returnWindow = prodDetails ? prodDetails.returnWindow : "7 Days";
                   const returnDays = returnWindow === "3 Days" ? 3 : returnWindow === "7 Days" ? 7 : returnWindow === "10 Days" ? 10 : returnWindow === "15 Days" ? 15 : returnWindow === "30 Days" ? 30 : 7;
                   const isReturnEligible = returnAvailable && elapsedDays <= returnDays;

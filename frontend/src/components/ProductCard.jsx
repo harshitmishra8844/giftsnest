@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import QuantityStepper from "./QuantityStepper";
 import { resolveMediaUrl } from "../services/api";
+import WishlistButton from "./WishlistButton";
 
 const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
   const navigate = useNavigate();
@@ -29,7 +30,8 @@ const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
   };
 
   return (
-    <article className="group overflow-hidden rounded-2xl border border-champagne/45 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1.5 hover:shadow-md hover:border-gold-300/40 flex flex-col justify-between h-full">
+    <article className="group relative overflow-hidden rounded-2xl border border-champagne/45 bg-white shadow-xs transition-all duration-300 hover:-translate-y-1.5 hover:shadow-md hover:border-gold-300/40 flex flex-col justify-between h-full">
+      <WishlistButton product={product} className="absolute top-3 right-3 z-10" />
       <button type="button" onClick={openDetails} className="block w-full text-left focus:outline-none">
         <div className="relative overflow-hidden aspect-[4/3] bg-gold-50/30 flex items-center justify-center">
           <img

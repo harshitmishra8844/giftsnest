@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import api, { resolveMediaUrl } from "../services/api";
 import { useCart } from "../context/CartContext";
 import { getUserAuth } from "../services/userAuth";
+import { useWishlist } from "../context/WishlistContext";
 import QuantityStepper from "../components/QuantityStepper";
 import CartToast from "../components/CartToast";
 import SEO from "../components/SEO";
@@ -11,6 +12,7 @@ const ProductDetails = () => {
   const { idOrSlug } = useParams();
   const navigate = useNavigate();
   const { cartItems, addToCart, updateQuantity } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -418,6 +420,15 @@ const ProductDetails = () => {
     setToastMessage(`${item.name} added to cart`);
   };
 
+  const isWishlisted = isInWishlist(product?._id);
+
+  const handleWishlistToggle = async () => {
+    const result = await toggleWishlist(product);
+    if (result?.redirect) {
+      navigate("/login", { state: { redirectTo: `/products/${product.slug || product._id}` } });
+    }
+  };
+
   const selectedRating = Number(reviewForm.rating || 5);
   const deliveryEstimate = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -572,36 +583,53 @@ const ProductDetails = () => {
             ) : null}
 
             {/* Gallery Checkout Bar for Tablet/Desktop */}
-            <div className="mt-6 hidden grid-cols-2 gap-4 sm:grid">
-              {!product.isPersonalized && cartQuantity > 0 ? (
-                <QuantityStepper
-                  quantity={cartQuantity}
-                  onDecrease={handleDecreaseQty}
-                  onIncrease={handleIncreaseQty}
-                  increaseDisabled={outOfStock || reachedMaxStock}
-                  decreaseAriaLabel={`Decrease ${product.name} quantity`}
-                  increaseAriaLabel={`Increase ${product.name} quantity`}
-                  className="rounded-full border-champagne bg-white"
-                  buttonClassName="text-luxury-black hover:bg-gold-50"
-                  valueClassName="text-luxury-black text-xs"
-                />
-              ) : (
+            <div className="mt-6 hidden flex-col gap-3 sm:flex">
+              <div className="grid grid-cols-2 gap-4">
+                {!product.isPersonalized && cartQuantity > 0 ? (
+                  <QuantityStepper
+                    quantity={cartQuantity}
+                    onDecrease={handleDecreaseQty}
+                    onIncrease={handleIncreaseQty}
+                    increaseDisabled={outOfStock || reachedMaxStock}
+                    decreaseAriaLabel={`Decrease ${product.name} quantity`}
+                    increaseAriaLabel={`Increase ${product.name} quantity`}
+                    className="rounded-full border-champagne bg-white"
+                    buttonClassName="text-luxury-black hover:bg-gold-50"
+                    valueClassName="text-luxury-black text-xs"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
+                    onClick={handleAddToCart}
+                    className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm cursor-pointer font-semibold"
+                  >
+                    {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
-                  onClick={handleAddToCart}
-                  className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm cursor-pointer font-semibold"
+                  onClick={handleBuyNow}
+                  className="rounded-full bg-luxury-black hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm cursor-pointer font-semibold"
                 >
-                  {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
+                  Buy Now
                 </button>
-              )}
+              </div>
               <button
                 type="button"
-                disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
-                onClick={handleBuyNow}
-                className="rounded-full bg-luxury-black hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-sm cursor-pointer font-semibold"
+                onClick={handleWishlistToggle}
+                className="w-full rounded-full border border-champagne hover:border-gold-500 bg-white hover:bg-gold-50/20 px-6 py-3 text-xs font-bold uppercase tracking-widest text-luxury-black hover:text-gold-600 transition-all duration-300 shadow-sm cursor-pointer flex items-center justify-center gap-2 font-semibold"
               >
-                Buy Now
+                {isWishlisted ? (
+                  <>
+                    <span className="text-red-500 scale-110 animate-heart-pop">❤️</span> Remove from Wishlist
+                  </>
+                ) : (
+                  <>
+                    <span>🤍</span> Add to Wishlist
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -723,36 +751,53 @@ const ProductDetails = () => {
               </div>
 
               {/* Purchase Options directly inside details column */}
-              <div className="grid grid-cols-2 gap-3 py-1">
-                {!product.isPersonalized && cartQuantity > 0 ? (
-                  <QuantityStepper
-                    quantity={cartQuantity}
-                    onDecrease={handleDecreaseQty}
-                    onIncrease={handleIncreaseQty}
-                    increaseDisabled={outOfStock || reachedMaxStock}
-                    decreaseAriaLabel={`Decrease ${product.name} quantity`}
-                    increaseAriaLabel={`Increase ${product.name} quantity`}
-                    className="rounded-full border-champagne bg-white"
-                    buttonClassName="text-luxury-black hover:bg-gold-50"
-                    valueClassName="text-luxury-black text-xs"
-                  />
-                ) : (
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3 py-1">
+                  {!product.isPersonalized && cartQuantity > 0 ? (
+                    <QuantityStepper
+                      quantity={cartQuantity}
+                      onDecrease={handleDecreaseQty}
+                      onIncrease={handleIncreaseQty}
+                      increaseDisabled={outOfStock || reachedMaxStock}
+                      decreaseAriaLabel={`Decrease ${product.name} quantity`}
+                      increaseAriaLabel={`Increase ${product.name} quantity`}
+                      className="rounded-full border-champagne bg-white"
+                      buttonClassName="text-luxury-black hover:bg-gold-50"
+                      valueClassName="text-luxury-black text-xs"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
+                      onClick={handleAddToCart}
+                      className="rounded-full bg-gold-500 hover:bg-gold-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
+                    >
+                      {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
-                    onClick={handleAddToCart}
-                    className="rounded-full bg-gold-500 hover:bg-gold-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
+                    onClick={handleBuyNow}
+                    className="rounded-full bg-luxury-black hover:bg-gold-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
                   >
-                    {outOfStock ? "Sold out" : uploadingImage ? "Uploading..." : recentlyAdded ? "Added ✓" : "Add to Cart"}
+                    Buy Now
                   </button>
-                )}
+                </div>
                 <button
                   type="button"
-                  disabled={outOfStock || (product.isPersonalized && !isCustomizationValid) || uploadingImage}
-                  onClick={handleBuyNow}
-                  className="rounded-full bg-luxury-black hover:bg-gold-600 px-4 py-3 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
+                  onClick={handleWishlistToggle}
+                  className="w-full rounded-full border border-champagne hover:border-gold-500 bg-white hover:bg-gold-50/20 px-4 py-3 text-xs font-bold uppercase tracking-widest text-luxury-black hover:text-gold-600 transition-all duration-300 shadow-xs cursor-pointer flex items-center justify-center gap-2 font-semibold"
                 >
-                  Buy Now
+                  {isWishlisted ? (
+                    <>
+                      <span className="text-red-500 scale-110 animate-heart-pop">❤️</span> Remove from Wishlist
+                    </>
+                  ) : (
+                    <>
+                      <span>🤍</span> Add to Wishlist
+                    </>
+                  )}
                 </button>
               </div>
 
@@ -822,7 +867,7 @@ const ProductDetails = () => {
             )}
 
             {/* Return & Replacement Policy Card */}
-            {(product.returnAvailable || product.replacementAvailable) && (
+            {(product.returnAvailable || product.replacementAvailable || product.isPersonalized) && (
               <div className="rounded-2xl border border-gold-300/40 bg-white p-5 shadow-xs space-y-4">
                 <div className="flex items-center gap-3 border-b border-champagne/30 pb-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold-50 text-gold-600">
@@ -836,19 +881,31 @@ const ProductDetails = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  {product.returnAvailable && (
-                    <div className="flex items-start gap-3 rounded-xl border border-gold-100 bg-gold-50/20 p-3 transition-colors hover:bg-gold-50/40">
-                      <span className="text-gold-500 font-bold text-lg leading-none">✓</span>
+                <div className={`grid gap-3 text-xs ${(product.isPersonalized || product.returnAvailable) && product.replacementAvailable ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {product.isPersonalized ? (
+                    <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50/20 p-3 transition-colors hover:bg-red-50/40">
+                      <span className="text-red-500 font-bold text-lg leading-none">✕</span>
                       <div>
-                        <p className="font-semibold text-luxury-black text-[11px]">{product.returnWindow} Return</p>
+                        <p className="font-semibold text-luxury-black text-[11px]">Non-Returnable</p>
                         <p className="text-[9px] text-text-secondary font-light mt-0.5">
-                          {product.returnConditions?.some(c => c.startsWith("Return Shipping:"))
-                            ? product.returnConditions.find(c => c.startsWith("Return Shipping:"))?.replace("Return Shipping: ", "")
-                            : "Terms Apply"}
+                          Personalized items cannot be returned
                         </p>
                       </div>
                     </div>
+                  ) : (
+                    product.returnAvailable && (
+                      <div className="flex items-start gap-3 rounded-xl border border-gold-100 bg-gold-50/20 p-3 transition-colors hover:bg-gold-50/40">
+                        <span className="text-gold-500 font-bold text-lg leading-none">✓</span>
+                        <div>
+                          <p className="font-semibold text-luxury-black text-[11px]">{product.returnWindow} Return</p>
+                          <p className="text-[9px] text-text-secondary font-light mt-0.5">
+                            {product.returnConditions?.some(c => c.startsWith("Return Shipping:"))
+                              ? product.returnConditions.find(c => c.startsWith("Return Shipping:"))?.replace("Return Shipping: ", "")
+                              : "Terms Apply"}
+                          </p>
+                        </div>
+                      </div>
+                    )
                   )}
                   {product.replacementAvailable && (
                     <div className="flex items-start gap-3 rounded-xl border border-gold-100 bg-gold-50/20 p-3 transition-colors hover:bg-gold-50/40">
@@ -878,7 +935,11 @@ const ProductDetails = () => {
                 </div>
 
                 <p className="text-[9px] text-text-secondary/70 italic mt-2 leading-relaxed">
-                  Note: Returns accepted within {product.returnWindow || "7 Days"}. Product must be unused and in original packaging. Personalized products are non-returnable. Refund processed after quality inspection.
+                  {product.isPersonalized ? (
+                    `Note: Personalized products are non-returnable. Replacements may be requested within ${product.replacementWindow || "7 Days"} only in case of transit damage or wrong item delivered.`
+                  ) : (
+                    `Note: Returns accepted within ${product.returnWindow || "7 Days"}. Product must be unused and in original packaging. Personalized products are non-returnable. Refund processed after quality inspection.`
+                  )}
                 </p>
               </div>
             )}
