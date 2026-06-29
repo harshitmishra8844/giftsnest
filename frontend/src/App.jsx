@@ -18,7 +18,8 @@ import ReturnsRefunds from "./pages/ReturnsRefunds";
 import PersonalizedMug from "./pages/PersonalizedMug";
 import { useCart } from "./context/CartContext";
 import { useWishlist } from "./context/WishlistContext";
-import { getUserAuth } from "./services/userAuth";
+import { useAuth } from "./context/AuthContext";
+import AuthModal from "./components/AuthModal";
 import SearchBar from "./components/search/SearchBar";
 import { mockGiftProducts, trendingSearches } from "./data/mockGiftProducts";
 import api from "./services/api";
@@ -27,10 +28,20 @@ import SEO from "./components/SEO";
 
 const UserProtectedRoute = ({ children }) => {
   const location = useLocation();
-  const userAuth = getUserAuth();
+  const { auth, showLoginModal } = useAuth();
+  const navigate = useNavigate();
 
-  if (!userAuth?.token) {
-    return <Navigate to="/login" state={{ redirectTo: location.pathname }} replace />;
+  useEffect(() => {
+    if (!auth?.token) {
+      showLoginModal(() => {
+        navigate(location.pathname, { replace: true });
+      });
+      navigate("/cart", { replace: true });
+    }
+  }, [auth, location, navigate, showLoginModal]);
+
+  if (!auth?.token) {
+    return null;
   }
 
   return children;
@@ -41,6 +52,7 @@ function App() {
   const { wishlistCount } = useWishlist();
   const location = useLocation();
   const navigate = useNavigate();
+  const { auth, showLoginModal } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Centralized SEO default mappings
@@ -337,9 +349,19 @@ function App() {
               <NavLink to="/about" className={navLinkClass}>
                 About
               </NavLink>
-              <NavLink to="/my-profile" className={navLinkClass}>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (auth?.token) {
+                    navigate("/my-profile");
+                  } else {
+                    showLoginModal(() => navigate("/my-profile"));
+                  }
+                }}
+                className={navLinkClass({ isActive: location.pathname === "/my-profile" })}
+              >
                 Profile
-              </NavLink>
+              </button>
               <NavLink
                 to="/wishlist"
                 aria-label={`Wishlist (${wishlistCount})`}
@@ -453,19 +475,24 @@ function App() {
                 >
                   About Us
                 </NavLink>
-                <NavLink
-                  to="/my-profile"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
-                      isActive
-                        ? "bg-gold-500 text-white shadow-sm"
-                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
-                    }`
-                  }
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMobileMenuOpen(false);
+                    if (auth?.token) {
+                      navigate("/my-profile");
+                    } else {
+                      showLoginModal(() => navigate("/my-profile"));
+                    }
+                  }}
+                  className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 cursor-pointer ${
+                    location.pathname === "/my-profile"
+                      ? "bg-gold-500 text-white shadow-sm"
+                      : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
+                  }`}
                 >
                   My Profile
-                </NavLink>
+                </button>
                 <NavLink
                   to="/wishlist"
                   onClick={() => setMobileMenuOpen(false)}
@@ -575,7 +602,21 @@ function App() {
                 <li><Link to="/about" className="hover:text-gold-500 transition">About</Link></li>
                 <li><Link to="/products" className="hover:text-gold-500 transition">Products</Link></li>
                 <li><Link to="/cart" className="hover:text-gold-500 transition">Cart</Link></li>
-                <li><Link to="/my-profile" className="hover:text-gold-500 transition">My Profile</Link></li>
+                <li>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (auth?.token) {
+                        navigate("/my-profile");
+                      } else {
+                        showLoginModal(() => navigate("/my-profile"));
+                      }
+                    }}
+                    className="hover:text-gold-500 transition bg-transparent border-0 cursor-pointer p-0 text-sm text-gray-400 align-baseline text-left font-sans"
+                  >
+                    My Profile
+                  </button>
+                </li>
               </ul>
             </div>
 
@@ -642,6 +683,7 @@ function App() {
         </div>
       </footer>
       )}
+      <AuthModal />
     </div>
   );
 }

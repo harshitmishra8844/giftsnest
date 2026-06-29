@@ -1659,11 +1659,31 @@ const sendAdminReplacementRequestAlertV2 = async (replacementRequest, order) => 
   }
 };
 
+const sendOtpEmail = async (email, otp) => {
+  const storeInfo = await getStoreDetails();
+  const title = `Your Verification Code - ${otp}`;
+  const headline = `Verify Your Email Address`;
+
+  const bodyHtml = `
+    <p style="margin: 0 0 16px 0;">Hello,</p>
+    <p style="margin: 0 0 16px 0;">Use the secure verification code below to sign in to your account. This code is valid for <strong>5 minutes</strong>, can only be used once, and is protected against brute force attempts.</p>
+    <div style="text-align: center; margin: 30px 0; background-color: #FCFAF5; border: 1px solid #E7D29E; border-radius: 16px; padding: 20px;">
+      <span style="font-family: Georgia, serif; font-size: 32px; font-weight: bold; letter-spacing: 0.15em; color: #D4AF37;">${otp}</span>
+    </div>
+    <p style="margin: 0 0 16px 0; font-size: 12px; color: #8F8C81;">If you did not request this code, you can safely ignore this email. Someone may have entered your email address by mistake.</p>
+  `;
+
+  const textContent = `Your verification code is ${otp}. This code is valid for 5 minutes.`;
+
+  return await queueEmail(email.toLowerCase().trim(), title, bodyHtml, textContent, "otp_verification");
+};
+
 module.exports = {
   queueEmail,
   retryEmail,
   startEmailWorker,
   getEmailSettings,
+  sendOtpEmail,
   
   // Specific templates
   sendCustomerOrderConfirmation,

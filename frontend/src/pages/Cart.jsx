@@ -1,11 +1,24 @@
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import QuantityStepper from "../components/QuantityStepper";
 import { resolveMediaUrl } from "../services/api";
 
 const Cart = () => {
+  const navigate = useNavigate();
+  const { auth, showLoginModal } = useAuth();
   const { state } = useLocation();
   const { cartItems, itemCount, totalPrice, updateQuantity, removeFromCart } = useCart();
+
+  const hasOpenedModalRef = useRef(false);
+
+  useEffect(() => {
+    if (!auth?.token && cartItems.length > 0 && !hasOpenedModalRef.current) {
+      hasOpenedModalRef.current = true;
+      showLoginModal(() => navigate("/checkout"));
+    }
+  }, [auth, cartItems, showLoginModal, navigate]);
 
   const subtotal = Number(totalPrice.toFixed(2));
 
@@ -106,12 +119,19 @@ const Cart = () => {
             <span className="font-serif">INR {subtotal}</span>
           </p>
         </div>
-        <Link
-          to="/checkout"
-          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow-sm font-semibold"
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            if (auth?.token) {
+              navigate("/checkout");
+            } else {
+              showLoginModal(() => navigate("/checkout"));
+            }
+          }}
+          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow-sm font-semibold cursor-pointer border-0"
         >
           Proceed to Checkout
-        </Link>
+        </button>
       </aside>
     </section>
   );

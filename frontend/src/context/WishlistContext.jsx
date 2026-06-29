@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../services/api";
-import { getUserAuth } from "../services/userAuth";
+import { useAuth } from "./AuthContext";
 
 const WishlistContext = createContext(null);
 
@@ -9,8 +9,8 @@ export const WishlistProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  const userAuth = getUserAuth();
-  const token = userAuth?.token;
+  const { auth, showLoginModal } = useAuth();
+  const token = auth?.token;
 
   // Show a toast message that auto-dismisses after 1800ms
   const showToast = (message) => {
@@ -52,14 +52,14 @@ export const WishlistProvider = ({ children }) => {
     if (!token) {
       // Store pending action
       localStorage.setItem("pending_wishlist_add", product._id);
-      showToast("Redirecting to login... ❤️");
-      return { redirect: true };
+      showLoginModal();
+      return;
     }
 
     // Optimistic update
     const simulatedItem = {
       _id: `temp-${Date.now()}`,
-      user_id: userAuth.user?._id || "",
+      user_id: auth?._id || "",
       product_id: product,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
