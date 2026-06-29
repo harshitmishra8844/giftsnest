@@ -167,7 +167,7 @@ router.patch("/addresses/:addressId/default", protect, async (req, res) => {
 // Update user profile settings
 router.put("/profile", protect, async (req, res) => {
   try {
-    const { name, email, password, newPassword } = req.body;
+    const { name, email, password, newPassword, mobileNumber } = req.body;
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -183,6 +183,10 @@ router.put("/profile", protect, async (req, res) => {
 
     if (name) {
       user.name = name.trim();
+    }
+
+    if (mobileNumber !== undefined) {
+      user.mobileNumber = mobileNumber.trim();
     }
 
     if (password && newPassword) {
@@ -206,12 +210,100 @@ router.put("/profile", protect, async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      mobileNumber: user.mobileNumber || "",
       isAdmin: Boolean(user.isAdmin),
       token: generateToken(user._id),
     });
   } catch (error) {
     console.error("Update profile error:", error.message);
     return res.status(500).json({ message: "Failed to update profile settings" });
+  }
+});
+
+// Get user cart
+router.get("/cart", protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate("cart.product");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    return res.status(200).json(user.cart || []);
+  } catch (error) {
+    console.error("Get cart error:", error.message);
+    return res.status(500).json({ message: "Failed to fetch cart" });
+  }
+});
+
+// Sync user cart
+router.put("/cart", protect, async (req, res) => {
+  try {
+    const { cartItems } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.cart = cartItems.map((item) => ({
+      product: item.product,
+      quantity: item.quantity || 1,
+      customization: item.customization || {},
+    }));
+
+    await user.save();
+    return res.status(200).json({ message: "Cart synced successfully", cart: user.cart });
+  } catch (error) {
+    console.error("Sync cart error:", error.message);
+    return res.status(500).json({ message: "Failed to sync cart" });
+  }
+});
+
+// Log client activity timeline events
+router.post("/activity", protect, async (req, res) => {
+  try {
+    const { action, details } = req.body;
+    if (!action) {
+      return res.status(400).json({ message: "Action is required" });
+    }
+
+    const { logActivity } = require("../services/logService");
+    await logActivity(req.user._id, req.user.name, action, details || "", req);
+
+    return res.status(201).json({ message: "Activity logged successfully" });
+  } catch (error) {
+    console.error("Log user activity error:", error.message);
+    return res.status(500).json({ message: "Failed to record activity" });
+  }
+});
+
+// Get notifications for logged-in user
+router.get("/notifications", protect, async (req, res) => {
+  try {
+    const Notification = require("../models/Notification");
+    const notifications = await Notification.find({ recipient: req.user._id })
+      .sort({ createdAt: -1 });
+    return res.status(200).json(notifications);
+  } catch (error) {
+    console.error("Get user notifications error:", error.message);
+    return res.status(500).json({ message: "Failed to fetch notifications" });
+  }
+});
+
+// Mark notification as read
+router.put("/notifications/:id/read", protect, async (req, res) => {
+  try {
+    const Notification = require("../models/Notification");
+    const notif = await Notification.findOneAndUpdate(
+      { _id: req.params.id, recipient: req.user._id },
+      { $set: { status: "Read" } },
+      { new: true }
+    );
+    if (!notif) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+    return res.status(200).json(notif);
+  } catch (error) {
+    console.error("Mark notification read error:", error.message);
+    return res.status(500).json({ message: "Failed to update notification" });
   }
 });
 

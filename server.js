@@ -23,6 +23,8 @@ const logRoutes = require("./routes/logRoutes");
 const ticketRoutes = require("./routes/ticketRoutes");
 const returnRoutes = require("./routes/returnRoutes");
 const emailRoutes = require("./routes/emailRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+const cmsRoutes = require("./routes/cmsRoutes");
 const { getStoreInfo } = require("./controllers/adminController");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { verifyEmailTransporter, getSmtpConfig } = require("./services/emailTransporter");
@@ -60,12 +62,14 @@ app.use("/api/admin/employees", employeeRoutes);
 app.use("/api/admin/roles", roleRoutes);
 app.use("/api/admin/departments", departmentRoutes);
 app.use("/api/admin/logs", logRoutes);
+app.use("/api/admin/customers", customerRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/returns", returnRoutes);
 app.use("/api/admin/emails", emailRoutes);
+app.use("/api/cms", cmsRoutes);
 
 
 app.use(notFound);

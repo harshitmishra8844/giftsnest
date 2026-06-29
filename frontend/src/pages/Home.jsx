@@ -42,6 +42,8 @@ const Home = () => {
   const [offers, setOffers] = useState([]);
   const [specialOffer, setSpecialOffer] = useState(null);
   const [countdownText, setCountdownText] = useState("");
+  const [cmsContent, setCmsContent] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const isSpecialOfferLive = (offer) => {
     if (!offer?.active) return false;
@@ -100,17 +102,26 @@ const Home = () => {
       element.setAttribute("content", content);
     };
 
-    document.title = "Niyora Gifts | Flowers, Cakes & Personalized Gifts";
-    setMeta("description", "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.");
-    setMeta("keywords", "gift store, flowers delivery, cakes online, personalized gifts, same day delivery");
-    setMeta("og:title", "Niyora Gifts | Flowers, Cakes & Personalized Gifts", "property");
-    setMeta("og:description", "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.", "property");
+    if (cmsContent?.seo?.title) {
+      document.title = cmsContent.seo.title;
+      if (cmsContent.seo.description) setMeta("description", cmsContent.seo.description);
+      if (cmsContent.seo.keywords) setMeta("keywords", cmsContent.seo.keywords);
+      if (cmsContent.seo.ogTitle) setMeta("og:title", cmsContent.seo.ogTitle, "property");
+      if (cmsContent.seo.ogDescription) setMeta("og:description", cmsContent.seo.ogDescription, "property");
+      if (cmsContent.seo.ogImage) setMeta("og:image", cmsContent.seo.ogImage, "property");
+    } else {
+      document.title = "Niyora Gifts | Flowers, Cakes & Personalized Gifts";
+      setMeta("description", "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.");
+      setMeta("keywords", "gift store, flowers delivery, cakes online, personalized gifts, same day delivery");
+      setMeta("og:title", "Niyora Gifts | Flowers, Cakes & Personalized Gifts", "property");
+      setMeta("og:description", "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.", "property");
+    }
     setMeta("og:type", "website", "property");
 
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [cmsContent]);
 
   useEffect(() => {
     if (!specialOffer?.endDate) {
@@ -148,6 +159,25 @@ const Home = () => {
     };
     fetchOffers();
   }, []);
+
+  useEffect(() => {
+    const fetchHomeContent = async () => {
+      try {
+        const { data } = await api.get("/cms/content/homepage");
+        setCmsContent(data);
+      } catch (err) {
+        console.error("Failed to load homepage content:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHomeContent();
+  }, []);
+
+  const categories = cmsContent?.content?.featuredCategories || quickCategories;
+  const reviews = cmsContent?.content?.testimonials || testimonials;
+  const highlights = cmsContent?.content?.whyChooseUs || aboutHighlights;
+  const heroBgImage = cmsContent?.content?.heroImages?.[0] || "";
 
   return (
     <div className="space-y-10">
@@ -190,23 +220,32 @@ const Home = () => {
         </section>
       ) : null}
 
-      <section className="fade-in-up scroll-reveal rounded-3xl bg-luxury-black text-white shadow-2xl p-8 md:p-16 relative overflow-hidden border border-gold-500/20">
+      <section 
+        className="fade-in-up scroll-reveal rounded-3xl bg-luxury-black text-white shadow-2xl p-8 md:p-16 relative overflow-hidden border border-gold-500/20"
+        style={heroBgImage ? { backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.9) 30%, rgba(0, 0, 0, 0.5) 100%), url(${heroBgImage})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
+      >
         {/* Luxury Background Glows */}
-        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-gold-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute -left-24 -bottom-24 h-96 w-96 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />
+        {!heroBgImage && <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-gold-500/10 blur-3xl pointer-events-none" />}
+        {!heroBgImage && <div className="absolute -left-24 -bottom-24 h-96 w-96 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />}
 
         <div className="grid items-center gap-12 md:grid-cols-[1.15fr_0.85fr] relative z-10">
           <div className="space-y-6">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-gold-400/90">Curated Boutique</p>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-gold-400/90">
+              {cmsContent?.content?.heroSubtitle || "Curated Boutique"}
+            </p>
             <h1 className="text-4xl font-light font-serif leading-[1.15] md:text-6xl text-white">
-              Celebrate every moment with <span className="italic font-serif text-gold-300 font-normal">premium gifts</span>
+              {cmsContent?.content?.heroTitle ? (
+                <span dangerouslySetInnerHTML={{ __html: cmsContent.content.heroTitle }} />
+              ) : (
+                <>Celebrate every moment with <span className="italic font-serif text-gold-300 font-normal">premium gifts</span></>
+              )}
             </h1>
             <p className="max-w-xl text-sm leading-8 text-gray-300/80 font-light tracking-wide md:text-base">
-              Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.
+              {cmsContent?.content?.heroDescription || "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever."}
             </p>
             <div className="mt-2 flex flex-wrap gap-4 pt-1">
-              <Link to="/products" className="rounded-full bg-gold-500 hover:bg-gold-600 px-7 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-md transition duration-300 font-semibold">
-                Explore Catalog
+              <Link to={cmsContent?.content?.heroButtonLink || "/products"} className="rounded-full bg-gold-500 hover:bg-gold-600 px-7 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-md transition duration-300 font-semibold">
+                {cmsContent?.content?.heroButtonText || "Explore Catalog"}
               </Link>
               <Link to="/about" className="rounded-full border border-white/20 hover:border-gold-300 px-7 py-3 text-xs font-bold uppercase tracking-widest text-white hover:text-gold-300 hover:bg-white/5 transition duration-300">
                 Our Story
@@ -214,7 +253,7 @@ const Home = () => {
             </div>
           </div>
           <div className="grid gap-4">
-            {aboutHighlights.map((item) => (
+            {highlights.map((item) => (
               <article key={item.title} className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm hover:bg-white/8 transition duration-300 shadow-sm">
                 <h3 className="text-sm font-extrabold uppercase tracking-wider text-gold-300">{item.title}</h3>
                 <p className="mt-2 text-xs leading-5 text-gray-300/70 font-light">{item.text}</p>
@@ -226,13 +265,17 @@ const Home = () => {
 
       <section className="fade-in-up scroll-reveal rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-8 md:p-12 shadow-sm">
         <div className="text-center space-y-2">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-gold-600">Elegant selections</p>
-          <h2 className="text-2xl font-bold font-serif text-luxury-black md:text-4xl">Shop by Category</h2>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-gold-600">
+            {cmsContent?.content?.featuredProductsSection?.subtitle || "Elegant selections"}
+          </p>
+          <h2 className="text-2xl font-bold font-serif text-luxury-black md:text-4xl">
+            {cmsContent?.content?.featuredProductsSection?.title || "Shop by Category"}
+          </h2>
           <div className="w-12 h-0.5 bg-gold-500 mx-auto mt-3 rounded" />
         </div>
 
         <div className="mt-10 flex overflow-x-auto gap-4 no-scrollbar pb-4 -mx-4 px-4 md:grid md:grid-cols-6 md:justify-center md:gap-6 lg:gap-8 md:mx-0 md:px-0 scroll-smooth">
-          {quickCategories.map((category) => (
+          {categories.map((category) => (
             <Link
               key={category.name}
               to={`/products?category=${encodeURIComponent(category.name)}`}
@@ -336,7 +379,7 @@ const Home = () => {
           <span className="rounded-full bg-gold-50 border border-gold-200/30 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-gold-800">Trusted by Gift Lovers</span>
         </div>
         <div className="mt-8 flex gap-6 overflow-x-auto pb-4 no-scrollbar">
-          {testimonials.map((review) => (
+          {reviews.map((review) => (
             <article key={review.name} className="w-80 flex-shrink-0 rounded-2xl border border-champagne/40 bg-white/90 p-6 flex flex-col justify-between shadow-xs hover:border-gold-300/40 transition-all duration-300">
               <div>
                 <div className="mb-3 flex items-center">

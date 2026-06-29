@@ -51,9 +51,73 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Active", "Inactive"],
+      enum: ["Active", "Inactive", "Suspended", "Deleted", "Pending Verification"],
       default: "Active",
     },
+    loginMethod: {
+      type: String,
+      enum: ["Email", "OTP"],
+      default: "OTP",
+    },
+    verificationStatus: {
+      type: String,
+      enum: ["Pending", "Verified"],
+      default: "Verified",
+    },
+    isGuest: {
+      type: Boolean,
+      default: false,
+    },
+    tags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    suspension: {
+      reason: { type: String, default: "" },
+      suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      date: { type: Date, default: null },
+      notes: { type: String, default: "" },
+    },
+    notes: [
+      {
+        text: { type: String, required: true },
+        adminName: { type: String, required: true },
+        date: { type: Date, default: Date.now },
+      },
+    ],
+    cart: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          default: 1,
+          min: 1,
+        },
+        customization: {
+          type: mongoose.Schema.Types.Mixed,
+          default: {},
+        },
+      },
+    ],
+    recentlyViewed: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+        viewedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     lastLogin: {
       type: Date,
       default: null,

@@ -48,17 +48,62 @@ const UserProtectedRoute = ({ children }) => {
 };
 
 function App() {
-  const { itemCount } = useCart();
+  const { itemCount, cartItems, setCartItems } = useCart();
   const { wishlistCount } = useWishlist();
   const location = useLocation();
   const navigate = useNavigate();
   const { auth, showLoginModal } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const [cmsShell, setCmsShell] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+
+  useEffect(() => {
+    const fetchShell = async () => {
+      try {
+        const { data } = await api.get("/cms/shell");
+        setCmsShell(data);
+      } catch (err) {
+        console.error("Failed to load CMS layout settings:", err);
+      }
+    };
+    fetchShell();
+  }, []);
+
+  useEffect(() => {
+    if (cmsShell?.popups?.active) {
+      const closed = sessionStorage.getItem("gift-popup-closed");
+      if (!closed) {
+        const timer = setTimeout(() => setShowPopup(true), 2500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [cmsShell]);
+
+  const handleClosePopup = () => {
+    sessionStorage.setItem("gift-popup-closed", "true");
+    setShowPopup(false);
+  };
+
   // Centralized SEO default mappings
   const seoData = useMemo(() => {
     const path = location.pathname;
     const searchParams = new URLSearchParams(location.search);
+    
+    // 1. Check CMS database SEO first
+    if (cmsShell?.seoMap && cmsShell.seoMap[path]) {
+      const dbSeo = cmsShell.seoMap[path];
+      return {
+        title: dbSeo.title,
+        description: dbSeo.description,
+        keywords: dbSeo.keywords,
+        canonical: dbSeo.canonical,
+        ogImage: dbSeo.ogImage,
+        ogTitle: dbSeo.ogTitle,
+        ogDescription: dbSeo.ogDescription,
+        schemaJson: dbSeo.schemaJson,
+      };
+    }
     
     // Default fallback
     let title = "Niyora Gifts | Luxury Curated Gifting";
@@ -148,6 +193,59 @@ function App() {
     };
     fetchProducts();
   }, []);
+
+  // Load database cart on login
+  useEffect(() => {
+    const loadCart = async () => {
+      if (auth?.token && !auth?.isAdmin) {
+        try {
+          const { data } = await api.get("/user/cart", {
+            headers: { Authorization: `Bearer ${auth.token}` }
+          });
+          if (Array.isArray(data) && data.length > 0) {
+            const formatted = data.map(item => {
+              if (!item.product) return null;
+              return {
+                ...item.product,
+                quantity: item.quantity,
+                customization: item.customization || {},
+                cartItemId: item.customization ? `${item.product._id}-${JSON.stringify(item.customization)}` : item.product._id
+              };
+            }).filter(Boolean);
+            
+            if (formatted.length > 0) {
+              setCartItems(formatted);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to load cart from database:", err);
+        }
+      }
+    };
+    loadCart();
+  }, [auth, setCartItems]);
+
+  // Sync local cart changes to database
+  useEffect(() => {
+    const syncCart = async () => {
+      if (auth?.token && !auth?.isAdmin) {
+        try {
+          const payload = cartItems.map(item => ({
+            product: item._id,
+            quantity: item.quantity,
+            customization: item.customization || {}
+          }));
+          await api.put("/user/cart", { cartItems: payload }, {
+            headers: { Authorization: `Bearer ${auth.token}` }
+          });
+        } catch (err) {
+          console.error("Failed to sync cart items to database:", err);
+        }
+      }
+    };
+    const delay = setTimeout(syncCart, 1000);
+    return () => clearTimeout(delay);
+  }, [cartItems, auth]);
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
@@ -257,17 +355,51 @@ function App() {
 
   return (
     <div className={isAdminRoute ? "min-h-screen bg-[#FAF7F2] font-sans" : "min-h-screen bg-ivory"}>
-      {!isDynamicRoute && <SEO title={seoData.title} description={seoData.description} />}
+      {!isDynamicRoute && (
+        <SEO 
+          title={seoData.title} 
+          description={seoData.description} 
+          keywords={seoData.keywords}
+          canonical={seoData.canonical}
+          image={seoData.ogImage}
+          ogTitle={seoData.ogTitle}
+          ogDescription={seoData.ogDescription}
+          schemaJson={seoData.schemaJson}
+        />
+      )}
+      {!isAdminRoute && cmsShell?.announcements?.active && (
+        <div 
+          style={{ 
+            backgroundColor: cmsShell.announcements.bgColor || "#B28A30", 
+            color: cmsShell.announcements.textColor || "#ffffff" 
+          }}
+          className="text-center py-2 px-4 text-xs font-bold tracking-wider transition-all"
+        >
+          {cmsShell.announcements.link ? (
+            <Link to={cmsShell.announcements.link} className="hover:underline">
+              {cmsShell.announcements.text}
+            </Link>
+          ) : (
+            <span>{cmsShell.announcements.text}</span>
+          )}
+        </div>
+      )}
       {!isAdminRoute && (
         <header className="sticky top-0 z-20 backdrop-blur-lg bg-white/85 border-b border-champagne/40 shadow-xs transition-all duration-300">
         <div className="mx-auto w-full max-w-7xl px-4 py-3 md:px-8">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between lg:gap-6">
             <div className="flex items-center justify-between min-w-[150px] shrink-0">
               <NavLink to="/" className="group inline-flex items-center gap-2.5">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-sm font-serif font-bold text-white shadow-md transition group-hover:scale-105">
-                  N
+                {cmsShell?.header?.logoImage ? (
+                  <img src={cmsShell.header.logoImage} alt="Logo" className="h-9 w-9 object-contain" />
+                ) : (
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-sm font-serif font-bold text-white shadow-md transition group-hover:scale-105">
+                    {cmsShell?.header?.logoText?.[0] || "N"}
+                  </span>
+                )}
+                <span className="text-xl font-bold tracking-widest text-luxury-black font-serif">
+                  {cmsShell?.header?.logoText || "Niyora Gifts"}
                 </span>
-                <span className="text-xl font-bold tracking-widest text-luxury-black font-serif">Niyora Gifts</span>
               </NavLink>
               <span className="hidden md:inline-block text-[9px] font-bold uppercase tracking-[0.3em] text-gold-600 bg-gold-50 px-2.5 py-1 rounded-sm border border-gold-200/30">
                 curated gifting
@@ -336,19 +468,20 @@ function App() {
                 products={products}
                 trendingSearches={trendingSearches}
                 onSearch={handleSearch}
+                placeholder={cmsShell?.header?.searchPlaceholder}
               />
             </div>
 
             <div className="hidden items-center gap-1.5 rounded-full border border-gray-200/50 bg-gray-50/50 p-1.5 shadow-inner md:flex lg:flex-wrap shrink-0">
-              <NavLink to="/" className={navLinkClass}>
-                Home
-              </NavLink>
-              <NavLink to="/products" className={navLinkClass}>
-                Products
-              </NavLink>
-              <NavLink to="/about" className={navLinkClass}>
-                About
-              </NavLink>
+              {(cmsShell?.header?.navigationMenu || [
+                { label: "Home", link: "/" },
+                { label: "Products", link: "/products" },
+                { label: "About Us", link: "/about" }
+              ]).map((nav, index) => (
+                <NavLink key={index} to={nav.link} className={navLinkClass}>
+                  {nav.label}
+                </NavLink>
+              ))}
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -436,45 +569,26 @@ function App() {
               </div>
               
               <nav className="flex flex-col gap-3">
-                <NavLink
-                  to="/"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
-                      isActive
-                        ? "bg-gold-500 text-white shadow-sm"
-                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
-                    }`
-                  }
-                >
-                  Home
-                </NavLink>
-                <NavLink
-                  to="/products"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
-                      isActive
-                        ? "bg-gold-500 text-white shadow-sm"
-                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
-                    }`
-                  }
-                >
-                  Products
-                </NavLink>
-                <NavLink
-                  to="/about"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
-                      isActive
-                        ? "bg-gold-500 text-white shadow-sm"
-                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
-                    }`
-                  }
-                >
-                  About Us
-                </NavLink>
+                {(cmsShell?.header?.navigationMenu || [
+                  { label: "Home", link: "/" },
+                  { label: "Products", link: "/products" },
+                  { label: "About Us", link: "/about" }
+                ]).map((nav, index) => (
+                  <NavLink
+                    key={index}
+                    to={nav.link}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
+                        isActive
+                          ? "bg-gold-500 text-white shadow-sm"
+                          : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
+                      }`
+                    }
+                  >
+                    {nav.label}
+                  </NavLink>
+                ))}
                 <button
                   onClick={(e) => {
                     e.preventDefault();
@@ -571,63 +685,79 @@ function App() {
         <div className="mx-auto w-full max-w-7xl px-4 py-16 md:px-8">
           <div className="grid gap-10 md:grid-cols-12">
             <div className="md:col-span-4 space-y-4">
-              <h3 className="text-2xl font-bold tracking-widest text-gold-500 font-serif">Niyora Gifts</h3>
+              {cmsShell?.footer?.logoImage ? (
+                <img src={cmsShell.footer.logoImage} className="h-9 object-contain" alt="Logo" />
+              ) : (
+                <h3 className="text-2xl font-bold tracking-widest text-gold-500 font-serif">
+                  {cmsShell?.footer?.logoText || "Niyora Gifts"}
+                </h3>
+              )}
               <p className="max-w-sm text-sm leading-7 text-gray-400">
-                Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful, lasting memory.
+                {cmsShell?.footer?.aboutText || "Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful, lasting memory."}
               </p>
               <div className="flex items-center gap-3 pt-2">
-                <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="rounded-full bg-stone-900 p-2.5 text-gray-400 hover:bg-gold-500 hover:text-white transition duration-300 border border-stone-800 shadow-sm">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                    <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9a5.5 5.5 0 0 1-5.5 5.5h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9z" />
-                    <path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8zM18 6.5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z" />
-                  </svg>
-                </a>
-                <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook" className="rounded-full bg-stone-900 p-2.5 text-gray-400 hover:bg-gold-500 hover:text-white transition duration-300 border border-stone-800 shadow-sm">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                    <path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.5 1.6-1.5H17V5a24.2 24.2 0 0 0-2.6-.1c-2.6 0-4.4 1.6-4.4 4.5V11H7.5v3H10v8h3.5z" />
-                  </svg>
-                </a>
-                <a href="https://x.com" target="_blank" rel="noreferrer" aria-label="X" className="rounded-full bg-stone-900 p-2.5 text-gray-400 hover:bg-gold-500 hover:text-white transition duration-300 border border-stone-800 shadow-sm">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                    <path d="M18.9 3H21l-4.6 5.3L22 21h-4.8l-3.8-5-4.3 5H7l5-5.8L2 3h4.9l3.4 4.5L13.9 3h5zM18 19h1.3L6.2 5H4.8L18 19z" />
-                  </svg>
-                </a>
+                {(cmsShell?.footer?.socialMediaLinks || [
+                  { name: "instagram", link: "https://instagram.com" },
+                  { name: "facebook", link: "https://facebook.com" },
+                  { name: "x", link: "https://x.com" }
+                ]).map((s, index) => {
+                  let svgContent = null;
+                  if (s.name.toLowerCase() === "instagram") {
+                    svgContent = <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9a5.5 5.5 0 0 1-5.5 5.5h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9z M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8zM18 6.5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z" />;
+                  } else if (s.name.toLowerCase() === "facebook") {
+                    svgContent = <path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.5 1.6-1.5H17V5a24.2 24.2 0 0 0-2.6-.1c-2.6 0-4.4 1.6-4.4 4.5V11H7.5v3H10v8h3.5z" />;
+                  } else if (s.name.toLowerCase() === "x" || s.name.toLowerCase() === "twitter") {
+                    svgContent = <path d="M18.9 3H21l-4.6 5.3L22 21h-4.8l-3.8-5-4.3 5H7l5-5.8L2 3h4.9l3.4 4.5L13.9 3h5zM18 19h1.3L6.2 5H4.8L18 19z" />;
+                  }
+                  return (
+                    <a key={index} href={s.link} target="_blank" rel="noreferrer" aria-label={s.name} className="rounded-full bg-stone-900 p-2.5 text-gray-400 hover:bg-gold-500 hover:text-white transition duration-300 border border-stone-800 shadow-sm">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                        {svgContent}
+                      </svg>
+                    </a>
+                  );
+                })}
               </div>
             </div>
 
             <div className="md:col-span-2 space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-gold-500">Explore</h4>
               <ul className="space-y-3 text-sm text-gray-400">
-                <li><Link to="/" className="hover:text-gold-500 transition">Home</Link></li>
-                <li><Link to="/about" className="hover:text-gold-500 transition">About</Link></li>
-                <li><Link to="/products" className="hover:text-gold-500 transition">Products</Link></li>
-                <li><Link to="/cart" className="hover:text-gold-500 transition">Cart</Link></li>
-                <li>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (auth?.token) {
-                        navigate("/my-profile");
-                      } else {
-                        showLoginModal(() => navigate("/my-profile"));
-                      }
-                    }}
-                    className="hover:text-gold-500 transition bg-transparent border-0 cursor-pointer p-0 text-sm text-gray-400 align-baseline text-left font-sans"
-                  >
-                    My Profile
-                  </button>
-                </li>
+                {(cmsShell?.footer?.quickLinks || [
+                  { label: "Home", link: "/" },
+                  { label: "About", link: "/about" },
+                  { label: "Products", link: "/products" },
+                  { label: "Cart", link: "/cart" }
+                ]).map((link, index) => (
+                  <li key={index}>
+                    <Link to={link.link} className="hover:text-gold-500 transition">{link.label}</Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
             <div className="md:col-span-3 space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-gold-500">Customer Care</h4>
               <ul className="space-y-3 text-sm text-gray-400">
-                <li><Link to="/track-order" className="hover:text-gold-500 transition">Track Order</Link></li>
-                <li><Link to="/shipping-policy" className="hover:text-gold-500 transition">Shipping Policy</Link></li>
-                <li><Link to="/returns-refunds" className="hover:text-gold-500 transition">Returns, Refunds & Replacement</Link></li>
-                <li><a href="mailto:niyoragifts@gmail.com" className="hover:text-gold-500 transition">niyoragifts@gmail.com</a></li>
-                <li className="text-gray-400">+91 90000 00000</li>
+                {(cmsShell?.footer?.customerServiceLinks || [
+                  { label: "Track Order", link: "/track-order" },
+                  { label: "Shipping Policy", link: "/shipping-policy" },
+                  { label: "Returns, Refunds & Replacement", link: "/returns-refunds" }
+                ]).map((link, index) => (
+                  <li key={index}>
+                    <Link to={link.link} className="hover:text-gold-500 transition">{link.label}</Link>
+                  </li>
+                ))}
+                {cmsShell?.footer?.contactDetails?.email && (
+                  <li>
+                    <a href={`mailto:${cmsShell.footer.contactDetails.email}`} className="hover:text-gold-500 transition">
+                      {cmsShell.footer.contactDetails.email}
+                    </a>
+                  </li>
+                )}
+                {cmsShell?.footer?.contactDetails?.phone && (
+                  <li className="text-gray-400">{cmsShell.footer.contactDetails.phone}</li>
+                )}
               </ul>
             </div>
 
@@ -674,16 +804,45 @@ function App() {
           </div>
 
           <div className="mt-12 flex flex-col gap-3 border-t border-stone-850 pt-6 text-xs text-gray-500 md:flex-row md:items-center md:justify-between">
-            <p>© {new Date().getFullYear()} Niyora Gifts. All rights reserved.</p>
+            <p>{cmsShell?.footer?.copyrightText || `© ${new Date().getFullYear()} Niyora Gifts. All rights reserved.`}</p>
             <div className="flex items-center gap-4">
-              <Link to="/products" className="hover:text-gold-500 transition">Privacy Policy</Link>
-              <Link to="/products" className="hover:text-gold-500 transition">Terms of Service</Link>
+              <Link to="/shipping-policy" className="hover:text-gold-500 transition">Shipping Policy</Link>
+              <Link to="/returns-refunds" className="hover:text-gold-500 transition">Return & Refund Policy</Link>
             </div>
           </div>
         </div>
       </footer>
       )}
       <AuthModal />
+      {/* Dynamic Popup promo dialog */}
+      {showPopup && cmsShell?.popups && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-backdrop">
+          <div className="relative w-full max-w-xl rounded-3xl border border-gold-500/20 bg-white overflow-hidden shadow-2xl animate-page-enter flex flex-col md:flex-row">
+            <button
+              onClick={handleClosePopup}
+              className="absolute top-3 right-3 z-10 bg-white/80 hover:bg-white text-luxury-black rounded-full p-1.5 shadow-md text-xs font-bold transition cursor-pointer"
+            >
+              ✕
+            </button>
+            {cmsShell.popups.imageUrl && (
+              <div className="md:w-1/2 h-48 md:h-auto bg-gray-150 relative overflow-hidden">
+                <img src={cmsShell.popups.imageUrl} alt="Promo" className="w-full h-full object-cover" />
+              </div>
+            )}
+            <div className={`p-8 flex flex-col justify-center ${cmsShell.popups.imageUrl ? "md:w-1/2" : "w-full text-center items-center"}`}>
+              <h3 className="text-2xl font-serif text-luxury-black font-bold mb-2">{cmsShell.popups.title}</h3>
+              <p className="text-xs text-text-secondary font-light leading-relaxed mb-6">{cmsShell.popups.text}</p>
+              <Link
+                to={cmsShell.popups.buttonLink || "/products"}
+                onClick={handleClosePopup}
+                className="inline-block rounded-full bg-gold-500 hover:bg-gold-600 text-white font-bold tracking-widest text-xs uppercase px-6 py-3 transition text-center shadow-sm w-full font-semibold"
+              >
+                {cmsShell.popups.buttonText || "Learn More"}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

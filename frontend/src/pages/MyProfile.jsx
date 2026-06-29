@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api, { resolveMediaUrl } from "../services/api";
 import { clearUserAuth, getUserAuth, saveUserAuth } from "../services/userAuth";
+import { useAuth } from "../context/AuthContext";
 
 const tabClass = (active) =>
   `shrink-0 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition duration-300 ${
@@ -64,7 +65,7 @@ const MyProfile = () => {
   const location = useLocation();
   const returnToAfterAddressSave = location.state?.returnTo || "";
   
-  const [auth, setAuth] = useState(getUserAuth());
+  const { auth, login, logout } = useAuth();
   const [orders, setOrders] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
@@ -87,14 +88,38 @@ const MyProfile = () => {
   const [profileForm, setProfileForm] = useState({
     name: auth?.name || "",
     email: auth?.email || "",
-    password: "",
-    newPassword: "",
-    confirmNewPassword: "",
+    mobileNumber: auth?.mobileNumber || "",
   });
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Sync profile form when auth updates
+  useEffect(() => {
+    if (auth) {
+      setProfileForm({
+        name: auth.name || "",
+        email: auth.email || "",
+        mobileNumber: auth.mobileNumber || "",
+      });
+    }
+  }, [auth]);
+
   // FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [dynamicFaqs, setDynamicFaqs] = useState([]);
+
+  useEffect(() => {
+    const fetchFaqs = async () => {
+      try {
+        const { data } = await api.get("/cms/content/faq");
+        if (data?.content?.items) {
+          setDynamicFaqs(data.content.items);
+        }
+      } catch (err) {
+        console.error("Failed to load CMS FAQs:", err);
+      }
+    };
+    fetchFaqs();
+  }, []);
 
   const faqs = [
     { q: "How can I track my package?", a: "Once your order has Shipped, a Tracking ID and Carrier link will appear under your 'Order Tracking' tab. Click 'Track Package' to see real-time updates." },
@@ -114,6 +139,11 @@ const MyProfile = () => {
   const [submittingTicket, setSubmittingTicket] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+
+  // Notifications states
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   // Return request states
   const [returnsList, setReturnsList] = useState([]);
@@ -185,6 +215,32 @@ const MyProfile = () => {
       setError(err.response?.data?.message || "Failed to load support tickets.");
     } finally {
       setLoadingTickets(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      setError("");
+      const { data } = await api.get("/user/notifications");
+      setNotifications(data);
+      setUnreadCount(data.filter((n) => n.status !== "Read").length);
+    } catch (err) {
+      console.error("Load notifications error:", err);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await api.put(`/user/notifications/${id}/read`);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, status: "Read" } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification read:", err);
     }
   };
 
@@ -467,6 +523,9 @@ const MyProfile = () => {
     if (activeTab === "returns" && auth?.token) {
       fetchReturns();
     }
+    if (activeTab === "notifications" && auth?.token) {
+      fetchNotifications();
+    }
   }, [activeTab, auth]);
 
   // Calculate overview metrics
@@ -584,7 +643,7 @@ const MyProfile = () => {
         ]);
         setOrders(ordersRes.data);
         setAddresses(addressesRes.data);
-        await fetchReturns();
+        await Promise.all([fetchReturns(), fetchNotifications()]);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load your profile data");
       } finally {
@@ -596,8 +655,7 @@ const MyProfile = () => {
   }, [auth, navigate]);
 
   const handleLogout = () => {
-    clearUserAuth();
-    setAuth(null);
+    logout();
     navigate("/login");
   };
 
@@ -706,8 +764,12 @@ const MyProfile = () => {
     setError("");
     setSuccessMessage("");
 
-    if (profileForm.newPassword && profileForm.newPassword !== profileForm.confirmNewPassword) {
-      setError("New passwords do not match.");
+    if (!profileForm.name.trim()) {
+      setError("Full name is required.");
+      return;
+    }
+    if (!profileForm.mobileNumber.trim()) {
+      setError("Mobile number is required.");
       return;
     }
 
@@ -716,22 +778,12 @@ const MyProfile = () => {
       const payload = {
         name: profileForm.name.trim(),
         email: profileForm.email.toLowerCase().trim(),
+        mobileNumber: profileForm.mobileNumber.trim(),
       };
-      if (profileForm.password && profileForm.newPassword) {
-        payload.password = profileForm.password;
-        payload.newPassword = profileForm.newPassword;
-      }
 
       const { data } = await api.put("/user/profile", payload);
-      saveUserAuth(data);
-      setAuth(data);
+      login(data); // Syncs globally with context and localStorage
       setSuccessMessage("Account settings updated successfully!");
-      setProfileForm((prev) => ({
-        ...prev,
-        password: "",
-        newPassword: "",
-        confirmNewPassword: "",
-      }));
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update profile settings");
     } finally {
@@ -1576,6 +1628,14 @@ const MyProfile = () => {
         <button onClick={() => setActiveTab("addresses")} className={tabClass(activeTab === "addresses")}>My Addresses</button>
         <button onClick={() => setActiveTab("tracking")} className={tabClass(activeTab === "tracking")}>Order Tracking</button>
         <button onClick={() => setActiveTab("settings")} className={tabClass(activeTab === "settings")}>Settings</button>
+        <button onClick={() => setActiveTab("notifications")} className={tabClass(activeTab === "notifications")}>
+          Notifications
+          {unreadCount > 0 && (
+            <span className="ml-1.5 rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 animate-pulse">
+              {unreadCount}
+            </span>
+          )}
+        </button>
         <button onClick={() => setActiveTab("help")} className={tabClass(activeTab === "help")}>Support</button>
       </div>
 
@@ -2338,15 +2398,44 @@ const MyProfile = () => {
         <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 md:p-8 shadow-xs animate-fade-in">
           <div className="border-b border-champagne/30 pb-4 mb-6">
             <h2 className="text-lg font-serif font-semibold text-luxury-black">Account Settings</h2>
-            <p className="text-xs text-text-secondary mt-1 font-light">Manage registered contact details and account passwords securely.</p>
+            <p className="text-xs text-text-secondary mt-1 font-light">Manage your profile details and registered contact information.</p>
           </div>
 
-          <form onSubmit={handleUpdateProfile} className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Personal Info Settings */}
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Left side info card */}
+            <div className="md:col-span-1 border border-champagne/30 rounded-2xl p-5 bg-gold-50/10 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold-600 to-gold-400 text-white font-serif font-bold text-xl flex items-center justify-center shadow-md select-none">
+                {(auth?.name || "G").charAt(0).toUpperCase()}
+              </div>
+              <h3 className="text-sm font-serif font-medium text-luxury-black mt-3">{auth?.name || "Gift Lover"}</h3>
+              <p className="text-[10px] text-gold-700 bg-gold-50/50 border border-gold-200/20 px-3 py-1 rounded-full font-medium mt-2 flex items-center gap-1">
+                ✓ Email OTP Secured
+              </p>
+              <div className="w-10 h-[1px] bg-gold-300/40 my-4" />
+              <p className="text-[10px] text-text-secondary leading-relaxed font-light">
+                Your account is protected by standard passwordless email verification. No password updates are needed.
+              </p>
+            </div>
+
+            {/* Right side form */}
+            <form onSubmit={handleUpdateProfile} className="md:col-span-2 space-y-5">
               <div className="space-y-4">
-                <h3 className="text-xs font-bold text-luxury-black uppercase tracking-wider mb-2">Personal Information</h3>
-                
+                <h3 className="text-xs font-bold text-luxury-black uppercase tracking-wider mb-2">Profile Information</h3>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Email Address</label>
+                  <input
+                    name="email"
+                    type="email"
+                    value={profileForm.email}
+                    disabled
+                    className="w-full rounded-full border border-champagne bg-gray-50 text-gray-500 px-4 py-2.5 text-xs cursor-not-allowed outline-none select-none"
+                  />
+                  <p className="text-[9px] text-text-secondary mt-1 font-light">
+                    Your email address is linked to your login and cannot be changed.
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Full Name</label>
                   <input
@@ -2358,77 +2447,139 @@ const MyProfile = () => {
                     placeholder="Update name"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Email Address</label>
+                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Mobile Number</label>
                   <input
-                    name="email"
-                    type="email"
-                    value={profileForm.email}
+                    name="mobileNumber"
+                    type="tel"
+                    value={profileForm.mobileNumber}
                     onChange={handleProfileFormChange}
                     required
                     className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                    placeholder="Update email"
+                    placeholder="Update mobile number"
                   />
                 </div>
               </div>
 
-              {/* Password Settings */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-luxury-black uppercase tracking-wider mb-2">Change Password</h3>
-                <p className="text-xs text-text-secondary font-light">Leave these blank if you do not wish to update your password.</p>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Current Password</label>
-                  <input
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={profileForm.password}
-                    onChange={handleProfileFormChange}
-                    className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                    placeholder="••••••••"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">New Password</label>
-                  <input
-                    name="newPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    value={profileForm.newPassword}
-                    onChange={handleProfileFormChange}
-                    className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                    placeholder="At least 6 characters"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Confirm New Password</label>
-                  <input
-                    name="confirmNewPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    value={profileForm.confirmNewPassword}
-                    onChange={handleProfileFormChange}
-                    className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                    placeholder="Confirm new password"
-                  />
-                </div>
+              <div className="border-t border-champagne/30 pt-4 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs hover:shadow-sm cursor-pointer"
+                >
+                  {savingProfile ? "Saving changes..." : "Save Settings"}
+                </button>
               </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {/* NOTIFICATIONS TAB */}
+      {activeTab === "notifications" && !loading ? (
+        <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 md:p-8 shadow-xs animate-fade-in space-y-6">
+          <div className="border-b border-champagne/30 pb-4 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-serif font-semibold text-luxury-black flex items-center gap-2">
+                <span>🔔</span> Notifications & Alerts
+              </h2>
+              <p className="text-xs text-text-secondary mt-1 font-light">Inbox updates, customer alerts, and promotional announcements.</p>
             </div>
-
-            <div className="border-t border-champagne/30 pt-5">
+            {unreadCount > 0 && (
               <button
-                type="submit"
-                disabled={savingProfile}
-                className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs hover:shadow-sm cursor-pointer"
+                type="button"
+                onClick={async () => {
+                  try {
+                    await Promise.all(
+                      notifications
+                        .filter((n) => n.status !== "Read")
+                        .map((n) => api.put(`/user/notifications/${n._id}/read`))
+                    );
+                    setNotifications((prev) => prev.map((n) => ({ ...n, status: "Read" })));
+                    setUnreadCount(0);
+                  } catch (err) {
+                    console.error("Mark all read failed:", err);
+                  }
+                }}
+                className="rounded-full border border-gold-300 text-gold-700 hover:bg-gold-50/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-all duration-300"
               >
-                {savingProfile ? "Saving changes..." : "Save Settings"}
+                Mark all as read
               </button>
+            )}
+          </div>
+
+          {loadingNotifications && notifications.length === 0 ? (
+            <div className="py-12 flex justify-center items-center">
+              <svg className="animate-spin h-6 w-6 text-gold-500" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
             </div>
-          </form>
+          ) : notifications.length > 0 ? (
+            <div className="space-y-4">
+              {notifications.map((n) => {
+                const isRead = n.status === "Read";
+                const isOffer = n.type === "Offer";
+                const isAlert = n.type === "Alert";
+                return (
+                  <div
+                    key={n._id}
+                    onClick={() => {
+                      if (!isRead) {
+                        handleMarkAsRead(n._id);
+                      }
+                    }}
+                    className={`rounded-2xl border p-5 transition duration-300 relative overflow-hidden cursor-pointer ${
+                      isRead
+                        ? "bg-white/40 border-champagne/30 text-luxury-black/70"
+                        : "bg-gold-50/15 border-gold-300/40 text-luxury-black shadow-xs hover:bg-gold-50/20"
+                    }`}
+                  >
+                    {!isRead && (
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-gold-500" />
+                    )}
+                    <div className="flex flex-wrap justify-between items-start gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+                            isOffer ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
+                            isAlert ? "bg-rose-50 border-rose-200 text-rose-800" :
+                            "bg-sky-50 border-sky-200 text-sky-800"
+                          }`}>
+                            {n.type || "Info"}
+                          </span>
+                          {!isRead && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 animate-pulse" />
+                          )}
+                        </div>
+                        <h3 className={`text-xs font-serif font-bold ${isRead ? "text-luxury-black/75" : "text-luxury-black"}`}>
+                          {n.title}
+                        </h3>
+                      </div>
+                      <span className="text-[10px] text-text-secondary font-light">
+                        {new Date(n.createdAt).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs font-light leading-relaxed whitespace-pre-line text-text-secondary">
+                      {n.message}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-champagne bg-white/50 p-12 text-center max-w-xl mx-auto shadow-xs flex flex-col justify-center items-center h-64">
+              <span className="text-3xl mb-2">📬</span>
+              <h4 className="text-sm font-serif font-semibold text-luxury-black">Inbox Empty</h4>
+              <p className="text-[11px] text-text-secondary mt-1 max-w-xs font-light">You have no notifications or alerts at this time.</p>
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -2467,7 +2618,7 @@ const MyProfile = () => {
             <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-6 rounded-3xl shadow-xs animate-fade-in">
               <h3 className="text-sm font-serif font-bold text-luxury-black mb-3">Frequently Asked Questions</h3>
               <div className="divide-y divide-champagne/30">
-                {faqs.map((faq, idx) => {
+                {(dynamicFaqs.length > 0 ? dynamicFaqs : faqs).map((faq, idx) => {
                   const isOpen = openFaqIndex === idx;
                   return (
                     <div key={idx} className="py-3">

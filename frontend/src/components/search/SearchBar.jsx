@@ -6,7 +6,7 @@ const RECENT_KEY = "giftnest-recent-searches";
 const MAX_RECENT = 5;
 const DEBOUNCE_MS = 300;
 
-const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-search-input" }) => {
+const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-search-input", placeholder = "Search for gifts (e.g. birthday, anniversary, flowers...)" }) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -206,7 +206,7 @@ const SearchBar = ({ products, trendingSearches, onSearch, inputId = "gift-searc
           onFocus={() => setIsOpen(true)}
           onBlur={() => setTimeout(() => setIsOpen(false), 150)}
           onKeyDown={onKeyDown}
-          placeholder="Search for gifts (e.g. birthday, anniversary, flowers...)"
+          placeholder={placeholder}
           aria-label="Search gifts"
           aria-autocomplete="list"
           aria-expanded={isOpen}

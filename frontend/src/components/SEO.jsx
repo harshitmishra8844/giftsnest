@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-export default function SEO({ title, description, canonical, type = "website", image }) {
+export default function SEO({ title, description, canonical, type = "website", image, keywords, schemaJson }) {
   const location = useLocation();
 
   useEffect(() => {
@@ -25,6 +25,12 @@ export default function SEO({ title, description, canonical, type = "website", i
     if (description) {
       const descMeta = getOrCreateMeta("name", "description");
       descMeta.setAttribute("content", description);
+    }
+
+    // 2.5 Meta Keywords
+    if (keywords) {
+      const kwMeta = getOrCreateMeta("name", "keywords");
+      kwMeta.setAttribute("content", keywords);
     }
 
     // 3. Open Graph Metadata
@@ -73,7 +79,31 @@ export default function SEO({ title, description, canonical, type = "website", i
     }
     canonicalLink.setAttribute("href", canonical || window.location.href);
 
-  }, [title, description, canonical, type, image, location.pathname]);
+    // 6. Schema JSON-LD Script tag
+    let schemaScript = document.getElementById("cms-schema-jsonld");
+    if (schemaScript) {
+      schemaScript.remove();
+    }
+    if (schemaJson) {
+      try {
+        // Validate it's correct JSON
+        JSON.parse(schemaJson);
+        schemaScript = document.createElement("script");
+        schemaScript.id = "cms-schema-jsonld";
+        schemaScript.type = "application/ld+json";
+        schemaScript.innerHTML = schemaJson;
+        document.head.appendChild(schemaScript);
+      } catch (err) {
+        console.warn("Invalid Schema JSON-LD metadata ignored:", err.message);
+      }
+    }
+
+    return () => {
+      const scriptToRemove = document.getElementById("cms-schema-jsonld");
+      if (scriptToRemove) scriptToRemove.remove();
+    };
+
+  }, [title, description, canonical, type, image, keywords, schemaJson, location.pathname]);
 
   return null;
 }

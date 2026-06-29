@@ -8,6 +8,8 @@ import autoTable from "jspdf-autotable";
 import SEO from "../components/SEO";
 import AddProduct from "./AddProduct";
 import ReturnsReplacementsTab from "./ReturnsReplacementsTab";
+import CustomersSection from "../components/CustomersSection";
+import CmsManager from "../components/cms/CmsManager";
 import {
   PremiumRingLoader,
   LoadingOverlay,
@@ -177,6 +179,7 @@ const AdminDashboard = () => {
 
   // --- ENTERPRISE RBAC & SECURITY STATES ---
   const [activeTab, setActiveTab] = useState("overview");
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [productsSubTab, setProductsSubTab] = useState("inventory");
   const [couponsSubTab, setCouponsSubTab] = useState("public");
   const [employeesSubTab, setEmployeesSubTab] = useState("employees");
@@ -474,8 +477,8 @@ const AdminDashboard = () => {
   }, [products]);
 
   const filteredProducts = useMemo(
-    () =>
-      selectedCategory === "All"
+    () => {
+      let result = selectedCategory === "All"
         ? products
         : products.filter(
           (product) => {
@@ -484,8 +487,19 @@ const AdminDashboard = () => {
             const categoriesList = productCat.split(",").map(c => c.trim());
             return categoriesList.includes(selectedCat);
           }
-        ),
-    [products, selectedCategory]
+        );
+      if (globalSearchQuery.trim()) {
+        const q = globalSearchQuery.trim().toLowerCase();
+        result = result.filter(
+          (p) =>
+            String(p.name || "").toLowerCase().includes(q) ||
+            String(p.category || "").toLowerCase().includes(q) ||
+            String(p.sku || "").toLowerCase().includes(q)
+        );
+      }
+      return result;
+    },
+    [products, selectedCategory, globalSearchQuery]
   );
 
   const productsByStock = useMemo(
@@ -539,8 +553,40 @@ const AdminDashboard = () => {
         (order) => String(order?.paymentMethod || "online").trim().toLowerCase() === normalizedFilter
       );
     }
+    if (globalSearchQuery.trim()) {
+      const q = globalSearchQuery.trim().toLowerCase();
+      result = result.filter(
+        (order) =>
+          String(order.orderCode || order._id || "").toLowerCase().includes(q) ||
+          String(order.address?.fullName || "").toLowerCase().includes(q) ||
+          String(order.address?.phone || "").toLowerCase().includes(q) ||
+          String(order.address?.email || "").toLowerCase().includes(q)
+      );
+    }
     return result;
-  }, [ordersForView, orderStatusFilter, orderPaymentFilter]);
+  }, [ordersForView, orderStatusFilter, orderPaymentFilter, globalSearchQuery]);
+
+  const filteredEmployees = useMemo(() => {
+    if (!globalSearchQuery.trim()) return employees;
+    const q = globalSearchQuery.trim().toLowerCase();
+    return employees.filter(
+      (emp) =>
+        String(emp.name || "").toLowerCase().includes(q) ||
+        String(emp.email || "").toLowerCase().includes(q) ||
+        String(emp.designation || "").toLowerCase().includes(q) ||
+        String(emp.department?.name || "").toLowerCase().includes(q)
+    );
+  }, [employees, globalSearchQuery]);
+
+  const filteredCoupons = useMemo(() => {
+    if (!globalSearchQuery.trim()) return coupons;
+    const q = globalSearchQuery.trim().toLowerCase();
+    return coupons.filter(
+      (c) =>
+        String(c.code || "").toLowerCase().includes(q) ||
+        String(c.type || "").toLowerCase().includes(q)
+    );
+  }, [coupons, globalSearchQuery]);
 
   const visibleOrderIds = useMemo(() => ordersForViewFiltered.map((order) => order._id), [ordersForViewFiltered]);
 
@@ -587,6 +633,7 @@ const AdminDashboard = () => {
       newsletter: "Newsletter Campaigns | Niyora Gifts Admin",
       employees: "Employees & Permissions | Niyora Gifts Admin",
       logs: "Security Audit Logs | Niyora Gifts Admin",
+      customers: "Customer Management | Niyora Gifts Admin",
     };
     return tabTitles[activeTab] || "Admin Dashboard | Niyora Gifts Admin";
   }, [activeTab]);
@@ -829,6 +876,17 @@ const AdminDashboard = () => {
 
     fetchData();
   }, [adminAuth, authHeader, navigate]);
+
+  useEffect(() => {
+    setGlobalSearchQuery("");
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "logs") {
+      setLogsSearch(globalSearchQuery);
+      setLogsPage(1);
+    }
+  }, [globalSearchQuery, activeTab]);
 
   // --- ENTERPRISE RBAC & SECURITY HANDLERS & FETCHERS ---
   const fetchEmployeesList = async () => {
@@ -3339,7 +3397,7 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gold-200/10 dark:divide-gold-900/10 text-luxury-black dark:text-white">
-                  {employees.map((emp) => (
+                  {filteredEmployees.map((emp) => (
                     <tr key={emp._id} className="hover:bg-gold-500/5 transition-colors">
                       <td className="py-3">
                         <div className="flex items-center gap-2.5">
@@ -4148,11 +4206,13 @@ const AdminDashboard = () => {
     { id: "products", label: "Products & Stock", icon: "🛍️", permission: ["PRODUCTS_VIEW", "INVENTORY_VIEW"] },
     { id: "orders", label: "Orders", icon: "📦", permission: "ORDERS_VIEW" },
     { id: "returns-replacements", label: "Returns & Replacements", icon: "🔄", permission: "ORDERS_RETURNS" },
+    { id: "customers", label: "Customers", icon: "👤", permission: "CUSTOMERS_VIEW" },
     { id: "tickets", label: "Support Tickets", icon: "💬", permission: ["TICKETS_MANAGE", "SUPPORT_CHAT"] },
     { id: "coupons", label: "Coupons & Settings", icon: "🎟️", permission: ["COUPONS_MANAGE", "BUSINESS_ANALYTICS_VIEW", "CONTENT_HOMEPAGE"] },
     { id: "newsletter", label: "Newsletter", icon: "✉️", permission: "MARKETING_CAMPAIGNS" },
     { id: "employees", label: "Employees & Roles", icon: "👥", permission: ["EMPLOYEES_MANAGE", "ROLES_MANAGE", "DEPARTMENTS_MANAGE"] },
-    { id: "logs", label: "Activity Logs", icon: "📋", permission: "ACTIVITY_LOGS_VIEW" }
+    { id: "logs", label: "Activity Logs", icon: "📋", permission: "ACTIVITY_LOGS_VIEW" },
+    { id: "cms", label: "Content Management", icon: "📝", permission: ["CONTENT_HOMEPAGE", "CONTENT_BLOGS", "CONTENT_SEO", "BANNER_MANAGE"] }
   ];
 
   const visibleSidebarItems = sidebarItems.filter(item => {
@@ -4305,12 +4365,14 @@ const AdminDashboard = () => {
             </h2>
           </div>
           <div className="flex items-center gap-4">
-            <div className="relative hidden md:block">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 text-xs">🔍</span>
+            <div className="relative block">
+              <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400 text-[10px]">🔍</span>
               <input
                 type="text"
-                placeholder="Global Search..."
-                className="w-48 xl:w-64 rounded-full border border-gold-200/50 dark:border-gold-900/40 bg-white/50 dark:bg-white/5 px-8 py-1.5 text-[11px] text-luxury-black dark:text-white transition-all focus:border-gold-500 focus:w-56 xl:focus:w-72 outline-none"
+                value={globalSearchQuery}
+                onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                placeholder={`Search ${activeTab}...`}
+                className="w-24 xs:w-36 sm:w-48 xl:w-64 rounded-full border border-gold-200/50 dark:border-gold-900/40 bg-white/50 dark:bg-white/5 pl-7 pr-3 py-1.5 text-[10px] sm:text-[11px] text-luxury-black dark:text-white transition-all focus:border-gold-500 focus:w-28 xs:focus:w-40 sm:focus:w-56 xl:focus:w-72 outline-none"
               />
             </div>
 
@@ -4366,6 +4428,8 @@ const AdminDashboard = () => {
           {activeTab === "orders" && renderOrdersTab()}
           {activeTab === "tickets" && renderTicketsTab()}
           {activeTab === "returns-replacements" && <ReturnsReplacementsTab />}
+          {activeTab === "customers" && <CustomersSection authHeader={authHeader} adminAuth={adminAuth} globalSearchQuery={globalSearchQuery} />}
+          {activeTab === "cms" && <CmsManager authHeader={authHeader} adminAuth={adminAuth} />}
 
           {activeTab === "coupons" && couponsSubTab === "store-settings" && (
             <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
@@ -5030,7 +5094,7 @@ const AdminDashboard = () => {
                     ) : null}
 
                     <div className="mt-4 space-y-3 md:hidden">
-                      {coupons.map((coupon) => (
+                      {filteredCoupons.map((coupon) => (
                         <article key={coupon._id} className="rounded-2xl border border-gray-150/40 bg-white/50 p-4 space-y-2">
                           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2">
                             <div className="flex items-center gap-2">
@@ -5107,7 +5171,7 @@ const AdminDashboard = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {coupons.map((coupon) => (
+                          {filteredCoupons.map((coupon) => (
                             <tr key={coupon._id} className="hover:bg-gray-50/40 transition-colors">
                               <td className="py-3.5 pr-2">
                                 <span className="font-serif font-bold text-sm text-gray-955 tracking-wide">{coupon.code}</span>
@@ -5170,10 +5234,10 @@ const AdminDashboard = () => {
                               </td>
                             </tr>
                           ))}
-                          {coupons.length === 0 ? (
+                          {filteredCoupons.length === 0 ? (
                             <tr>
                               <td className="py-8 text-center text-gray-400 font-light" colSpan={9}>
-                                No coupons created yet. Use form above to add your first promotion.
+                                No coupons created yet matching the search filter.
                               </td>
                             </tr>
                           ) : null}
