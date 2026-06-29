@@ -154,7 +154,12 @@ const seedDB = async () => {
     const masterEmail = (process.env.ADMIN_EMAIL || "niyoragifts@gmail.com").toLowerCase().trim();
     const masterPassword = process.env.ADMIN_PASSWORD || "harshit@123";
 
-    let masterAdmin = await User.findOne({ email: masterEmail });
+    let masterAdmin = await User.findOne({
+      $or: [
+        { email: masterEmail },
+        { employeeId: "EMP-MASTER-001" }
+      ]
+    });
     if (!masterAdmin) {
       const hashedPassword = await bcrypt.hash(masterPassword, 10);
       
@@ -172,8 +177,9 @@ const seedDB = async () => {
         department: itDeptId,
         status: "Active",
       });
-      console.log(`[seeder] Created default Master Admin account: ${masterEmail}`);
+      console.log("Master Admin created successfully.");
     } else {
+      console.log("Master Admin already exists. Skipping creation.");
       // Ensure existing admin document matches master flags if it has the master email
       let changed = false;
       if (!masterAdmin.isAdmin) {
@@ -186,7 +192,7 @@ const seedDB = async () => {
       }
       if (changed) {
         await masterAdmin.save();
-        console.log(`[seeder] Updated existing user ${masterEmail} to hold Master Admin privileges`);
+        console.log(`[seeder] Updated existing user ${masterAdmin.email} to hold Master Admin privileges`);
       }
     }
 
