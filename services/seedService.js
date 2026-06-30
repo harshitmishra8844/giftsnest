@@ -4,6 +4,7 @@ const Role = require("../models/Role");
 const Department = require("../models/Department");
 const EmailSetting = require("../models/EmailSetting");
 const CmsContent = require("../models/CmsContent");
+const CustomerSegment = require("../models/CustomerSegment");
 
 const predefinedPermissions = [
   // Products
@@ -35,7 +36,14 @@ const predefinedPermissions = [
   { code: "SUPPORT_EMAIL", name: "Handle Email Support", group: "Customers" },
 
   // Marketing
-  { code: "COUPONS_MANAGE", name: "Manage Coupons", group: "Marketing" },
+  { code: "COUPONS_MANAGE", name: "Manage Coupons (Super Admin)", group: "Marketing" },
+  { code: "COUPONS_VIEW", name: "View Coupons", group: "Marketing" },
+  { code: "COUPONS_CREATE", name: "Create Coupons", group: "Marketing" },
+  { code: "COUPONS_EDIT", name: "Edit Coupons", group: "Marketing" },
+  { code: "COUPONS_DELETE", name: "Delete Coupons", group: "Marketing" },
+  { code: "COUPONS_PUSH", name: "Push/Assign Coupons to Users", group: "Marketing" },
+  { code: "COUPONS_RETENTION", name: "Manage Retention & Special Coupons", group: "Marketing" },
+  { code: "COUPONS_STORE_SETTINGS", name: "Manage Coupon Store Settings", group: "Marketing" },
   { code: "MARKETING_CAMPAIGNS", name: "Manage Campaigns (SMS/Email/Push)", group: "Marketing" },
   { code: "BANNER_MANAGE", name: "Manage Banners & Promos", group: "Marketing" },
 
@@ -114,7 +122,7 @@ const seedDB = async () => {
         description: "Administers discount systems, manages promotional popups and campaign builders.",
         isCustom: false,
         permissions: [
-          "COUPONS_MANAGE", "MARKETING_CAMPAIGNS", "BANNER_MANAGE"
+          "COUPONS_MANAGE", "COUPONS_VIEW", "COUPONS_CREATE", "COUPONS_EDIT", "COUPONS_DELETE", "COUPONS_PUSH", "COUPONS_RETENTION", "COUPONS_STORE_SETTINGS", "MARKETING_CAMPAIGNS", "BANNER_MANAGE"
         ]
       },
       {
@@ -462,8 +470,45 @@ const seedCmsContent = async () => {
         console.log(`[seeder] Created default CMS section: ${item.section}`);
       }
     }
+
+    // 5. Seed Default Customer Segments
+    const defaultSegments = [
+      {
+        name: "VIP Customers",
+        description: "Shoppers with minimum aggregate purchase volume of ₹15,000",
+        filters: { spentMin: 15000 },
+        isDynamic: true,
+      },
+      {
+        name: "New Registrations",
+        description: "Shoppers who registered within the past 30 days",
+        filters: { ordersMin: 0, ordersMax: 2 },
+        isDynamic: true,
+      },
+      {
+        name: "Inactive Members",
+        description: "Shoppers with no order logins tracked for 90+ days",
+        filters: { lastLoginDays: 90 },
+        isDynamic: true,
+      },
+      {
+        name: "Cart Abandoners",
+        description: "Shoppers who have items remaining in their shopping carts",
+        filters: { cartAbandoned: true },
+        isDynamic: true,
+      }
+    ];
+
+    for (const seg of defaultSegments) {
+      const exists = await CustomerSegment.findOne({ name: seg.name });
+      if (!exists) {
+        await CustomerSegment.create(seg);
+        console.log(`[seeder] Created default CRM segment: ${seg.name}`);
+      }
+    }
+
   } catch (error) {
-    console.error("[seeder] CMS seeding error:", error);
+    console.error("[seeder] CMS seeding or CRM segment seeding error:", error);
   }
 };
 

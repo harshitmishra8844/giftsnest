@@ -307,4 +307,64 @@ router.put("/notifications/:id/read", protect, async (req, res) => {
   }
 });
 
+// Get coupons for logged-in user (both assigned and public)
+router.get("/coupons", protect, async (req, res) => {
+  try {
+    const CouponAssignment = require("../models/CouponAssignment");
+    const Coupon = require("../models/Coupon");
+
+    // 1. Get assigned coupons
+    const rawAssignments = await CouponAssignment.find({ userId: req.user._id })
+      .populate("couponId")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const activeAssignments = rawAssignments.filter((as) => {
+      if (as.status !== "Unused") return false;
+      const cp = as.couponId;
+      if (!cp) return false;
+      if (cp.active === false) return false;
+      
+      const now = new Date();
+      if (cp.startDate) {
+        const start = new Date(cp.startDate);
+        if (!Number.isNaN(start.getTime()) && now < start) return false;
+      }
+      if (cp.endDate) {
+        const end = new Date(cp.endDate);
+        if (!Number.isNaN(end.getTime()) && now > end) return false;
+      }
+      return true;
+    });
+
+    // 2. Get active public coupons
+    const now = new Date();
+    const publicCoupons = await Coupon.find({ active: true, isSpecial: false })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Filter out public coupons that have expired or not yet started
+    const activePublic = publicCoupons.filter((c) => {
+      const now = new Date();
+      if (c.startDate) {
+        const start = new Date(c.startDate);
+        if (!Number.isNaN(start.getTime()) && now < start) return false;
+      }
+      if (c.endDate) {
+        const end = new Date(c.endDate);
+        if (!Number.isNaN(end.getTime()) && now > end) return false;
+      }
+      return true;
+    });
+
+    return res.status(200).json({
+      assigned: activeAssignments,
+      public: activePublic,
+    });
+  } catch (error) {
+    console.error("Get user coupons error:", error.message);
+    return res.status(500).json({ message: "Failed to fetch user coupons" });
+  }
+});
+
 module.exports = router;

@@ -196,6 +196,38 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
+    birthday: {
+      type: Date,
+      default: null,
+    },
+    anniversary: {
+      type: Date,
+      default: null,
+    },
+    gender: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    age: {
+      type: Number,
+      default: null,
+    },
+    loyaltyPoints: {
+      type: Number,
+      default: 0,
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    referralCode: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+    },
   },
   { timestamps: true }
 );

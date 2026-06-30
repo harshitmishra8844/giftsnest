@@ -10,6 +10,10 @@ import AddProduct from "./AddProduct";
 import ReturnsReplacementsTab from "./ReturnsReplacementsTab";
 import CustomersSection from "../components/CustomersSection";
 import CmsManager from "../components/cms/CmsManager";
+import CrmDashboardTab from "../components/CrmDashboardTab";
+import CampaignsTab from "../components/CampaignsTab";
+import SegmentsTab from "../components/SegmentsTab";
+import AlertsTab from "../components/AlertsTab";
 import {
   PremiumRingLoader,
   LoadingOverlay,
@@ -161,6 +165,13 @@ const AdminDashboard = () => {
   const [couponEmailTargetId, setCouponEmailTargetId] = useState("");
   const [couponEmailForm, setCouponEmailForm] = useState(emptyCouponEmailForm);
   const [sendingCouponEmail, setSendingCouponEmail] = useState(false);
+  const [pushCouponCode, setPushCouponCode] = useState("");
+  const [pushCustomerEmail, setPushCustomerEmail] = useState("");
+  const [pushRemainingUses, setPushRemainingUses] = useState(1);
+  const [pushingCoupon, setPushingCoupon] = useState(false);
+  const [pushTarget, setPushTarget] = useState("single");
+  const [pushSegmentId, setPushSegmentId] = useState("");
+  const [crmSegments, setCrmSegments] = useState([]);
   const [editingId, setEditingId] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -345,6 +356,45 @@ const AdminDashboard = () => {
       setSelectedTicket(null);
     }
   }, [activeTab, adminAuth]);
+
+  // Adjust subtab if missing EMPLOYEES_MANAGE
+  useEffect(() => {
+    if (activeTab === "employees" && adminAuth) {
+      if (!hasPermission("EMPLOYEES_MANAGE")) {
+        setEmployeesSubTab("roles");
+      }
+    }
+  }, [activeTab, adminAuth]);
+
+  // Adjust coupons subtab if missing COUPONS_MANAGE/COUPONS_VIEW
+  useEffect(() => {
+    if (activeTab === "coupons" && adminAuth) {
+      if (hasPermission("COUPONS_MANAGE") || hasPermission("COUPONS_VIEW")) {
+        setCouponsSubTab("public");
+      } else if (hasPermission("COUPONS_RETENTION")) {
+        setCouponsSubTab("special");
+      } else if (hasPermission("COUPONS_PUSH")) {
+        setCouponsSubTab("push");
+      } else if (hasPermission("COUPONS_STORE_SETTINGS")) {
+        setCouponsSubTab("store-settings");
+      }
+    }
+  }, [activeTab, adminAuth]);
+
+  // Load dynamic CRM segments when Coupons subtab switches to "push"
+  useEffect(() => {
+    if (activeTab === "coupons" && couponsSubTab === "push" && adminAuth) {
+      const loadSegments = async () => {
+        try {
+          const { data } = await api.get("/admin/crm/segments", authHeader);
+          setCrmSegments(data || []);
+        } catch (err) {
+          console.error("Failed to load customer segments", err);
+        }
+      };
+      loadSegments();
+    }
+  }, [activeTab, couponsSubTab, adminAuth]);
 
   // Permission Check
   const hasPermission = (permission) => {
@@ -979,13 +1029,13 @@ const AdminDashboard = () => {
     if (!adminAuth?.token) return;
 
     if (activeTab === "employees") {
+      fetchRolesList();
+      fetchPermissionsConfig();
       if (hasPermission("EMPLOYEES_MANAGE")) {
         fetchEmployeesList();
-        fetchDepartmentsList();
       }
-      if (hasPermission("ROLES_MANAGE")) {
-        fetchRolesList();
-        fetchPermissionsConfig();
+      if (hasPermission("DEPARTMENTS_MANAGE")) {
+        fetchDepartmentsList();
       }
     } else if (activeTab === "logs") {
       if (logsSubTab === "audit" && hasPermission("ACTIVITY_LOGS_VIEW")) {
@@ -2523,6 +2573,43 @@ const AdminDashboard = () => {
     }
   };
 
+  const handlePushCoupon = async (e) => {
+    e.preventDefault();
+    if (!pushCouponCode) {
+      setError("Please select a coupon.");
+      return;
+    }
+    if (pushTarget === "single" && !pushCustomerEmail) {
+      setError("Please enter customer email.");
+      return;
+    }
+    if (pushTarget === "segment" && !pushSegmentId) {
+      setError("Please select a user category.");
+      return;
+    }
+    try {
+      setPushingCoupon(true);
+      setError("");
+      setSuccess("");
+      const { data } = await api.post("/admin/coupons/push", {
+        couponCode: pushCouponCode,
+        pushTarget,
+        customerEmail: pushTarget === "single" ? pushCustomerEmail : undefined,
+        segmentId: pushTarget === "segment" ? pushSegmentId : undefined,
+        remainingUses: Number(pushRemainingUses || 1)
+      }, authHeader);
+      setSuccess(data.message);
+      setPushCustomerEmail("");
+      setPushSegmentId("");
+      setPushRemainingUses(1);
+      setPushCouponCode("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to push coupon to customer profile");
+    } finally {
+      setPushingCoupon(false);
+    }
+  };
+
   const removeCoupon = async (id) => {
     try {
       await api.delete(`/admin/coupons/${id}`, authHeader);
@@ -3347,9 +3434,9 @@ const AdminDashboard = () => {
         <div className="space-y-6 animate-page-enter">
           {/* Sub Navigation mock to preserve layout */}
           <div className="flex border-b border-gold-200/20 dark:border-gold-900/20">
-            <button type="button" className="px-4 py-2.5 text-xs font-semibold border-b-2 border-gold-500 text-gold-500 font-bold">Employees List</button>
+            {hasPermission("EMPLOYEES_MANAGE") && <button type="button" className="px-4 py-2.5 text-xs font-semibold border-b-2 border-gold-500 text-gold-500 font-bold">Employees List</button>}
             <button type="button" className="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-gray-lux dark:text-gray-400">Custom Roles Matrix</button>
-            <button type="button" className="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-gray-lux dark:text-gray-400">Departments</button>
+            {hasPermission("DEPARTMENTS_MANAGE") && <button type="button" className="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-gray-lux dark:text-gray-400">Departments</button>}
           </div>
           <TableSkeleton rows={5} cols={5} />
         </div>
@@ -3360,16 +3447,18 @@ const AdminDashboard = () => {
       <div className="space-y-6 animate-page-enter">
         {/* Sub Navigation */}
         <div className="flex border-b border-gold-200/20 dark:border-gold-900/20">
-          <button
-            type="button"
-            onClick={() => setEmployeesSubTab("employees")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${employeesSubTab === "employees"
-              ? "border-gold-500 text-gold-500 font-bold"
-              : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-              }`}
-          >
-            Employees List
-          </button>
+          {hasPermission("EMPLOYEES_MANAGE") && (
+            <button
+              type="button"
+              onClick={() => setEmployeesSubTab("employees")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${employeesSubTab === "employees"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+                }`}
+            >
+              Employees List
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setEmployeesSubTab("roles")}
@@ -3380,16 +3469,18 @@ const AdminDashboard = () => {
           >
             Custom Roles Matrix
           </button>
-          <button
-            type="button"
-            onClick={() => setEmployeesSubTab("departments")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${employeesSubTab === "departments"
-              ? "border-gold-500 text-gold-500 font-bold"
-              : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
-              }`}
-          >
-            Departments
-          </button>
+          {hasPermission("DEPARTMENTS_MANAGE") && (
+            <button
+              type="button"
+              onClick={() => setEmployeesSubTab("departments")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${employeesSubTab === "departments"
+                ? "border-gold-500 text-gold-500 font-bold"
+                : "border-transparent text-gray-lux dark:text-gray-400 hover:text-gold-500"
+                }`}
+            >
+              Departments
+            </button>
+          )}
         </div>
 
         {employeesSubTab === "employees" && (
@@ -3514,7 +3605,7 @@ const AdminDashboard = () => {
                     <p className="text-[10px] text-gray-lux dark:text-gray-400 mt-1 font-light line-clamp-2">{r.description || "No description provided."}</p>
                     <div className="flex justify-between items-center mt-2.5">
                       <span className="text-[9px] font-semibold text-gold-600 uppercase">{r.permissions?.length || 0} permissions</span>
-                      {r.isCustom && (
+                      {r.isCustom && hasPermission("ROLES_MANAGE") && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -3535,16 +3626,18 @@ const AdminDashboard = () => {
             {/* Custom Role Builder Form */}
             <div className="lg:col-span-2 rounded-3xl border border-gold-200/20 dark:border-gold-900/10 bg-white dark:bg-[#1C1C1C] p-6 shadow-sm">
               <h3 className="text-base font-serif font-semibold text-luxury-black dark:text-white mb-1">
-                {editingRoleId ? `Edit Custom Permissions Matrix: ${roleForm.name}` : "Create Custom Security Role"}
+                {editingRoleId ? `Permissions Matrix: ${roleForm.name}` : "Create Custom Security Role"}
               </h3>
-              <p className="text-xs text-gray-lux dark:text-gray-400 mb-4 font-light">Toggle granular access capabilities across features.</p>
+              <p className="text-xs text-gray-lux dark:text-gray-400 mb-4 font-light">
+                {hasPermission("ROLES_MANAGE") ? "Toggle granular access capabilities across features." : "View-only mode: granular access capabilities for this security role."}
+              </p>
 
               <form onSubmit={handleSaveRole} className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <input
                     type="text"
                     required
-                    disabled={editingRoleId && !roles.find(x => x._id === editingRoleId)?.isCustom}
+                    disabled={!hasPermission("ROLES_MANAGE") || (editingRoleId && !roles.find(x => x._id === editingRoleId)?.isCustom)}
                     value={roleForm.name}
                     onChange={(e) => setRoleForm(p => ({ ...p, name: e.target.value }))}
                     placeholder="Role Name (e.g. Stock Lead)"
@@ -3553,6 +3646,7 @@ const AdminDashboard = () => {
                   <input
                     type="text"
                     value={roleForm.description}
+                    disabled={!hasPermission("ROLES_MANAGE")}
                     onChange={(e) => setRoleForm(p => ({ ...p, description: e.target.value }))}
                     placeholder="Brief Role Description"
                     className="rounded-xl border border-gold-200/50 dark:border-gold-900/30 bg-white/50 dark:bg-white/5 px-3.5 py-2 text-xs text-luxury-black dark:text-white outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
@@ -3569,6 +3663,7 @@ const AdminDashboard = () => {
                             <input
                               type="checkbox"
                               checked={roleForm.permissions.includes(perm.code)}
+                              disabled={!hasPermission("ROLES_MANAGE")}
                               onChange={() => handleTogglePermissionInForm(perm.code)}
                               className="rounded text-gold-505 focus:ring-gold-500 cursor-pointer h-4 w-4 shrink-0 mt-0.5"
                             />
@@ -3591,17 +3686,19 @@ const AdminDashboard = () => {
                         setEditingRoleId("");
                         setRoleForm(emptyRoleForm);
                       }}
-                      className="rounded-full border border-gold-200/50 dark:border-gold-900/30 px-4 py-2 text-xs font-semibold text-gray-lux dark:text-white"
+                      className="rounded-full border border-gold-200/50 dark:border-gold-900/30 px-4 py-2 text-xs font-semibold text-gray-lux dark:text-white animate-float"
                     >
                       Clear Selection
                     </button>
                   )}
-                  <button
-                    type="submit"
-                    className="rounded-full bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover text-white dark:text-black px-5 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer"
-                  >
-                    {editingRoleId ? "Update Role Matrix" : "Save Role"}
-                  </button>
+                  {hasPermission("ROLES_MANAGE") && (
+                    <button
+                      type="submit"
+                      className="rounded-full bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover text-white dark:text-black px-5 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer animate-float"
+                    >
+                      {editingRoleId ? "Update Role Matrix" : "Save Role"}
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
@@ -4182,42 +4279,170 @@ const AdminDashboard = () => {
     return (
       <div className="space-y-6 animate-page-enter">
         <div className="flex border-b border-gray-200 dark:border-gray-700">
-          <button
-            type="button"
-            onClick={() => setCouponsSubTab("public")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "public"
-              ? "border-gold-600 text-gold-600 dark:text-gold-450"
-              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
-              }`}
-          >
-            Public Checkout Coupons
-          </button>
-          <button
-            type="button"
-            onClick={() => setCouponsSubTab("special")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "special"
-              ? "border-gold-600 text-gold-600 dark:text-gold-450"
-              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
-              }`}
-          >
-            Retention & Special Coupons
-          </button>
-          <button
-            type="button"
-            onClick={() => setCouponsSubTab("store-settings")}
-            className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "store-settings"
-              ? "border-gold-600 text-gold-600 dark:text-gold-450"
-              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
-              }`}
-          >
-            Store Settings
-          </button>
+          {(hasPermission("COUPONS_MANAGE") || hasPermission("COUPONS_VIEW")) && (
+            <button
+              type="button"
+              onClick={() => setCouponsSubTab("public")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "public"
+                ? "border-gold-600 text-gold-600 dark:text-gold-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                }`}
+            >
+              Public Checkout Coupons
+            </button>
+          )}
+          {(hasPermission("COUPONS_MANAGE") || hasPermission("COUPONS_RETENTION")) && (
+            <button
+              type="button"
+              onClick={() => setCouponsSubTab("special")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "special"
+                ? "border-gold-600 text-gold-600 dark:text-gold-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                }`}
+            >
+              Retention & Special Coupons
+            </button>
+          )}
+          {(hasPermission("COUPONS_MANAGE") || hasPermission("COUPONS_PUSH")) && (
+            <button
+              type="button"
+              onClick={() => setCouponsSubTab("push")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "push"
+                ? "border-gold-600 text-gold-600 dark:text-gold-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                }`}
+            >
+              Push to Customer Profile
+            </button>
+          )}
+          {(hasPermission("COUPONS_MANAGE") || hasPermission("COUPONS_STORE_SETTINGS")) && (
+            <button
+              type="button"
+              onClick={() => setCouponsSubTab("store-settings")}
+              className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${couponsSubTab === "store-settings"
+                ? "border-gold-600 text-gold-600 dark:text-gold-450"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                }`}
+            >
+              Store Settings
+            </button>
+          )}
         </div>
 
         {couponsSubTab === "store-settings" && (
           <div className="rounded-3xl border border-gray-150/40 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm space-y-4">
             <h3 className="text-lg font-serif font-light text-gray-955 dark:text-white">Store Information Settings</h3>
             <p className="text-xs text-gray-405 font-light">Set default sender details for shipping bills and invoices.</p>
+          </div>
+        )}
+
+        {couponsSubTab === "push" && (
+          <div className="rounded-3xl border border-gold-200/20 bg-white/70 dark:bg-gray-800/80 backdrop-blur-md p-6 shadow-sm max-w-xl mx-auto space-y-6">
+            <div>
+              <h3 className="text-lg font-serif font-semibold text-luxury-black dark:text-white">Push Coupon to Customer Profile</h3>
+              <p className="text-xs text-gray-lux dark:text-gray-400 mt-1 font-light">Assign an existing coupon to an individual customer or a whole category/segment of users.</p>
+            </div>
+
+            <form onSubmit={handlePushCoupon} className="space-y-4 text-xs">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Select Coupon Code</label>
+                <select
+                  value={pushCouponCode}
+                  onChange={(e) => setPushCouponCode(e.target.value)}
+                  className="rounded-full border border-gray-200 bg-white dark:bg-white/5 dark:text-white px-4 py-2 text-xs font-light focus:border-gold-500 focus:ring-1 focus:ring-gold-500 outline-none transition-all"
+                  required
+                >
+                  <option value="">-- Choose a Coupon --</option>
+                  {coupons.map((c) => (
+                    <option key={c._id} value={c.code}>
+                      {c.code} ({c.type === "percent" ? `${c.value}% OFF` : `₹${c.value} OFF`} - {c.active ? "Active" : "Inactive"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Target Type</label>
+                <div className="flex gap-4 text-xs py-1">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="pushTarget"
+                      value="single"
+                      checked={pushTarget === "single"}
+                      onChange={() => setPushTarget("single")}
+                      className="text-gold-500 focus:ring-gold-500"
+                    />
+                    <span className="text-luxury-black dark:text-white">Single Customer</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="pushTarget"
+                      value="segment"
+                      checked={pushTarget === "segment"}
+                      onChange={() => setPushTarget("segment")}
+                      className="text-gold-500 focus:ring-gold-500"
+                    />
+                    <span className="text-luxury-black dark:text-white">User Category / Segment</span>
+                  </label>
+                </div>
+              </div>
+
+              {pushTarget === "single" ? (
+                <div className="flex flex-col gap-1.5 animate-fade-in">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Customer Registered Email</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. shopper@gmail.com"
+                    value={pushCustomerEmail}
+                    onChange={(e) => setPushCustomerEmail(e.target.value)}
+                    className="rounded-full border border-gray-200 bg-white dark:bg-white/5 dark:text-white px-4 py-2 text-xs font-light focus:border-gold-500 focus:ring-1 focus:ring-gold-500 outline-none transition-all"
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5 animate-fade-in">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Select User Category / Segment</label>
+                  <select
+                    value={pushSegmentId}
+                    onChange={(e) => setPushSegmentId(e.target.value)}
+                    className="rounded-full border border-gray-200 bg-white dark:bg-white/5 dark:text-white px-4 py-2 text-xs font-light focus:border-gold-500 focus:ring-1 focus:ring-gold-500 outline-none transition-all"
+                    required
+                  >
+                    <option value="">-- Choose Category --</option>
+                    <option value="all">All Customers</option>
+                    <option value="newsletter">Newsletter Subscribers</option>
+                    {crmSegments.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.name} ({s.memberCount || 0} members)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Allowed Redemption Uses Limit</label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 1"
+                  value={pushRemainingUses}
+                  onChange={(e) => setPushRemainingUses(e.target.value)}
+                  className="rounded-full border border-gray-200 bg-white dark:bg-white/5 dark:text-white px-4 py-2 text-xs font-light focus:border-gold-500 focus:ring-1 focus:ring-gold-500 outline-none transition-all"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={pushingCoupon}
+                className="w-full rounded-full bg-[#1C1C1C] dark:bg-gold-500 hover:bg-[#2A2A2A] dark:hover:bg-gold-hover text-white dark:text-black py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer disabled:opacity-50 animate-float"
+              >
+                {pushingCoupon ? "Pushing Coupon..." : "Push Coupon to Profile"}
+              </button>
+            </form>
           </div>
         )}
       </div>
@@ -4234,8 +4459,12 @@ const AdminDashboard = () => {
     { id: "orders", label: "Orders", icon: "📦", permission: "ORDERS_VIEW" },
     { id: "returns-replacements", label: "Returns & Replacements", icon: "🔄", permission: "ORDERS_RETURNS" },
     { id: "customers", label: "Customers", icon: "👤", permission: "CUSTOMERS_VIEW" },
+    { id: "crm-dashboard", label: "CRM Console", icon: "🎯", permission: "CUSTOMERS_VIEW" },
+    { id: "crm-campaigns", label: "CRM Campaigns", icon: "📣", permission: "MARKETING_CAMPAIGNS" },
+    { id: "crm-segments", label: "CRM Segments", icon: "🧬", permission: "CUSTOMERS_VIEW" },
+    { id: "crm-alerts", label: "CRM Alerts", icon: "🚨", permission: "CUSTOMERS_EDIT" },
     { id: "tickets", label: "Support Tickets", icon: "💬", permission: ["TICKETS_MANAGE", "SUPPORT_CHAT"] },
-    { id: "coupons", label: "Coupons & Settings", icon: "🎟️", permission: ["COUPONS_MANAGE", "BUSINESS_ANALYTICS_VIEW", "CONTENT_HOMEPAGE"] },
+    { id: "coupons", label: "Coupons & Settings", icon: "🎟️", permission: ["COUPONS_MANAGE", "COUPONS_VIEW", "COUPONS_RETENTION", "COUPONS_PUSH", "COUPONS_STORE_SETTINGS", "BUSINESS_ANALYTICS_VIEW", "CONTENT_HOMEPAGE"] },
     { id: "newsletter", label: "Newsletter", icon: "✉️", permission: "MARKETING_CAMPAIGNS" },
     { id: "employees", label: "Employees & Roles", icon: "👥", permission: ["EMPLOYEES_MANAGE", "ROLES_MANAGE", "DEPARTMENTS_MANAGE"] },
     { id: "logs", label: "Activity Logs", icon: "📋", permission: "ACTIVITY_LOGS_VIEW" },
@@ -4285,7 +4514,7 @@ const AdminDashboard = () => {
       {/* Sidebar for Desktop */}
       <aside className={`fixed inset-y-0 left-0 z-30 ${sidebarCollapsed ? "w-20" : "w-64"} bg-[#1C1C1C] text-white border-r border-gold-900/10 transform transition-all duration-300 ease-in-out md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-64"}`}>
         <div className="h-full flex flex-col justify-between">
-          <div>
+          <div className="flex-1 flex flex-col min-h-0">
             <div className={`h-16 flex items-center justify-between border-b border-gold-900/10 ${sidebarCollapsed ? "px-4" : "px-6"}`}>
               <div className="flex items-center gap-2.5">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-sm font-serif font-bold text-white shadow-md">N</span>
@@ -4307,7 +4536,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Profile Widget */}
-            <div className="p-4 border-b border-gold-900/10 flex items-center gap-3 bg-white/5">
+            <div className="p-4 border-b border-gold-900/10 flex items-center gap-3 bg-white/5 shrink-0">
               <div className="h-9 w-9 shrink-0 rounded-full bg-gold-500/10 text-gold-505 flex items-center justify-center font-bold text-xs ring-1 ring-gold-500/30 select-none">
                 {adminAuth?.name?.split(" ").map(n => n[0]).join("").toUpperCase() || "A"}
               </div>
@@ -4319,7 +4548,7 @@ const AdminDashboard = () => {
               )}
             </div>
 
-            <nav className="p-3 space-y-1">
+            <nav className="p-3 space-y-1 flex-1 overflow-y-auto max-h-[calc(100vh-12rem)] select-none">
               {visibleSidebarItems.map((item) => (
                 <button
                   key={item.id}
@@ -4412,8 +4641,21 @@ const AdminDashboard = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-gold-500 animate-pulse" />
               <span className="text-[9px] uppercase font-bold text-gold-600 dark:text-gold-400 tracking-wider">Secured</span>
             </div>
-            <div className="h-8 w-8 rounded-full bg-gold-500 text-white flex items-center justify-center font-bold text-xs ring-2 ring-gold-200/20">
-              {adminAuth?.name?.[0].toUpperCase()}
+            <div className="flex items-center gap-2 border-l border-gold-200/20 dark:border-gold-900/20 pl-3">
+              <div
+                className="h-8 w-8 rounded-full bg-gold-500 text-white flex items-center justify-center font-bold text-xs ring-2 ring-gold-200/20 cursor-pointer"
+                title={`${adminAuth?.name} - Click to Logout`}
+                onClick={() => handleLogout()}
+              >
+                {adminAuth?.name?.[0].toUpperCase()}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleLogout()}
+                className="text-[10px] font-bold uppercase tracking-wider text-red-500 hover:text-red-750 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-white/5 transition duration-200 cursor-pointer font-sans"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </header>
@@ -4456,6 +4698,10 @@ const AdminDashboard = () => {
           {activeTab === "tickets" && renderTicketsTab()}
           {activeTab === "returns-replacements" && <ReturnsReplacementsTab />}
           {activeTab === "customers" && <CustomersSection authHeader={authHeader} adminAuth={adminAuth} globalSearchQuery={globalSearchQuery} />}
+          {activeTab === "crm-dashboard" && <CrmDashboardTab authHeader={authHeader} adminAuth={adminAuth} />}
+          {activeTab === "crm-campaigns" && <CampaignsTab authHeader={authHeader} adminAuth={adminAuth} />}
+          {activeTab === "crm-segments" && <SegmentsTab authHeader={authHeader} adminAuth={adminAuth} />}
+          {activeTab === "crm-alerts" && <AlertsTab authHeader={authHeader} adminAuth={adminAuth} />}
           {activeTab === "cms" && <CmsManager authHeader={authHeader} adminAuth={adminAuth} />}
 
           {activeTab === "coupons" && couponsSubTab === "store-settings" && (

@@ -89,6 +89,34 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
+  // CRM Extensions States
+  const [timelineData, setTimelineData] = useState([]);
+  const [assignedCoupons, setAssignedCoupons] = useState([]);
+  const [crmCommHistory, setCrmCommHistory] = useState({ emails: [], sms: [], whatsapp: [], push: [], inApp: [] });
+  const [loadingCrm, setLoadingCrm] = useState(false);
+
+  // CRM Direct Concierge Send Message Form State
+  const [crmChannel, setCrmChannel] = useState("Email");
+  const [crmSubject, setCrmSubject] = useState("");
+  const [crmMessage, setCrmMessage] = useState("");
+  const [crmTemplate, setCrmTemplate] = useState("");
+  const [crmMedia, setCrmMedia] = useState("");
+  const [crmPushImage, setCrmPushImage] = useState("");
+  const [crmPushCta, setCrmPushCta] = useState("");
+  const [crmPushLink, setCrmPushLink] = useState("");
+  const [sendingCrmMsg, setSendingCrmMsg] = useState(false);
+
+  // CRM Assign Coupon Form State
+  const [assignCode, setAssignCode] = useState("");
+  const [assignType, setAssignType] = useState("percent");
+  const [assignValue, setAssignValue] = useState("");
+  const [assignMinCart, setAssignMinCart] = useState("0");
+  const [assignMaxDiscount, setAssignMaxDiscount] = useState("");
+  const [assignUses, setAssignUses] = useState("1");
+  const [assignExpiryDays, setAssignExpiryDays] = useState("30");
+  const [assignReason, setAssignReason] = useState("manual");
+  const [assigningCoupon, setAssigningCoupon] = useState(false);
+
   const isMasterAdmin = adminAuth?.isMasterAdmin === true;
   const hasDeletePermission = isMasterAdmin || adminAuth?.permissions?.includes("CUSTOMERS_DELETE");
   const hasPurgePermission = isMasterAdmin || adminAuth?.permissions?.includes("CUSTOMERS_PURGE");
@@ -162,6 +190,114 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
     }
   };
 
+  // Fetch dynamic CRM extensions
+  const fetchCrmData = async (id) => {
+    try {
+      setLoadingCrm(true);
+      const [timeRes, coupRes, commRes] = await Promise.all([
+        api.get(`/admin/crm/customers/${id}/timeline`, authHeader),
+        api.get(`/admin/crm/customers/${id}/coupons`, authHeader),
+        api.get(`/admin/crm/customers/${id}/communication-history`, authHeader),
+      ]);
+      setTimelineData(timeRes.data || []);
+      setAssignedCoupons(coupRes.data || []);
+      setCrmCommHistory(commRes.data || { emails: [], sms: [], whatsapp: [], push: [], inApp: [] });
+    } catch (err) {
+      console.error("Failed to load CRM data:", err.message);
+    } finally {
+      setLoadingCrm(false);
+    }
+  };
+
+  const handleSendCrmMessage = async (e) => {
+    e.preventDefault();
+    if (!crmMessage.trim()) return;
+
+    try {
+      setSendingCrmMsg(true);
+      setError("");
+      const payload = {
+        channel: crmChannel,
+        message: crmMessage,
+      };
+
+      if (crmChannel === "Email") {
+        payload.subject = crmSubject || "Important Message from Concierge Desk";
+      } else if (crmChannel === "WhatsApp") {
+        payload.templateName = crmTemplate;
+        payload.mediaUrl = crmMedia;
+      } else if (crmChannel === "Push") {
+        payload.subject = crmSubject || "Alert Update";
+        payload.image = crmPushImage;
+        payload.ctaButtonLabel = crmPushCta;
+        payload.deepLink = crmPushLink;
+      }
+
+      await api.post(`/admin/crm/customers/${profileId}/send-message`, payload, authHeader);
+      setSuccess("Concierge message dispatched successfully!");
+      setCrmMessage("");
+      setCrmSubject("");
+      setCrmTemplate("");
+      setCrmMedia("");
+      setCrmPushImage("");
+      setCrmPushCta("");
+      setCrmPushLink("");
+      fetchCrmData(profileId);
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to dispatch concierge message.");
+    } finally {
+      setSendingCrmMsg(false);
+    }
+  };
+
+  const handleAssignCoupon = async (e) => {
+    e.preventDefault();
+    try {
+      setAssigningCoupon(true);
+      setError("");
+      
+      const payload = {
+        couponCode: assignCode || undefined,
+        type: assignType,
+        value: assignValue,
+        minCartValue: assignMinCart || "0",
+        maxDiscount: assignMaxDiscount || undefined,
+        remainingUses: assignUses || "1",
+        expiryDays: assignExpiryDays || "30",
+        reason: assignReason,
+      };
+
+      await api.post(`/admin/crm/customers/${profileId}/assign-coupon`, payload, authHeader);
+      setSuccess("Coupon code successfully assigned to user profile.");
+      setAssignCode("");
+      setAssignValue("");
+      setAssignMinCart("0");
+      setAssignMaxDiscount("");
+      setAssignUses("1");
+      setAssignExpiryDays("30");
+      fetchCrmData(profileId);
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to assign coupon code.");
+    } finally {
+      setAssigningCoupon(false);
+    }
+  };
+
+  const handleDeleteNotification = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this notification log?")) return;
+    try {
+      setError("");
+      await api.delete(`/admin/crm/notifications/${id}`, authHeader);
+      setSuccess("Notification deleted successfully.");
+      fetchCrmData(profileId);
+      setTimeout(() => setSuccess(""), 3500);
+    } catch (err) {
+      setError("Failed to delete notification.");
+    }
+  };
+
   // Fetch single customer profile
   const fetchCustomerProfile = async (id) => {
     try {
@@ -169,6 +305,7 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
       setProfileData(null);
       const { data } = await api.get(`/admin/customers/${id}`, authHeader);
       setProfileData(data);
+      fetchCrmData(id);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load customer profile details");
     } finally {
@@ -1240,21 +1377,51 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
                       <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Mobile Phone</span>
                       <span className="font-mono text-gray-700">{profileData.profile.mobileNumber || "—"}</span>
                     </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Gender</span>
+                        <span className="text-gray-700">{profileData.profile.gender || "Not Set"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Age</span>
+                        <span className="text-gray-700">{profileData.profile.age || "—"}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Birthday</span>
+                        <span className="text-gray-700">{profileData.profile.birthday ? new Date(profileData.profile.birthday).toLocaleDateString() : "—"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Anniversary</span>
+                        <span className="text-gray-700">{profileData.profile.anniversary ? new Date(profileData.profile.anniversary).toLocaleDateString() : "—"}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Reward Points</span>
+                        <span className="text-gold-600 font-bold">{profileData.profile.loyaltyPoints || 0} pts</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Risk Score</span>
+                        <span className={`font-bold ${
+                          (profileData.orderInfo.orderHistory.filter(o => o.status === "Cancelled").length / (profileData.orderInfo.totalOrders || 1)) > 0.3
+                            ? "text-red-600"
+                            : "text-emerald-700"
+                        }`}>
+                          {Math.round((profileData.orderInfo.orderHistory.filter(o => o.status === "Cancelled").length / (profileData.orderInfo.totalOrders || 1)) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                    {profileData.profile.referralCode && (
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Referral Code</span>
+                        <span className="font-mono text-gray-750 font-semibold">{profileData.profile.referralCode}</span>
+                      </div>
+                    )}
                     <div>
                       <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Registration Date</span>
                       <span className="text-gray-700">{new Date(profileData.profile.createdAt).toLocaleString()}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Login Method</span>
-                      <span className="text-gray-700 uppercase">{profileData.profile.loginMethod || "OTP"}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Verification</span>
-                      <span className="text-gray-700">{profileData.profile.verificationStatus || "Verified"}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Newsletter Campaign</span>
-                      <span className="text-gray-700">{profileData.profile.isNewsletterSubscribed ? "Subscribed" : "Unsubscribed"}</span>
                     </div>
                   </div>
 
@@ -1284,10 +1451,12 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
                       { id: "orders", label: `Orders (${profileData.orderInfo.totalOrders})` },
                       { id: "wishlist", label: `Wishlist (${profileData.wishlist.length})` },
                       { id: "cart", label: `Cart (${profileData.cart.length})` },
-                      { id: "timeline", label: "Timeline" },
+                      { id: "crm_comm", label: "Concierge Chat" },
+                      { id: "crm_coupons", label: "Coupons Manager" },
+                      { id: "crm_timeline", label: "Live Timeline" },
+                      { id: "crm_history", label: "Message Logs" },
                       { id: "notes", label: `Private Notes (${profileData.profile.notes?.length || 0})` },
-                      { id: "notifications", label: "Notifications" },
-                      { id: "security", label: "Login & Session Logs" }
+                      { id: "security", label: "Session Logs" }
                     ].map((tab) => (
                       <button
                         key={tab.id}
@@ -1546,42 +1715,7 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
                       </div>
                     )}
 
-                    {/* Tab: Timeline */}
-                    {profileTab === "timeline" && (
-                      <div className="rounded-2xl border border-gold-200/10 bg-white p-4 space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-gold-700 border-b border-gold-200/10 pb-1.5">Activity Timeline Dossier</h4>
-                        
-                        {isMasterAdmin ? (
-                          <div className="relative border-l border-gold-200 ml-3 pl-5 space-y-5 py-2">
-                            {profileData.activityTimeline && profileData.activityTimeline.length > 0 ? (
-                              profileData.activityTimeline.map((item) => (
-                                <div key={item._id} className="relative text-xs">
-                                  <span className="absolute -left-[26px] top-1.5 h-3 w-3 rounded-full bg-gold-500 border border-white"></span>
-                                  <div className="flex items-center justify-between gap-2 border-b border-gray-50 pb-1">
-                                    <span className="font-bold text-gray-900 uppercase tracking-wide text-[10px]">{item.action}</span>
-                                    <span className="text-[9px] text-gray-400">{new Date(item.timestamp).toLocaleString()}</span>
-                                  </div>
-                                  <p className="text-gray-600 mt-1">{item.details}</p>
-                                  <div className="mt-1 text-[9px] text-gray-400 space-x-2">
-                                    <span>IP: {item.ipAddress}</span>
-                                    <span>•</span>
-                                    <span>Device: {item.device}</span>
-                                    <span>•</span>
-                                    <span>Browser: {item.userAgent ? item.userAgent.split(" ")[0] : "Unknown"}</span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-xs text-gray-400 font-light py-2">No activity timeline events recorded.</p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-xs text-amber-800 font-medium">
-                            ⚠ Master Admin permissions are required to access full Activity Log details and timelines.
-                          </div>
-                        )}
-                      </div>
-                    )}
+
 
                     {/* Tab: Private Notes */}
                     {profileTab === "notes" && (
@@ -1628,42 +1762,426 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
                       </div>
                     )}
 
-                    {/* Tab: Notifications */}
-                    {profileTab === "notifications" && (
+                    {/* Tab: CRM Timeline */}
+                    {profileTab === "crm_timeline" && (
                       <div className="rounded-2xl border border-gold-200/10 bg-white p-4 space-y-3">
-                        <div className="flex items-center justify-between border-b border-gold-200/10 pb-1.5">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-gold-700">Sent Notification Logs ({profileData.notifications?.length || 0})</h4>
-                          <button
-                            onClick={() => handleOpenNotify(profileData.profile)}
-                            className="rounded-full border border-gold-200 text-gold-600 bg-white hover:bg-gold-500/10 px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider transition cursor-pointer"
-                          >
-                            Send Alert
-                          </button>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gold-700 border-b border-gold-200/10 pb-1.5">Activity Timeline Dossier</h4>
+                        {loadingCrm ? (
+                          <p className="text-xs text-gray-400 font-light py-2">Loading timeline...</p>
+                        ) : (
+                          <div className="relative border-l border-gold-200 ml-3 pl-5 space-y-5 py-2">
+                            {timelineData.length > 0 ? (
+                              timelineData.map((item) => (
+                                <div key={item._id} className="relative text-xs">
+                                  <span className="absolute -left-[26px] top-1.5 h-3 w-3 rounded-full bg-gold-500 border border-white"></span>
+                                  <div className="flex items-center justify-between gap-2 border-b border-gray-50 pb-1">
+                                    <span className="font-bold text-gray-900 uppercase tracking-wide text-[10px]">{item.eventTitle}</span>
+                                    <span className="text-[9px] text-gray-400">{new Date(item.timestamp).toLocaleString()}</span>
+                                  </div>
+                                  <p className="text-gray-600 mt-1">{item.eventDescription}</p>
+                                  {item.ipAddress && (
+                                    <div className="mt-1 text-[9px] text-gray-400 space-x-2 font-mono">
+                                      <span>IP: {item.ipAddress}</span>
+                                      <span>•</span>
+                                      <span>Device: {item.device}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-xs text-gray-400 font-light py-2">No activity events recorded yet.</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tab: Concierge Chat */}
+                    {profileTab === "crm_comm" && (
+                      <form onSubmit={handleSendCrmMessage} className="rounded-2xl border border-gold-200/10 bg-white p-4 space-y-3.5">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gold-700 border-b border-gold-200/10 pb-1.5">Concierge Communication Desk</h4>
+                        
+                        <div className="grid gap-3 sm:grid-cols-2 text-xs">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Communication Mode</label>
+                            <select
+                              value={crmChannel}
+                              onChange={(e) => setCrmChannel(e.target.value)}
+                              className="rounded-full border border-gray-200 bg-white px-3 py-1.5 outline-none focus:border-gold-500 font-sans"
+                            >
+                              <option value="Email">Email</option>
+                              <option value="SMS">SMS (Text Message)</option>
+                              <option value="WhatsApp">WhatsApp Message</option>
+                              <option value="Push">Push Notification</option>
+                              <option value="Website Notification">Website / In-App Notification</option>
+                            </select>
+                          </div>
+
+                          {(crmChannel === "Email" || crmChannel === "Push" || crmChannel === "Website Notification") && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Subject Headline</label>
+                              <input
+                                placeholder="Message Subject Line..."
+                                value={crmSubject}
+                                onChange={(e) => setCrmSubject(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                              />
+                            </div>
+                          )}
+
+                          {crmChannel === "WhatsApp" && (
+                            <>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">WhatsApp Template Name (Optional)</label>
+                                <input
+                                  placeholder="e.g. order_delivery_update"
+                                  value={crmTemplate}
+                                  onChange={(e) => setCrmTemplate(e.target.value)}
+                                  className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Media Attachment URL (Optional)</label>
+                                <input
+                                  placeholder="PDF or Image absolute URL link..."
+                                  value={crmMedia}
+                                  onChange={(e) => setCrmMedia(e.target.value)}
+                                  className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          {crmChannel === "Push" && (
+                            <>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Rich Banner Image URL</label>
+                                <input
+                                  placeholder="Banner Image URL..."
+                                  value={crmPushImage}
+                                  onChange={(e) => setCrmPushImage(e.target.value)}
+                                  className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">CTA Action Button Title</label>
+                                <input
+                                  placeholder="e.g. Claim Discount"
+                                  value={crmPushCta}
+                                  onChange={(e) => setCrmPushCta(e.target.value)}
+                                  className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1 sm:col-span-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Deep Link Action Destination</label>
+                                <input
+                                  placeholder="e.g. /my-profile?tab=coupons"
+                                  value={crmPushLink}
+                                  onChange={(e) => setCrmPushLink(e.target.value)}
+                                  className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
 
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                          {profileData.notifications && profileData.notifications.length > 0 ? (
-                            profileData.notifications.map((n) => (
-                              <div key={n._id} className="rounded-xl border border-gray-150 p-3.5 text-xs bg-white space-y-1.5 shadow-2xs">
-                                <div className="flex items-center justify-between border-b border-gray-50 pb-1">
-                                  <span className="font-semibold text-gray-900">{n.title}</span>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="rounded-full bg-gold-500/10 text-gold-600 px-2 py-0.2 text-[8px] font-bold uppercase">
-                                      {n.type}
-                                    </span>
-                                    <span className={`rounded-full px-2 py-0.2 text-[8px] font-bold uppercase ${
-                                      n.status === "Read" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"
-                                    }`}>
-                                      {n.status}
-                                    </span>
-                                  </div>
-                                </div>
-                                <p className="text-gray-600 font-light leading-normal">{n.message}</p>
-                                <span className="block text-[8px] text-gray-400 font-light">Dispatched at: {new Date(n.createdAt).toLocaleString()}</span>
-                              </div>
-                            ))
+                        <div className="flex flex-col gap-1 text-xs">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Message Copy Content</label>
+                            {crmChannel === "SMS" && (
+                              <span className={`text-[9px] font-bold uppercase ${crmMessage.length > 160 ? "text-red-500" : "text-gray-400"}`}>
+                                {crmMessage.length} / 160 chars ({Math.ceil(crmMessage.length / 160)} SMS)
+                              </span>
+                            )}
+                          </div>
+                          <textarea
+                            required
+                            rows={4}
+                            value={crmMessage}
+                            onChange={(e) => setCrmMessage(e.target.value)}
+                            placeholder="Type the message body or promotion content..."
+                            className="rounded-2xl border border-gray-200 p-3 font-light outline-none focus:border-gold-500"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={sendingCrmMsg || !crmMessage.trim()}
+                          className="rounded-full bg-gold-500 hover:bg-gold-hover text-white px-5 py-2 text-xs font-bold uppercase tracking-wider transition disabled:opacity-50 cursor-pointer shadow-xs"
+                        >
+                          {sendingCrmMsg ? "Sending Message..." : `Dispatch ${crmChannel}`}
+                        </button>
+                      </form>
+                    )}
+
+                    {/* Tab: Coupons Manager */}
+                    {profileTab === "crm_coupons" && (
+                      <div className="space-y-4">
+                        <div className="rounded-2xl border border-gold-200/10 bg-white p-4 space-y-3">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-gold-700 border-b border-gold-200/10 pb-1.5 font-sans">Assigned Coupon Dossier</h4>
+                          {loadingCrm ? (
+                            <p className="text-xs text-gray-400 font-light py-1">Loading assigned coupons...</p>
+                          ) : assignedCoupons.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                  <tr className="border-b border-gray-150 text-gray-400 font-bold uppercase text-[9px] font-sans">
+                                    <th className="py-2">Code</th>
+                                    <th className="py-2">Type</th>
+                                    <th className="py-2">Discount</th>
+                                    <th className="py-2">Remaining Uses</th>
+                                    <th className="py-2">Assigned Date</th>
+                                    <th className="py-2">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {assignedCoupons.map((cAssignment) => (
+                                    <tr key={cAssignment._id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
+                                      <td className="py-2 font-mono text-gold-600 font-semibold">{cAssignment.couponId?.code || "—"}</td>
+                                      <td className="py-2 uppercase text-gray-500">{cAssignment.couponId?.type || "percent"}</td>
+                                      <td className="py-2 font-semibold">
+                                        {cAssignment.couponId?.type === "percent" ? `${cAssignment.couponId?.value}% off` : `₹${cAssignment.couponId?.value} flat`}
+                                      </td>
+                                      <td className="py-2 font-mono">{cAssignment.remainingUses} left</td>
+                                      <td className="py-2 text-gray-400">{new Date(cAssignment.assignedDate).toLocaleDateString()}</td>
+                                      <td className="py-2">
+                                        <span className={`rounded-full px-2 py-0.2 text-[8px] font-bold uppercase ${
+                                          cAssignment.status === "Redeemed" ? "bg-emerald-50 text-emerald-800 border border-emerald-150" :
+                                          cAssignment.status === "Expired" ? "bg-red-50 text-red-800 border border-red-150" :
+                                          "bg-amber-50 text-amber-800 border border-amber-150"
+                                        }`}>
+                                          {cAssignment.status}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           ) : (
-                            <p className="text-xs text-gray-400 font-light py-2">No notifications dispatched to this user.</p>
+                            <p className="text-xs text-gray-400 font-light py-2">No dynamic coupons assigned to this user profile.</p>
+                          )}
+                        </div>
+
+                        <form onSubmit={handleAssignCoupon} className="rounded-2xl border border-gold-200/10 bg-white p-4 space-y-3.5 text-xs">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-gold-700 border-b border-gold-200/10 pb-1.5 font-sans">Assign or Generate Coupon</h4>
+                          
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Existing Coupon Code (Optional)</label>
+                              <input
+                                placeholder="e.g. DIWALI50"
+                                value={assignCode}
+                                onChange={(e) => setAssignCode(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Coupon Code Type</label>
+                              <select
+                                value={assignType}
+                                onChange={(e) => setAssignType(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3 py-1.5 outline-none focus:border-gold-500"
+                                disabled={!!assignCode}
+                              >
+                                <option value="percent">Percentage Discount</option>
+                                <option value="flat">Flat Cash Discount</option>
+                              </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discount Value (INR or %)</label>
+                              <input
+                                type="number"
+                                placeholder="e.g. 15"
+                                value={assignValue}
+                                onChange={(e) => setAssignValue(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                required={!assignCode}
+                                disabled={!!assignCode}
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Min Cart Purchase Value (INR)</label>
+                              <input
+                                type="number"
+                                placeholder="e.g. 999"
+                                value={assignMinCart}
+                                onChange={(e) => setAssignMinCart(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                disabled={!!assignCode}
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Maximum Allowed Discount Caps (INR)</label>
+                              <input
+                                type="number"
+                                placeholder="e.g. 500"
+                                value={assignMaxDiscount}
+                                onChange={(e) => setAssignMaxDiscount(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                disabled={!!assignCode}
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Max Redemption Uses Limit</label>
+                              <input
+                                type="number"
+                                placeholder="e.g. 1"
+                                value={assignUses}
+                                onChange={(e) => setAssignUses(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Expiry Duration (Days)</label>
+                              <input
+                                type="number"
+                                placeholder="e.g. 30"
+                                value={assignExpiryDays}
+                                onChange={(e) => setAssignExpiryDays(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3.5 py-1.5 outline-none focus:border-gold-500"
+                                disabled={!!assignCode}
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Assignment Trigger Cause</label>
+                              <select
+                                value={assignReason}
+                                onChange={(e) => setAssignReason(e.target.value)}
+                                className="rounded-full border border-gray-200 bg-white px-3 py-1.5 outline-none focus:border-gold-500"
+                              >
+                                <option value="manual">Concierge Manual Override</option>
+                                <option value="birthday">Birthday Reward</option>
+                                <option value="anniversary">Anniversary Gift</option>
+                                <option value="loyalty">Loyalty Milestone</option>
+                                <option value="purchase_history">Retention Incentives</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={assigningCoupon}
+                            className="rounded-full bg-gold-500 hover:bg-gold-hover text-white px-5 py-2 text-xs font-bold uppercase tracking-wider transition disabled:opacity-50 cursor-pointer shadow-xs"
+                          >
+                            {assigningCoupon ? "Assigning..." : "Assign Promo Code"}
+                          </button>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Tab: Message History Logs */}
+                    {profileTab === "crm_history" && (
+                      <div className="space-y-4">
+                        <div className="rounded-2xl border border-gold-200/10 bg-white p-4 space-y-4 text-xs">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-gold-700 border-b border-gold-200/10 pb-1.5 font-sans">Message Dispatch History Logs</h4>
+                          
+                          {loadingCrm ? (
+                            <p className="text-xs text-gray-400 font-light py-2">Loading communication logs...</p>
+                          ) : (
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+                              {/* Emails */}
+                              {crmCommHistory.emails && crmCommHistory.emails.length > 0 && (
+                                <div className="space-y-2">
+                                  <span className="block text-[9px] font-bold uppercase tracking-wider text-gold-600">Email Dispatches ({crmCommHistory.emails.length})</span>
+                                  {crmCommHistory.emails.map((e) => (
+                                    <div key={e._id} className="rounded-xl border border-gray-100 p-3 bg-cream/20 space-y-1">
+                                      <div className="flex items-center justify-between border-b border-gray-50 pb-1 text-[9px] text-gray-450 font-sans">
+                                        <span className="font-semibold text-gray-800">Subject: {e.subject}</span>
+                                        <span>{new Date(e.createdAt).toLocaleString()}</span>
+                                      </div>
+                                      <p className="text-gray-650 leading-relaxed truncate">{e.bodyText || "Html email"}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* SMS */}
+                              {crmCommHistory.sms && crmCommHistory.sms.length > 0 && (
+                                <div className="space-y-2">
+                                  <span className="block text-[9px] font-bold uppercase tracking-wider text-gold-600">SMS Messages ({crmCommHistory.sms.length})</span>
+                                  {crmCommHistory.sms.map((s) => (
+                                    <div key={s._id} className="rounded-xl border border-gray-100 p-3 bg-cream/20 space-y-1">
+                                      <div className="flex items-center justify-between border-b border-gray-50 pb-1 text-[9px] text-gray-450 font-sans">
+                                        <span className={`font-semibold ${s.status === "Delivered" ? "text-emerald-700" : "text-amber-800"}`}>{s.status}</span>
+                                        <span>{new Date(s.createdAt).toLocaleString()}</span>
+                                      </div>
+                                      <p className="text-gray-650 leading-relaxed">{s.message}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* WhatsApp */}
+                              {crmCommHistory.whatsapp && crmCommHistory.whatsapp.length > 0 && (
+                                <div className="space-y-2">
+                                  <span className="block text-[9px] font-bold uppercase tracking-wider text-gold-600">WhatsApp Broadcasts ({crmCommHistory.whatsapp.length})</span>
+                                  {crmCommHistory.whatsapp.map((w) => (
+                                    <div key={w._id} className="rounded-xl border border-gray-100 p-3 bg-cream/20 space-y-1">
+                                      <div className="flex items-center justify-between border-b border-gray-50 pb-1 text-[9px] text-gray-450 font-sans">
+                                        <span className="font-semibold text-emerald-805">{w.templateName ? `Template: ${w.templateName}` : "Direct Send"}</span>
+                                        <span>{new Date(w.createdAt).toLocaleString()}</span>
+                                      </div>
+                                      <p className="text-gray-650 leading-relaxed">{w.message}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Push Notifications */}
+                              {crmCommHistory.push && crmCommHistory.push.length > 0 && (
+                                <div className="space-y-2 mt-4">
+                                  <span className="block text-[9px] font-bold uppercase tracking-wider text-gold-600">Push Notifications ({crmCommHistory.push.length})</span>
+                                  {crmCommHistory.push.map((p) => (
+                                    <div key={p._id} className="rounded-xl border border-gray-100 p-3 bg-cream/20 space-y-1">
+                                      <div className="flex items-center justify-between border-b border-gray-50 pb-1 text-[9px] text-gray-450 font-sans">
+                                        <span className="font-semibold text-gray-800">{p.title}</span>
+                                        <span>{new Date(p.createdAt).toLocaleString()}</span>
+                                      </div>
+                                      <p className="text-gray-650 leading-relaxed">{p.message}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Website / In-App Notifications */}
+                              {crmCommHistory.inApp && crmCommHistory.inApp.length > 0 && (
+                                <div className="space-y-2 mt-4">
+                                  <span className="block text-[9px] font-bold uppercase tracking-wider text-gold-600">Website Notifications ({crmCommHistory.inApp.length})</span>
+                                  {crmCommHistory.inApp.map((n) => (
+                                    <div key={n._id} className="rounded-xl border border-gray-100 p-3 bg-cream/20 space-y-1 flex justify-between items-start gap-4">
+                                      <div className="space-y-1 flex-1">
+                                        <div className="flex items-center justify-between border-b border-gray-50 pb-1 text-[9px] text-gray-450 font-sans">
+                                          <span className="font-semibold text-gray-805">{n.title} ({n.type})</span>
+                                          <span>{new Date(n.createdAt).toLocaleString()}</span>
+                                        </div>
+                                        <p className="text-gray-650 leading-relaxed">{n.message}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeleteNotification(n._id)}
+                                        className="text-red-500 hover:text-red-750 font-semibold text-[10px] uppercase cursor-pointer"
+                                        title="Delete Notification"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {(!crmCommHistory.emails || crmCommHistory.emails.length === 0) &&
+                               (!crmCommHistory.sms || crmCommHistory.sms.length === 0) &&
+                               (!crmCommHistory.whatsapp || crmCommHistory.whatsapp.length === 0) &&
+                               (!crmCommHistory.push || crmCommHistory.push.length === 0) &&
+                               (!crmCommHistory.inApp || crmCommHistory.inApp.length === 0) && (
+                                <p className="text-xs text-gray-400 font-light py-6 text-center">No message history tracked yet.</p>
+                              )}                            </div>
                           )}
                         </div>
                       </div>

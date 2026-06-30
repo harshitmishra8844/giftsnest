@@ -14,8 +14,8 @@ const router = express.Router();
 router.use(protect);
 router.use(adminOnly);
 
-router.get("/permissions", checkPermission("ROLES_MANAGE"), getPermissionsList);
-router.get("/", checkPermission("ROLES_MANAGE"), getRoles);
+router.get("/permissions", getPermissionsList);
+router.get("/", getRoles);
 router.post("/", checkPermission("ROLES_MANAGE"), createCustomRole);
 router.put("/:id", checkPermission("ROLES_MANAGE"), updateRole);
 router.delete("/:id", checkPermission("ROLES_MANAGE"), deleteRole);

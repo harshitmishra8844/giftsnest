@@ -25,6 +25,7 @@ const returnRoutes = require("./routes/returnRoutes");
 const emailRoutes = require("./routes/emailRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const cmsRoutes = require("./routes/cmsRoutes");
+const crmRoutes = require("./routes/crmRoutes");
 const { getStoreInfo } = require("./controllers/adminController");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { verifyEmailTransporter, getSmtpConfig } = require("./services/emailTransporter");
@@ -70,6 +71,7 @@ app.use("/api/tickets", ticketRoutes);
 app.use("/api/returns", returnRoutes);
 app.use("/api/admin/emails", emailRoutes);
 app.use("/api/cms", cmsRoutes);
+app.use("/api/admin/crm", crmRoutes);
 
 
 app.use(notFound);
@@ -102,6 +104,12 @@ const startServer = async () => {
     await seedDB();
     const { startEmailWorker } = require("./services/emailService");
     startEmailWorker();
+    const { startCrmCampaignWorker } = require("./services/crmCampaignWorker");
+    startCrmCampaignWorker();
+    const { runGlobalAlertCheck } = require("./services/alertService");
+    // Run diagnostics check at startup and daily
+    runGlobalAlertCheck();
+    setInterval(runGlobalAlertCheck, 24 * 60 * 60 * 1000);
     logSmtpStartupInfo();
 
     if (process.env.NODE_ENV === "production") {

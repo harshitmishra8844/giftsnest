@@ -327,6 +327,129 @@ const deleteCoupon = async (req, res) => {
   }
 };
 
+const pushCouponToUserByEmail = async (req, res) => {
+  try {
+    const { couponCode, pushTarget, customerEmail, segmentId, remainingUses } = req.body;
+    if (!couponCode) {
+      return res.status(400).json({ message: "Coupon code is required" });
+    }
+
+    const User = require("../models/User");
+    const CouponAssignment = require("../models/CouponAssignment");
+    const CustomerTimeline = require("../models/CustomerTimeline");
+
+    // Find coupon
+    const coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase().trim() });
+    if (!coupon) {
+      return res.status(404).json({ message: "Coupon code not found" });
+    }
+
+    let targetUserIds = [];
+    let targetLabel = "";
+
+    if (pushTarget === "segment") {
+      if (!segmentId) {
+        return res.status(400).json({ message: "Segment/Category selection is required for segment push" });
+      }
+
+      if (segmentId === "all") {
+        targetUserIds = await User.find({ isAdmin: { $ne: true }, status: { $ne: "Deleted" } }).distinct("_id");
+        targetLabel = "All Customers";
+      } else if (segmentId === "newsletter") {
+        const Newsletter = require("../models/Newsletter");
+        const newsletterEmails = await Newsletter.find().distinct("email");
+        targetUserIds = await User.find({ email: { $in: newsletterEmails }, isAdmin: { $ne: true }, status: { $ne: "Deleted" } }).distinct("_id");
+        targetLabel = "Newsletter Subscribers";
+      } else {
+        const CustomerSegment = require("../models/CustomerSegment");
+        const segment = await CustomerSegment.findById(segmentId);
+        if (!segment) {
+          return res.status(404).json({ message: "Selected category/segment not found" });
+        }
+        const { resolveSegmentMembers } = require("../services/segmentService");
+        targetUserIds = await resolveSegmentMembers(segment.filters);
+        targetLabel = `Segment: ${segment.name}`;
+      }
+    } else {
+      // Default: single customer email
+      if (!customerEmail) {
+        return res.status(400).json({ message: "Customer email is required" });
+      }
+      const user = await User.findOne({ email: String(customerEmail).toLowerCase().trim() });
+      if (!user) {
+        return res.status(404).json({ message: "Customer account not found with this email" });
+      }
+      targetUserIds = [user._id];
+      targetLabel = `${user.name} (${user.email})`;
+    }
+
+    if (targetUserIds.length === 0) {
+      return res.status(400).json({ message: "No customer profiles found matching this category" });
+    }
+
+    // Now, push/assign coupon to all targeted users
+    let assignedCount = 0;
+    let skippedCount = 0;
+
+    for (const userId of targetUserIds) {
+      // Check if already assigned and unused
+      const existing = await CouponAssignment.findOne({ userId, couponId: coupon._id, status: "Unused" });
+      if (existing) {
+        skippedCount++;
+        continue;
+      }
+
+      // Create assignment
+      await CouponAssignment.create({
+        userId,
+        couponId: coupon._id,
+        assignedBy: req.user.name,
+        assignmentType: pushTarget === "segment" ? "segment" : "manual",
+        remainingUses: remainingUses ? Number(remainingUses) : 1,
+      });
+
+      // Log to customer timeline
+      if (CustomerTimeline) {
+        try {
+          await CustomerTimeline.create({
+            userId,
+            event: "Coupon Assigned",
+            title: `Coupon Pushed: ${coupon.code}`,
+            description: `Pushed by admin: ${req.user.name} (${pushTarget === "segment" ? "Bulk category push" : "Individual push"})`,
+            metadata: { couponCode: coupon.code }
+          });
+        } catch (err) {
+          // ignore timeline logging errors for individual loops
+        }
+      }
+      assignedCount++;
+    }
+
+    // Log admin activity
+    await logActivity(
+      req.user._id,
+      req.user.name,
+      pushTarget === "segment" ? "COUPON_PUSHED_BULK" : "COUPON_PUSHED",
+      `Pushed coupon ${coupon.code} to ${targetLabel}. Assigned: ${assignedCount}, Skipped: ${skippedCount}`,
+      req
+    );
+
+    let message = `Successfully pushed coupon "${coupon.code}" to ${assignedCount} user(s).`;
+    if (skippedCount > 0) {
+      message += ` (${skippedCount} already had this coupon active and were skipped.)`;
+    }
+
+    return res.status(201).json({
+      message,
+      assignedCount,
+      skippedCount
+    });
+  } catch (error) {
+    console.error("Push coupon error:", error);
+    return res.status(500).json({ message: `Failed to push coupon: ${error.message || error}` });
+  }
+};
+
 module.exports = {
   getCoupons,
   createCoupon,
@@ -334,4 +457,5 @@ module.exports = {
   deleteCoupon,
   generateSpecialCoupon,
   sendCouponEmail,
+  pushCouponToUserByEmail,
 };

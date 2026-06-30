@@ -101,6 +101,8 @@ const MyProfile = () => {
   // Recommendations state
   const [recommendations, setRecommendations] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [userCoupons, setUserCoupons] = useState([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
 
   // Profile update form state
   const [profileForm, setProfileForm] = useState({
@@ -256,6 +258,56 @@ const MyProfile = () => {
     }
   };
 
+  const fetchUserCoupons = async () => {
+    try {
+      setLoadingCoupons(true);
+      const { data } = await api.get("/user/coupons");
+      const assignedList = (data.assigned || [])
+        .filter((as) => {
+          const cp = as.couponId;
+          if (!cp) return false;
+          if (as.status !== "Unused") return false;
+          if (cp.active === false) return false;
+          const now = new Date();
+          if (cp.endDate && new Date(cp.endDate) < now) return false;
+          return true;
+        })
+        .map((as) => {
+          const cp = as.couponId || {};
+          return {
+            code: cp.code || "N/A",
+            desc: cp.isSpecial ? `Exclusive coupon: assigned to you. (Reason: ${as.assignmentType || 'reward'})` : "Hand-curated gift box discount.",
+            type: cp.type === "percent" ? "Percentage" : "Flat",
+            val: cp.type === "percent" ? `${cp.value}% OFF` : `₹${cp.value} OFF`,
+            exp: cp.endDate ? `Expires ${new Date(cp.endDate).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}` : "No Expiry",
+            status: as.status || "Unused"
+          };
+        });
+      const publicList = (data.public || [])
+        .filter((cp) => {
+          if (cp.active === false) return false;
+          const now = new Date();
+          if (cp.endDate && new Date(cp.endDate) < now) return false;
+          return true;
+        })
+        .map((cp) => {
+          return {
+            code: cp.code || "N/A",
+            desc: "Public checkout coupon available for all orders.",
+            type: cp.type === "percent" ? "Percentage" : "Flat",
+            val: cp.type === "percent" ? `${cp.value}% OFF` : `₹${cp.value} OFF`,
+            exp: cp.endDate ? `Expires ${new Date(cp.endDate).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}` : "No Expiry",
+            status: "Public"
+          };
+        });
+      setUserCoupons([...assignedList, ...publicList]);
+    } catch (err) {
+      console.error("Failed to load user coupons:", err);
+    } finally {
+      setLoadingCoupons(false);
+    }
+  };
+
   const handleMarkAsRead = async (id) => {
     try {
       await api.put(`/user/notifications/${id}/read`);
@@ -265,6 +317,23 @@ const MyProfile = () => {
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       console.error("Failed to mark notification read:", err);
+    }
+  };
+
+  const handleDeleteNotification = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this notification?")) return;
+    try {
+      await api.delete(`/user/notifications/${id}`);
+      setNotifications((prev) => prev.filter((n) => n._id !== id));
+      setUnreadCount((prev) => {
+        const deletedNotif = notifications.find((n) => n._id === id);
+        if (deletedNotif && deletedNotif.status !== "Read") {
+          return Math.max(0, prev - 1);
+        }
+        return prev;
+      });
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
     }
   };
 
@@ -751,11 +820,11 @@ const MyProfile = () => {
               </thead>
               <tbody>
                 ${items.map((item) => {
-                  const qty = Number(item.quantity || 0);
-                  const price = Number(item.price || 0);
-                  const lineTotal = (qty * price).toFixed(2);
-                  return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
-                }).join("")}
+      const qty = Number(item.quantity || 0);
+      const price = Number(item.price || 0);
+      const lineTotal = (qty * price).toFixed(2);
+      return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+    }).join("")}
               </tbody>
             </table>
             <div class="totals">
@@ -807,7 +876,7 @@ const MyProfile = () => {
         if (storeInfoRes && storeInfoRes.data) {
           setStoreInfo(storeInfoRes.data);
         }
-        await Promise.all([fetchReturns(), fetchNotifications()]);
+        await Promise.all([fetchReturns(), fetchNotifications(), fetchUserCoupons()]);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load your profile data");
       } finally {
@@ -1501,18 +1570,16 @@ const MyProfile = () => {
           { id: "addresses", label: "Addresses", icon: <MapPin className="w-3.5 h-3.5" /> },
           { id: "tracking", label: "Tracking", icon: <Truck className="w-3.5 h-3.5" /> },
           { id: "coupons", label: "Coupons", icon: <Gift className="w-3.5 h-3.5" /> },
-          { id: "notifications", label: "Notifications", icon: <Bell className="w-3.5 h-3.5" />, count: unreadCount },
           { id: "help", label: "Support", icon: <HelpCircle className="w-3.5 h-3.5" /> },
           { id: "settings", label: "Settings", icon: <Settings className="w-3.5 h-3.5" /> }
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer select-none ${
-              activeTab === tab.id
+            className={`shrink-0 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer select-none ${activeTab === tab.id
                 ? "bg-gold-500 text-white shadow-md scale-[1.02]"
                 : "bg-white text-luxury-black hover:bg-gold-50 hover:text-gold-600 border border-champagne/50"
-            }`}
+              }`}
           >
             {tab.icon}
             <span>{tab.label}</span>
@@ -1526,7 +1593,7 @@ const MyProfile = () => {
       </div>
 
       {/* Notification Banner messages */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {loading && (
           <motion.div
             initial={{ opacity: 0, y: -5 }}
@@ -1565,8 +1632,8 @@ const MyProfile = () => {
       </AnimatePresence>
 
       {/* Dynamic Tab Container with transitions */}
-      <div className="min-h-[400px]">
-        <AnimatePresence mode="wait">
+      <div className="min-h-0">
+        <AnimatePresence>
           {/* OVERVIEW TAB */}
           {activeTab === "overview" && !loading && (
             <motion.div
@@ -1605,10 +1672,10 @@ const MyProfile = () => {
                               style={{
                                 width:
                                   latestOrder.status === "Cancelled" ? "100%" :
-                                  latestOrder.status === "Delivered" ? "100%" :
-                                  latestOrder.status === "Shipped" ? "75%" :
-                                  latestOrder.status === "Processing" ? "50%" :
-                                  latestOrder.status === "Pending" ? "25%" : "0%",
+                                    latestOrder.status === "Delivered" ? "100%" :
+                                      latestOrder.status === "Shipped" ? "75%" :
+                                        latestOrder.status === "Processing" ? "50%" :
+                                          latestOrder.status === "Pending" ? "25%" : "0%",
                               }}
                             />
                           </div>
@@ -2063,11 +2130,10 @@ const MyProfile = () => {
                             key={opt.id}
                             type="button"
                             onClick={() => setAddressForm((prev) => ({ ...prev, label: opt.label }))}
-                            className={`flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border transition duration-200 hover:scale-[1.02] cursor-pointer ${
-                              addressForm.label === opt.label
+                            className={`flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border transition duration-200 hover:scale-[1.02] cursor-pointer ${addressForm.label === opt.label
                                 ? "border-gold-500 bg-gold-50 text-gold-900 font-bold"
                                 : "border-champagne bg-white hover:border-gold-300 text-text-secondary"
-                            }`}
+                              }`}
                           >
                             <span className="text-xl mb-1">{opt.icon}</span>
                             <span className="text-[10px] uppercase font-bold tracking-wider">{opt.label}</span>
@@ -2204,9 +2270,8 @@ const MyProfile = () => {
                     return (
                       <div
                         key={address._id}
-                        className={`rounded-3xl border p-5 flex flex-col justify-between transition duration-300 hover:shadow-md relative overflow-hidden bg-white/70 ${
-                          address.isDefault ? "border-gold-500 ring-1 ring-gold-500/10 shadow-sm" : "border-champagne/45 hover:border-gold-300"
-                        }`}
+                        className={`rounded-3xl border p-5 flex flex-col justify-between transition duration-300 hover:shadow-md relative overflow-hidden bg-white/70 ${address.isDefault ? "border-gold-500 ring-1 ring-gold-500/10 shadow-sm" : "border-champagne/45 hover:border-gold-300"
+                          }`}
                       >
                         <div>
                           <div className="flex items-center justify-between mb-3.5">
@@ -2267,99 +2332,7 @@ const MyProfile = () => {
           )}
 
           {/* ORDER TRACKING TAB */}
-          {activeTab === "tracking" && !loading && (
-            <motion.div
-              key="tracking"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
-            >
-              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs">
-                <h2 className="text-lg font-serif font-semibold text-luxury-black">Active Shipment Tracking</h2>
-                <p className="text-xs text-text-secondary mt-1 font-light">Verify delivery logistics status, locations timeline routes, and courier partner coordinates.</p>
-              </div>
 
-              {orders.length > 0 ? (
-                <div className="space-y-4">
-                  {orders.map((order) => {
-                    const stepIdx = getStepIndex(order.status);
-                    return (
-                      <div key={order._id} className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-5 shadow-xs space-y-4">
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-champagne/20 pb-3">
-                          <div>
-                            <h4 className="text-sm font-bold text-luxury-black font-serif">Order #{getOrderDisplayId(order)}</h4>
-                            <p className="text-[9px] text-text-secondary font-light">Expected Date: {new Date(new Date(order.createdAt).getTime() + 5*24*60*60*1000).toLocaleDateString("en-IN")}</p>
-                          </div>
-                          <span className={`rounded-full px-3 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${getStatusColor(order.status)}`}>
-                            {order.status}
-                          </span>
-                        </div>
-
-                        {/* Shipment Info details if shipped */}
-                        {order.trackingId && (
-                          <div className="grid gap-3 sm:grid-cols-3 bg-blue-50/20 border border-blue-200/50 p-3.5 rounded-2xl text-xs text-blue-900 font-light">
-                            <p><strong className="font-semibold">Courier Partner:</strong> <span className="capitalize">{order.trackingCarrier}</span></p>
-                            <p><strong className="font-semibold">Tracking Number AWB:</strong> {order.trackingId}</p>
-                            <a
-                              href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-blue-700 underline font-semibold flex items-center gap-1"
-                            >
-                              Track Live Package &rarr;
-                            </a>
-                          </div>
-                        )}
-
-                        {/* Timeline horizontal steps */}
-                        <div className="py-2.5">
-                          <div className="relative h-1.5 w-full bg-champagne/50 rounded-full">
-                            <div
-                              className="absolute h-1.5 bg-gold-500 rounded-full transition-all duration-500"
-                              style={{ width: `${(stepIdx / (trackingSteps.length - 1)) * 100}%` }}
-                            />
-                          </div>
-                          <div className="grid grid-cols-5 gap-1 text-[9px] font-bold text-text-secondary uppercase tracking-wider text-center mt-3">
-                            {trackingSteps.map((step, idx) => {
-                              const isCompleted = idx <= stepIdx;
-                              return (
-                                <div key={idx} className="space-y-1">
-                                  <div className={`mx-auto h-4 w-4 rounded-full border-2 flex items-center justify-center text-[7px] font-bold ${isCompleted ? 'border-gold-500 bg-gold-500 text-white' : 'border-champagne bg-white text-gray-300'}`}>
-                                    {isCompleted ? "✓" : idx + 1}
-                                  </div>
-                                  <span className={isCompleted ? "text-gold-800" : ""}>{step}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Live activity log mock details to look premium */}
-                        <div className="pt-2 border-t border-champagne/10">
-                          <h5 className="text-[10px] font-bold uppercase tracking-wider text-luxury-black mb-2.5">Fulfillment Pipeline Timeline</h5>
-                          <div className="space-y-3.5 text-xs font-light text-text-secondary border-l-2 border-gold-200/50 pl-4 ml-2">
-                            <div className="relative">
-                              <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-gold-500 ring-4 ring-gold-50" />
-                              <p className="font-semibold text-luxury-black text-[11px]">{order.status === "Delivered" ? "Delivered successfully" : order.status === "Shipped" ? "Package is in transit with carrier" : order.status === "Processing" ? "Gift curation validation in progress" : "Order Placed and queued"}</p>
-                              <p className="text-[9px] text-gray-400 mt-0.5">{new Date(order.updatedAt).toLocaleString("en-IN")}</p>
-                            </div>
-                            <div className="relative opacity-70">
-                              <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-gold-400" />
-                              <p className="font-semibold text-luxury-black text-[11px]">Surprise parcel details confirmed</p>
-                              <p className="text-[9px] text-gray-400 mt-0.5">{new Date(order.createdAt).toLocaleString("en-IN")}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                renderEmptyState("No active tracking", "You do not have any active packages running under delivery timelines. View order history for completed orders.", "🚚")
-              )}
-            </motion.div>
-          )}
 
           {/* NOTIFICATIONS TAB */}
           {activeTab === "notifications" && !loading && (
@@ -2408,11 +2381,10 @@ const MyProfile = () => {
                       <div
                         key={n._id}
                         onClick={() => !isRead && handleMarkAsRead(n._id)}
-                        className={`rounded-2xl border p-4.5 transition duration-300 relative overflow-hidden cursor-pointer ${
-                          isRead
+                        className={`rounded-2xl border p-4.5 transition duration-300 relative overflow-hidden cursor-pointer ${isRead
                             ? "bg-white/30 border-champagne/20 text-luxury-black/60"
                             : "bg-gold-50/15 border-gold-300/40 text-luxury-black shadow-xs hover:bg-gold-50/20"
-                        }`}
+                          }`}
                       >
                         {!isRead && (
                           <div className="absolute top-0 left-0 w-1.5 h-full bg-gold-500" />
@@ -2426,9 +2398,21 @@ const MyProfile = () => {
                               {n.title}
                             </h3>
                           </div>
-                          <span className="text-[10px] text-text-secondary font-light">
-                            {new Date(n.createdAt).toLocaleDateString("en-IN", { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-text-secondary font-light">
+                              {new Date(n.createdAt).toLocaleDateString("en-IN", { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteNotification(n._id);
+                              }}
+                              className="text-red-500 hover:text-red-700 transition cursor-pointer text-[10px] font-bold uppercase tracking-wider pl-2 border-l border-champagne/45 font-sans"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                         <p className="mt-2 text-xs font-light leading-relaxed text-text-secondary whitespace-pre-line">
                           {n.message}
@@ -2973,132 +2957,40 @@ const MyProfile = () => {
                 <p className="text-xs text-text-secondary mt-1 font-light">Copy promotional codes to apply during checkout for exclusive discounts.</p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                {[
-                  { code: "NIYORALUXE10", desc: "Flat 10% Off on all hand-curated gift boxes.", type: "Percentage", val: "10% OFF", exp: "Expires 31 Dec 2026" },
-                  { code: "FREESHIP", desc: "Enjoy complimentary surprise delivery across India.", type: "Shipping", val: "FREE SHIPPING", exp: "Expires 31 Dec 2026" },
-                  { code: "WELCOMEGIFT", desc: "Complimentary handcrafted premium envelope card.", type: "Addon", val: "FREE GIFT CARD", exp: "Expires 30 Sep 2026" }
-                ].map((cp, idx) => (
-                  <div key={idx} className="group relative rounded-3xl border border-champagne/40 bg-white p-6 shadow-sm hover:shadow-md hover:border-gold-300/40 transition-all duration-300 flex flex-col justify-between space-y-4 overflow-hidden">
-                    <div className="absolute -right-6 -top-6 w-16 h-16 bg-gold-500/10 rounded-full blur-xl" />
-                    <div>
-                      <span className="text-[8px] font-extrabold uppercase tracking-widest text-gold-700 bg-gold-50 px-2 py-0.5 rounded-md">{cp.type}</span>
-                      <h4 className="text-lg font-serif font-bold text-luxury-black mt-2">{cp.val}</h4>
-                      <p className="text-xs text-text-secondary font-light mt-1">{cp.desc}</p>
-                    </div>
-                    <div className="pt-3 border-t border-champagne/20 flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-bold text-gold-800 bg-gold-50 border border-gold-200/35 rounded px-2.5 py-1 select-all">{cp.code}</span>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(cp.code);
-                          setSuccessMessage(`Coupon code "${cp.code}" copied to clipboard!`);
-                          setTimeout(() => setSuccessMessage(""), 3000);
-                        }}
-                        className="rounded-full bg-luxury-black hover:bg-gold-500 text-white text-[9px] font-bold uppercase tracking-widest px-3.5 py-2 transition cursor-pointer select-none"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                    <p className="text-[8px] text-gray-400 font-mono text-right">{cp.exp}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* NOTIFICATIONS TAB */}
-          {activeTab === "notifications" && (
-            <motion.div
-              key="notifications"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
-            >
-              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 md:p-8 shadow-xs flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-serif font-semibold text-luxury-black flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-gold-600" /> Notifications & Inbox Alerts
-                  </h2>
-                  <p className="text-xs text-text-secondary mt-1 font-light">Inbox updates, customer alerts, and promotional announcements.</p>
-                </div>
-                {unreadCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await Promise.all(
-                          notifications
-                            .filter((n) => n.status !== "Read")
-                            .map((n) => api.put(`/user/notifications/${n._id}/read`))
-                        );
-                        setNotifications((prev) => prev.map((n) => ({ ...n, status: "Read" })));
-                        setUnreadCount(0);
-                      } catch (err) {
-                        console.error("Mark all read failed:", err);
-                      }
-                    }}
-                    className="rounded-full border border-gold-300 text-gold-700 hover:bg-gold-50/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-all duration-300"
-                  >
-                    Mark all as read
-                  </button>
-                )}
-              </div>
-
-              {loadingNotifications && notifications.length === 0 ? (
-                <div className="py-12 flex justify-center items-center text-xs text-text-secondary gap-2">
-                  <RefreshCw className="animate-spin h-4 w-4 text-gold-500" /> Loading...
-                </div>
-              ) : notifications.length > 0 ? (
-                <div className="space-y-3">
-                  {notifications.map((n) => {
-                    const isRead = n.status === "Read";
-                    const isOffer = n.type === "Offer";
-                    const isAlert = n.type === "Alert";
-                    return (
-                      <div
-                        key={n._id}
-                        onClick={() => {
-                          if (!isRead) {
-                            handleMarkAsRead(n._id);
-                          }
-                        }}
-                        className={`rounded-2xl border p-4.5 transition duration-300 relative overflow-hidden cursor-pointer ${
-                          isRead
-                            ? "bg-white/40 border-champagne/30 text-luxury-black/70"
-                            : "bg-gold-50/15 border-gold-300/40 text-luxury-black shadow-xs hover:bg-gold-50/20"
-                        }`}
-                      >
-                        {!isRead && (
-                          <div className="absolute top-0 left-0 w-1 h-full bg-gold-500" />
-                        )}
-                        <div className="flex flex-wrap justify-between items-start gap-2">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${
-                                isOffer ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
-                                isAlert ? "bg-rose-50 border-rose-200 text-rose-800" :
-                                "bg-sky-50 border-sky-200 text-sky-800"
-                              }`}>
-                                {n.type || "Info"}
-                              </span>
-                              {!isRead && (
-                                <span className="h-1.5 w-1.5 rounded-full bg-gold-500 animate-pulse" />
-                              )}
-                            </div>
-                            <h3 className={`text-xs font-serif font-bold ${isRead ? "text-luxury-black/75" : "text-luxury-black"}`}>
-                              {n.title}
-                            </h3>
-                            <p className="text-xs text-text-secondary font-light">{n.message}</p>
-                          </div>
-                          <span className="text-[10px] text-text-secondary font-light">{new Date(n.createdAt).toLocaleDateString("en-IN")}</span>
+              {loadingCoupons ? (
+                <div className="text-center py-12 text-sm text-text-secondary">Loading available coupons...</div>
+              ) : userCoupons.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {userCoupons.map((cp, idx) => (
+                    <div key={idx} className="group relative rounded-3xl border border-champagne/40 bg-white p-6 shadow-sm hover:shadow-md hover:border-gold-300/40 transition-all duration-300 flex flex-col justify-between space-y-4 overflow-hidden">
+                      <div className="absolute -right-6 -top-6 w-16 h-16 bg-gold-500/10 rounded-full blur-xl" />
+                      <div>
+                        <div className="flex gap-2 flex-wrap items-center">
+                          <span className="text-[8px] font-extrabold uppercase tracking-widest text-gold-700 bg-gold-50 px-2 py-0.5 rounded-md">{cp.type}</span>
+                          <span className="text-[8px] font-extrabold uppercase tracking-widest text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">{cp.status}</span>
                         </div>
+                        <h4 className="text-lg font-serif font-bold text-luxury-black mt-2">{cp.val}</h4>
+                        <p className="text-xs text-text-secondary font-light mt-1">{cp.desc}</p>
                       </div>
-                    );
-                  })}
+                      <div className="pt-3 border-t border-champagne/20 flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-bold text-gold-800 bg-gold-50 border border-gold-200/35 rounded px-2.5 py-1 select-all">{cp.code}</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(cp.code);
+                            setSuccessMessage(`Coupon code "${cp.code}" copied to clipboard!`);
+                            setTimeout(() => setSuccessMessage(""), 3000);
+                          }}
+                          className="rounded-full bg-luxury-black hover:bg-gold-500 text-white text-[9px] font-bold uppercase tracking-widest px-3.5 py-2 transition cursor-pointer select-none"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <p className="text-[8px] text-gray-400 font-mono text-right">{cp.exp}</p>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                renderEmptyState("Inbox is empty", "You do not have any notifications, alerts, or promotional gift coupons at this moment.", "📬")
+                renderEmptyState("No Coupons Found", "No promotional coupons are currently available.", "🎟️")
               )}
             </motion.div>
           )}
@@ -3218,11 +3110,10 @@ const MyProfile = () => {
                         fetchTicketDetails(ret.ticket._id || ret.ticket);
                       }
                     }}
-                    className={`rounded-3xl border p-4.5 cursor-pointer transition-all duration-300 ${
-                      isSelected
+                    className={`rounded-3xl border p-4.5 cursor-pointer transition-all duration-300 ${isSelected
                         ? "border-gold-500 bg-gold-100/10 shadow-xs scale-[1.01]"
                         : "border-champagne/45 bg-white hover:border-gold-300/40"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-2 border-b border-champagne/10 pb-2">
                       <span className="font-mono text-xs font-bold text-luxury-black">{ret.returnCode}</span>
@@ -3285,11 +3176,10 @@ const MyProfile = () => {
                     const isRejected = selectedReturn.status === "Rejected";
                     return (
                       <div key={idx} className="flex flex-col items-center text-center">
-                        <div className={`mb-1.5 h-6.5 w-6.5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
-                          reached ? 'border-gold-500 bg-gold-500 text-white' :
-                          isRejected && idx === 1 ? 'border-rose-500 bg-rose-500 text-white' :
-                          'border-champagne bg-white text-gray-400'
-                        }`}>
+                        <div className={`mb-1.5 h-6.5 w-6.5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${reached ? 'border-gold-500 bg-gold-500 text-white' :
+                            isRejected && idx === 1 ? 'border-rose-500 bg-rose-500 text-white' :
+                              'border-champagne bg-white text-gray-400'
+                          }`}>
                           {isRejected && idx === 1 ? "×" : idx + 1}
                         </div>
                         <p className={`text-[8px] font-bold leading-tight ${reached ? 'text-gold-800' : 'text-text-secondary'}`}>{step.label}</p>
