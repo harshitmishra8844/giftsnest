@@ -523,7 +523,16 @@ const AdminDashboard = () => {
           });
       }
     });
-    return Array.from(new Set([...standard, ...dynamic])).sort((a, b) => a.localeCompare(b));
+    const combined = Array.from(new Set([...standard, ...dynamic]));
+    const activeCategories = combined.filter((catName) => {
+      const selectedCat = catName.toLowerCase();
+      return products.some((product) => {
+        const productCat = String(product.category || "").toLowerCase();
+        const categoriesList = productCat.split(",").map((c) => c.trim()).filter(Boolean);
+        return categoriesList.includes(selectedCat);
+      });
+    });
+    return activeCategories.sort((a, b) => a.localeCompare(b));
   }, [products]);
 
   const filteredProducts = useMemo(

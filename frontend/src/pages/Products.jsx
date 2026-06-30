@@ -64,7 +64,18 @@ const Products = () => {
       }
     });
     const combined = Array.from(new Set([...standard, ...dynamic]));
-    return ["All", ...combined.sort((a, b) => a.localeCompare(b))];
+    const activeCategories = combined.filter((catName) => {
+      const selectedCat = catName.toLowerCase();
+      return products.some((product) => {
+        const productCat = String(product.category || "").toLowerCase();
+        const categoriesList = productCat.split(",").map((c) => c.trim()).filter(Boolean);
+        return (
+          categoriesList.includes(selectedCat) ||
+          categoriesList.some((c) => c.includes(selectedCat) || selectedCat.includes(c))
+        );
+      });
+    });
+    return ["All", ...activeCategories.sort((a, b) => a.localeCompare(b))];
   }, [products]);
 
   const visibleProducts = useMemo(() => {
