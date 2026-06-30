@@ -1731,7 +1731,7 @@ const AdminDashboard = () => {
             ${logoHtml}
             <div>
               <p class="brand-name">${storeInfo.storeName || "Niyora Gifts"}</p>
-              <p class="muted">Shipping Operations Copy</p>
+              <p class="brand-subtitle">Shipping Operations Copy</p>
             </div>
           </div>
           <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
@@ -1739,8 +1739,9 @@ const AdminDashboard = () => {
         <h1>Shipping Label</h1>
         <div class="meta">
           <p><strong>Order ID:</strong> ${getOrderDisplayId(safeOrder)}</p>
-          <p><strong>Status:</strong> ${safeOrder.status || "Pending"} | <strong>Amount:</strong> INR ${Number(safeOrder.totalPrice || 0).toFixed(2)}</p>
-          <p><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString()}</p>
+          <p><strong>Status:</strong> ${safeOrder.status || "Pending"}</p>
+          <p><strong>Amount:</strong> INR ${Number(safeOrder.totalPrice || 0).toFixed(2)}</p>
+          <p><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString("en-IN")}</p>
         </div>
         <div class="row">
           <div class="col">
@@ -1769,7 +1770,9 @@ const AdminDashboard = () => {
           <h2>Package Items</h2>
           <p>${itemList || "N/A"}</p>
         </div>
-        <p class="muted">Generated from Admin Dashboard</p>
+        <div class="footer-note">
+          Generated from Admin Dashboard
+        </div>
       </div>
     `;
   };
@@ -1816,40 +1819,43 @@ const AdminDashboard = () => {
         <head>
           <title>Shipping Labels (${printableOrders.length})</title>
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,450;0,650;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
             @page { size: A4 portrait; margin: 8mm; }
-            body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #fff; }
+            body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; color: #1a1a1a; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .two-up { display: grid; grid-template-rows: 1fr 1fr; gap: 8mm; }
             .sheet-wrap { height: 136.5mm; overflow: hidden; }
-            .sheet-wrap.placeholder { border: 1px dashed #d1d5db; border-radius: 10px; }
-            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 2px solid #111827; padding: 6mm; box-sizing: border-box; }
+            .sheet-wrap.placeholder { border: 1.5px dashed #e5dccb; border-radius: 10px; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 1px solid #e5dccb; padding: 6mm; box-sizing: border-box; background: #faf9f6; border-radius: 12px; position: relative; }
             .page-break { page-break-before: always; break-before: page; }
-            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 2px solid #b89047; padding-bottom: 8px; }
             .brand { display: flex; align-items: center; gap: 8px; }
-            .logo-dot { width: 30px; height: 30px; border-radius: 999px; background: #047857; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
-            .store-logo { width: 34px; height: 34px; object-fit: contain; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; padding: 2px; }
-            .brand-name { margin: 0; font-size: 14px; font-weight: 700; }
-            .pay-stamp { border: 2px solid; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; }
-            .pay-stamp.paid { color: #047857; border-color: #047857; background: #ecfdf5; }
-            .pay-stamp.cod { color: #9a3412; border-color: #9a3412; background: #fff7ed; }
-            .row { display: flex; gap: 10mm; align-items: flex-start; }
-            .col { flex: 1; }
-            h1 { margin: 0 0 6px; font-size: 18px; letter-spacing: 0.4px; }
-            h2 { margin: 0 0 5px; font-size: 12px; text-transform: uppercase; color: #374151; }
-            p { margin: 3px 0; font-size: 11px; line-height: 1.32; }
-            .box { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; min-height: 92px; }
-            .meta { margin: 8px 0 10px; border-top: 1px dashed #6b7280; border-bottom: 1px dashed #6b7280; padding: 8px 0; }
-            .items { margin-top: 10px; }
-            .qr { text-align: center; min-width: 150px; }
-            .qr img { width: 110px; height: 110px; border: 1px solid #d1d5db; padding: 4px; border-radius: 6px; }
-            .barcode { margin-top: 6px; font-family: "Courier New", monospace; letter-spacing: 1.6px; font-size: 12px; }
-            .muted { color: #6b7280; font-size: 10px; }
+            .logo-dot { width: 32px; height: 32px; border-radius: 999px; background: linear-gradient(135deg, #b89047, #d4af37); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Playfair Display', serif; font-size: 14px; }
+            .store-logo { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; border: 1px solid #e5dccb; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 13px; font-weight: 700; font-family: 'Playfair Display', serif; color: #1a1a1a; }
+            .brand-subtitle { margin: 0; font-size: 8px; text-transform: uppercase; letter-spacing: 1.2px; color: #b89047; font-weight: 600; }
+            .pay-stamp { border: 1px solid; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; font-family: 'Outfit', sans-serif; }
+            .pay-stamp.paid { color: #1b4332; border-color: #52b788; background-color: #d8f3dc; }
+            .pay-stamp.cod { color: #7f5539; border-color: #ddb892; background-color: #ede0d4; }
+            .row { display: grid; grid-template-columns: 1fr 1fr 140px; gap: 8px; align-items: start; }
+            .col { min-width: 0; }
+            h1 { margin: 0 0 4px; font-size: 16px; font-family: 'Playfair Display', serif; font-weight: 500; color: #1a1a1a; }
+            h2 { margin: 0 0 4px; font-size: 9px; color: #8b7355; text-transform: uppercase; border-bottom: 1px solid #e5dccb; padding-bottom: 2px; font-family: 'Outfit', sans-serif; font-weight: 700; letter-spacing: 0.8px; }
+            p { margin: 2px 0; font-size: 10px; line-height: 1.35; color: #4a4a4a; }
+            strong { color: #1a1a1a; }
+            .box { border: 1px solid #e5dccb; border-radius: 6px; padding: 6px; min-height: 80px; background: #fff; }
+            .meta { margin: 6px 0 8px; border-top: 1px dashed #e5dccb; border-bottom: 1px dashed #e5dccb; padding: 6px 0; display: flex; justify-content: space-between; font-size: 10px; }
+            .meta p { margin: 0; }
+            .items { margin-top: 8px; background: #fff; border: 1px solid #e5dccb; border-radius: 8px; padding: 8px; }
+            .qr { text-align: center; background: #faf9f6; border: 1px solid #e5dccb; border-radius: 8px; padding: 6px; }
+            .qr img { width: 90px; height: 90px; border: 1px solid #e5dccb; padding: 2px; border-radius: 6px; background: #fff; }
+            .barcode { margin-top: 4px; font-family: "Courier New", monospace; letter-spacing: 1.2px; font-size: 10px; color: #1a1a1a; }
+            .muted { color: #6b7280; font-size: 9px; }
+            .footer-note { margin-top: 8px; text-align: center; font-family: 'Playfair Display', serif; font-style: italic; font-size: 10px; color: #8b7355; border-top: 1px dashed #e5dccb; padding-top: 6px; }
           </style>
         </head>
         <body>
           ${labelsHtml}
-          <script>
-            window.onload = function() { window.print(); };
-          </script>
+          <script>window.onload = function() { window.print(); };</script>
         </body>
       </html>
     `);
@@ -1878,13 +1884,13 @@ const AdminDashboard = () => {
             ${logoHtml}
             <div>
               <p class="brand-name">${storeInfo.storeName || "Niyora Gifts"}</p>
-              <p class="muted">Invoice</p>
+              <p class="brand-subtitle">Curated Celebrations</p>
             </div>
           </div>
           <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
         </div>
         <h1>Tax Invoice</h1>
-        <p class="muted"><strong>Order:</strong> ${getOrderDisplayId(safeOrder)} • <strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString()}</p>
+        <p class="muted"><strong>Order:</strong> ${getOrderDisplayId(safeOrder)} • <strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString("en-IN")}</p>
         <div class="row">
           <div class="col">
             <h2>Bill To</h2>
@@ -1908,7 +1914,7 @@ const AdminDashboard = () => {
         </div>
         <table>
           <thead>
-            <tr><th>Item</th><th>Qty</th><th>Price</th><th>Line</th></tr>
+            <tr><th>Item</th><th>Qty</th><th>Price</th><th>Line Total</th></tr>
           </thead>
           <tbody>
             ${invoiceItems.map((item) => {
@@ -1924,6 +1930,9 @@ const AdminDashboard = () => {
           <p><span>Subtotal</span><span>INR ${subtotal.toFixed(2)}</span></p>
           <p><span>Discount</span><span>- INR ${discount.toFixed(2)}</span></p>
           <p class="grand"><span>Total</span><span>INR ${total.toFixed(2)}</span></p>
+        </div>
+        <div class="footer-note">
+          Thank you for letting us curate your special moments. With love, Niyora.
         </div>
       </div>
     `;
@@ -1968,34 +1977,40 @@ const AdminDashboard = () => {
         <head>
           <title>Invoices (${printableOrders.length})</title>
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,450;0,650;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
             @page { size: A4 portrait; margin: 8mm; }
-            body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #fff; }
+            body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; color: #1a1a1a; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .two-up { display: grid; grid-template-rows: 1fr 1fr; gap: 8mm; }
             .sheet-wrap { height: 136.5mm; overflow: hidden; }
-            .sheet-wrap.placeholder { border: 1px dashed #d1d5db; border-radius: 10px; }
-            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 1.5px solid #d1d5db; padding: 6mm; box-sizing: border-box; }
+            .sheet-wrap.placeholder { border: 1.5px dashed #e5dccb; border-radius: 10px; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 1px solid #e5dccb; padding: 6mm; box-sizing: border-box; background: #faf9f6; border-radius: 12px; position: relative; }
             .page-break { page-break-before: always; break-before: page; }
-            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 2px solid #b89047; padding-bottom: 8px; }
             .brand { display: flex; align-items: center; gap: 8px; }
-            .logo-dot { width: 28px; height: 28px; border-radius: 999px; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
-            .store-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; padding: 2px; }
-            .brand-name { margin: 0; font-size: 12px; font-weight: 700; }
-            .pay-stamp { border: 2px solid; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
-            .pay-stamp.paid { color: #047857; border-color: #047857; background: #ecfdf5; }
-            .pay-stamp.cod { color: #9a3412; border-color: #9a3412; background: #fff7ed; }
-            .row { display: flex; gap: 8mm; align-items: flex-start; }
+            .logo-dot { width: 32px; height: 32px; border-radius: 999px; background: linear-gradient(135deg, #b89047, #d4af37); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Playfair Display', serif; font-size: 14px; }
+            .store-logo { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; border: 1px solid #e5dccb; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 13px; font-weight: 700; font-family: 'Playfair Display', serif; color: #1a1a1a; letter-spacing: 0.5px; }
+            .brand-subtitle { margin: 0; font-size: 8px; text-transform: uppercase; letter-spacing: 1.2px; color: #b89047; font-weight: 600; }
+            .pay-stamp { border: 1px solid; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; font-family: 'Outfit', sans-serif; }
+            .pay-stamp.paid { color: #1b4332; border-color: #52b788; background-color: #d8f3dc; }
+            .pay-stamp.cod { color: #7f5539; border-color: #ddb892; background-color: #ede0d4; }
+            .row { display: flex; gap: 6mm; align-items: flex-start; margin-bottom: 8px; }
             .col { flex: 1; }
-            h1 { margin: 0 0 6px; font-size: 18px; letter-spacing: 0.4px; }
-            h2 { margin: 0 0 5px; font-size: 12px; text-transform: uppercase; color: #374151; }
-            p { margin: 3px 0; font-size: 11px; line-height: 1.32; }
-            .box { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px; min-height: 56px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-            th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 6px 3px; font-size: 11px; }
-            th { color: #4b5563; font-weight: 600; }
-            .totals { margin-top: 6px; margin-left: auto; width: 220px; }
-            .totals p { display: flex; justify-content: space-between; }
-            .grand { font-weight: 700; border-top: 1px solid #111827; padding-top: 4px; }
-            .muted { color: #6b7280; font-size: 10px; }
+            h1 { margin: 0 0 4px; font-size: 16px; font-family: 'Playfair Display', serif; font-weight: 500; color: #1a1a1a; }
+            h2 { margin: 0 0 4px; font-size: 10px; font-family: 'Outfit', sans-serif; text-transform: uppercase; color: #8b7355; border-bottom: 1px solid #e5dccb; padding-bottom: 2px; font-weight: 700; letter-spacing: 0.8px; }
+            p { margin: 2px 0; font-size: 10px; line-height: 1.35; color: #4a4a4a; }
+            strong { color: #1a1a1a; }
+            .box { border: 1px solid #e5dccb; border-radius: 8px; padding: 6px; min-height: 52px; background: #fff; }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 6px; border-radius: 8px; overflow: hidden; border: 1px solid #e5dccb; }
+            th, td { text-align: left; padding: 6px 8px; font-size: 10px; border-bottom: 1px solid #e5dccb; }
+            th { color: #8b7355; font-family: 'Outfit', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; background-color: #f5f0e6; }
+            td { background-color: #fff; color: #333; }
+            tr:last-child td { border-bottom: none; }
+            .totals { margin-top: 6px; margin-left: auto; width: 200px; background: #fff; border: 1px solid #e5dccb; border-radius: 8px; padding: 8px; }
+            .totals p { display: flex; justify-content: space-between; margin: 4px 0; }
+            .grand { font-family: 'Outfit', sans-serif; font-weight: 700; border-top: 1px solid #e5dccb; padding-top: 6px; margin-top: 6px; color: #b89047; font-size: 12px; }
+            .muted { color: #6b7280; font-size: 9px; }
+            .footer-note { margin-top: 12px; text-align: center; font-family: 'Playfair Display', serif; font-style: italic; font-size: 11px; color: #8b7355; border-top: 1px dashed #e5dccb; padding-top: 8px; }
           </style>
         </head>
         <body>
@@ -2049,29 +2064,35 @@ const AdminDashboard = () => {
         <head>
           <title>Invoice - ${getOrderDisplayId(safeOrder)}</title>
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,450;0,650;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
             @page { size: A4 portrait; margin: 8mm; }
-            body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #fff; }
-            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 1.5px solid #d1d5db; padding: 9mm; box-sizing: border-box; }
-            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-            .brand { display: flex; align-items: center; gap: 8px; }
-            .logo-dot { width: 30px; height: 30px; border-radius: 999px; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
-            .store-logo { width: 34px; height: 34px; object-fit: contain; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; padding: 2px; }
-            .brand-name { margin: 0; font-size: 14px; font-weight: 700; }
-            .pay-stamp { border: 2px solid; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; }
-            .pay-stamp.paid { color: #047857; border-color: #047857; background: #ecfdf5; }
-            .pay-stamp.cod { color: #9a3412; border-color: #9a3412; background: #fff7ed; }
-            h1 { margin: 0; font-size: 24px; }
-            h2 { margin: 0 0 6px; font-size: 14px; color: #374151; text-transform: uppercase; }
-            p { margin: 4px 0; font-size: 13px; line-height: 1.4; }
-            .top { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-            .box { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; flex: 1; }
-            table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-            th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 8px 4px; font-size: 13px; }
-            th { color: #4b5563; font-weight: 600; }
-            .totals { margin-top: 10px; margin-left: auto; width: 280px; }
-            .totals p { display: flex; justify-content: space-between; }
-            .grand { font-size: 16px; font-weight: 700; border-top: 1px solid #111827; padding-top: 6px; }
-            .muted { color: #6b7280; font-size: 12px; margin-top: 14px; }
+            body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; color: #1a1a1a; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 1px solid #e5dccb; padding: 10mm; box-sizing: border-box; background: #faf9f6; border-radius: 12px; position: relative; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #b89047; padding-bottom: 12px; }
+            .brand { display: flex; align-items: center; gap: 10px; }
+            .logo-dot { width: 36px; height: 36px; border-radius: 999px; background: linear-gradient(135deg, #b89047, #d4af37); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Playfair Display', serif; font-size: 16px; }
+            .store-logo { width: 42px; height: 42px; object-fit: contain; border-radius: 6px; border: 1px solid #e5dccb; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 16px; font-weight: 700; font-family: 'Playfair Display', serif; color: #1a1a1a; letter-spacing: 0.5px; }
+            .brand-subtitle { margin: 0; font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: #b89047; font-weight: 600; }
+            .pay-stamp { border: 1px solid; padding: 4px 12px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; font-family: 'Outfit', sans-serif; }
+            .pay-stamp.paid { color: #1b4332; border-color: #52b788; background-color: #d8f3dc; }
+            .pay-stamp.cod { color: #7f5539; border-color: #ddb892; background-color: #ede0d4; }
+            h1 { margin: 0; font-size: 22px; font-family: 'Playfair Display', serif; font-weight: 500; color: #1a1a1a; }
+            h2 { margin: 0 0 6px; font-size: 11px; font-family: 'Outfit', sans-serif; text-transform: uppercase; color: #8b7355; border-bottom: 1px solid #e5dccb; padding-bottom: 4px; font-weight: 700; letter-spacing: 1px; }
+            p { margin: 4px 0; font-size: 11px; line-height: 1.45; color: #4a4a4a; }
+            strong { color: #1a1a1a; }
+            .top { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+            .box { border: 1px solid #e5dccb; border-radius: 8px; padding: 10px; flex: 1; background: #fff; }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px; border-radius: 8px; overflow: hidden; border: 1px solid #e5dccb; }
+            th, td { text-align: left; padding: 8px 10px; font-size: 11px; border-bottom: 1px solid #e5dccb; }
+            th { color: #8b7355; font-family: 'Outfit', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; background-color: #f5f0e6; }
+            td { background-color: #fff; color: #333; }
+            tr:last-child td { border-bottom: none; }
+            .totals { margin-top: 12px; margin-left: auto; width: 240px; background: #fff; border: 1px solid #e5dccb; border-radius: 8px; padding: 10px; }
+            .totals p { display: flex; justify-content: space-between; margin: 4px 0; }
+            .grand { font-family: 'Outfit', sans-serif; font-weight: 700; border-top: 1px solid #e5dccb; padding-top: 8px; margin-top: 8px; color: #b89047; font-size: 13px; }
+            .muted { color: #6b7280; font-size: 10px; margin-top: 10px; }
+            .footer-note { margin-top: 25px; text-align: center; font-family: 'Playfair Display', serif; font-style: italic; font-size: 12px; color: #8b7355; border-top: 1px dashed #e5dccb; padding-top: 15px; }
           </style>
         </head>
         <body>
@@ -2081,7 +2102,7 @@ const AdminDashboard = () => {
                 ${logoHtml}
                 <div>
                   <p class="brand-name">${storeInfo.storeName || "Niyora Gifts"}</p>
-                  <p class="muted">Accounts Copy</p>
+                  <p class="brand-subtitle">Official Copy</p>
                 </div>
               </div>
               <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
@@ -2096,7 +2117,7 @@ const AdminDashboard = () => {
               <div class="box">
                 <h2>Invoice Details</h2>
                 <p><strong>Order ID:</strong> ${getOrderDisplayId(safeOrder)}</p>
-                <p><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString()}</p>
+                <p><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString("en-IN")}</p>
                 <p><strong>Status:</strong> ${safeOrder.status || "Pending"}</p>
                 <p><strong>Coupon:</strong> ${safeOrder.couponCode || "-"}</p>
               </div>
@@ -2127,7 +2148,9 @@ const AdminDashboard = () => {
               <p><span>Discount</span><span>- INR ${discount.toFixed(2)}</span></p>
               <p class="grand"><span>Total</span><span>INR ${total.toFixed(2)}</span></p>
             </div>
-            <p class="muted">This is a computer-generated invoice from Admin Dashboard.</p>
+            <div class="footer-note">
+              Thank you for letting us curate your special moments. With love, Niyora.
+            </div>
           </div>
           <script>window.onload = function() { window.print(); };</script>
         </body>
@@ -2163,7 +2186,7 @@ const AdminDashboard = () => {
               ${logoHtml}
               <div>
                 <p class="brand-name">${storeInfo.storeName || "Niyora Gifts"}</p>
-                <p class="muted">Label + Invoice (single A4)</p>
+                <p class="brand-subtitle">Curated Celebrations</p>
               </div>
             </div>
             <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
@@ -2197,21 +2220,21 @@ const AdminDashboard = () => {
                 <p class="barcode">*${getOrderDisplayId(safeOrder)}*</p>
               </div>
             </div>
-            <p class="muted"><strong>Items:</strong> ${itemList || "N/A"}</p>
+            <p class="muted"><strong>Items:</strong><br/>${itemList || "N/A"}</p>
           </div>
 
           <div class="cutline">
-            <span>Cut / Tear here</span>
+            <span>✂ Cut / Tear here ✂</span>
           </div>
 
           <div class="panel invoice-panel">
             <div class="panel-head">
               <h1>Tax Invoice</h1>
-              <p class="panel-meta"><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString()} • <strong>Coupon:</strong> ${safeOrder.couponCode || "-"}</p>
+              <p class="panel-meta"><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString("en-IN")} • <strong>Coupon:</strong> ${safeOrder.couponCode || "-"}</p>
             </div>
             <table>
               <thead>
-                <tr><th>Item</th><th>Qty</th><th>Price</th><th>Line</th></tr>
+                <tr><th>Item</th><th>Qty</th><th>Price</th><th>Line Total</th></tr>
               </thead>
               <tbody>
                 ${invoiceItems
@@ -2233,7 +2256,9 @@ const AdminDashboard = () => {
               <p><span>Discount</span><span>- INR ${discount.toFixed(2)}</span></p>
               <p class="grand"><span>Total</span><span>INR ${total.toFixed(2)}</span></p>
             </div>
-            <p class="muted">Generated from Admin Dashboard</p>
+            <div class="footer-note">
+              Thank you for letting us curate your special moments. With love, Niyora.
+            </div>
           </div>
         </div>
       </div>
@@ -2268,50 +2293,52 @@ const AdminDashboard = () => {
         <head>
           <title>Shipping + Invoice (${printableOrders.length})</title>
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,450;0,650;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
             @page { size: A4 portrait; margin: 8mm; }
-            body { font-family: Arial, sans-serif; margin: 0; color: #111827; }
-            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; box-sizing: border-box; border: 1.5px solid #d1d5db; padding: 8mm; }
+            body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; color: #1a1a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; box-sizing: border-box; border: 1px solid #e5dccb; padding: 6mm; background: #faf9f6; border-radius: 12px; }
             .page-break { page-break-before: always; break-before: page; }
             .combined { display: block; }
-            .panel { border: 1px solid #d1d5db; border-radius: 10px; padding: 8px; background: #fff; }
-            .label-panel { }
-            .invoice-panel { }
-            .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 6px; }
-            .panel-meta { margin: 0; color: #374151; font-size: 10px; }
-            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+            .panel { border: 1px solid #e5dccb; border-radius: 8px; padding: 10px; background: #fff; }
+            .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 2px solid #b89047; padding-bottom: 4px; margin-bottom: 6px; }
+            .panel-meta { margin: 0; color: #4a4a4a; font-size: 9px; font-family: 'Outfit', sans-serif; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 2px solid #b89047; padding-bottom: 6px; }
             .brand { display: flex; align-items: center; gap: 8px; }
-            .logo-dot { width: 28px; height: 28px; border-radius: 999px; background: #0f766e; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
-            .store-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; padding: 2px; }
-            .brand-name { margin: 0; font-size: 12px; font-weight: 700; }
-            .pay-stamp { border: 2px solid; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
-            .pay-stamp.paid { color: #047857; border-color: #047857; background: #ecfdf5; }
-            .pay-stamp.cod { color: #9a3412; border-color: #9a3412; background: #fff7ed; }
-            .label-grid { display: grid; grid-template-columns: 1fr 1fr 150px; gap: 8px; align-items: start; }
+            .logo-dot { width: 32px; height: 32px; border-radius: 999px; background: linear-gradient(135deg, #b89047, #d4af37); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Playfair Display', serif; font-size: 14px; }
+            .store-logo { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; border: 1px solid #e5dccb; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 13px; font-weight: 700; font-family: 'Playfair Display', serif; color: #1a1a1a; }
+            .brand-subtitle { margin: 0; font-size: 8px; text-transform: uppercase; letter-spacing: 1.2px; color: #b89047; font-weight: 600; }
+            .pay-stamp { border: 1px solid; padding: 3px 10px; border-radius: 4px; font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; font-family: 'Outfit', sans-serif; }
+            .pay-stamp.paid { color: #1b4332; border-color: #52b788; background-color: #d8f3dc; }
+            .pay-stamp.cod { color: #7f5539; border-color: #ddb892; background-color: #ede0d4; }
+            .label-grid { display: grid; grid-template-columns: 1fr 1fr 140px; gap: 8px; align-items: start; }
             .label-col { min-width: 0; }
-            .label-qr { text-align: center; }
-            .cutline { position: relative; text-align: center; color: #6b7280; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
-            .cutline:before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed #9ca3af; }
-            .cutline span { position: relative; background: #fff; padding: 0 10px; }
-            h1 { margin: 0 0 6px; font-size: 18px; }
-            h2 { margin: 0 0 4px; font-size: 12px; color: #374151; text-transform: uppercase; }
-            p { margin: 3px 0; font-size: 11px; line-height: 1.35; }
-            .box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px; min-height: 70px; }
-            .label-qr img { width: 110px; height: 110px; border: 1px solid #d1d5db; padding: 3px; border-radius: 6px; }
-            .barcode { margin-top: 6px; font-family: "Courier New", monospace; letter-spacing: 1.6px; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-            th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 6px 3px; font-size: 11px; }
-            th { color: #4b5563; font-weight: 600; }
-            .totals { margin-top: 8px; margin-left: auto; width: 240px; }
-            .totals p { display: flex; justify-content: space-between; }
-            .grand { font-weight: 700; border-top: 1px solid #111827; padding-top: 5px; }
-            .muted { color: #6b7280; font-size: 10px; }
+            .label-qr { text-align: center; background: #faf9f6; border: 1px solid #e5dccb; border-radius: 8px; padding: 6px; }
+            .cutline { position: relative; text-align: center; color: #8b7355; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin: 12px 0; font-family: 'Outfit', sans-serif; font-weight: 600; }
+            .cutline:before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed #b89047; }
+            .cutline span { position: relative; background: #faf9f6; padding: 0 10px; }
+            h1 { margin: 0 0 4px; font-size: 16px; font-family: 'Playfair Display', serif; font-weight: 500; color: #1a1a1a; }
+            h2 { margin: 0 0 4px; font-size: 9px; color: #8b7355; text-transform: uppercase; border-bottom: 1px solid #e5dccb; padding-bottom: 2px; font-family: 'Outfit', sans-serif; font-weight: 700; letter-spacing: 0.8px; }
+            p { margin: 2px 0; font-size: 10px; line-height: 1.35; color: #4a4a4a; }
+            strong { color: #1a1a1a; }
+            .box { border: 1px solid #e5dccb; border-radius: 6px; padding: 6px; min-height: 60px; background: #faf9f6; }
+            .label-qr img { width: 90px; height: 90px; border: 1px solid #e5dccb; padding: 2px; border-radius: 6px; background: #fff; }
+            .barcode { margin-top: 4px; font-family: "Courier New", monospace; letter-spacing: 1.2px; font-size: 10px; color: #1a1a1a; }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 6px; border-radius: 8px; overflow: hidden; border: 1px solid #e5dccb; }
+            th, td { text-align: left; padding: 6px 8px; font-size: 10px; border-bottom: 1px solid #e5dccb; }
+            th { color: #8b7355; font-family: 'Outfit', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; background-color: #f5f0e6; }
+            td { background-color: #fff; color: #333; }
+            tr:last-child td { border-bottom: none; }
+            .totals { margin-top: 8px; margin-left: auto; width: 220px; background: #fff; border: 1px solid #e5dccb; border-radius: 8px; padding: 8px; }
+            .totals p { display: flex; justify-content: space-between; margin: 4px 0; }
+            .grand { font-family: 'Outfit', sans-serif; font-weight: 700; border-top: 1px solid #e5dccb; padding-top: 6px; margin-top: 6px; color: #b89047; font-size: 12px; }
+            .muted { color: #6b7280; font-size: 9px; }
+            .footer-note { margin-top: 10px; text-align: center; font-family: 'Playfair Display', serif; font-style: italic; font-size: 11px; color: #8b7355; border-top: 1px dashed #e5dccb; padding-top: 6px; }
           </style>
         </head>
         <body>
           ${combinedHtml}
-          <script>
-            window.onload = function() { window.print(); };
-          </script>
+          <script>window.onload = function() { window.print(); };</script>
         </body>
       </html>
     `);

@@ -68,6 +68,7 @@ const MyProfile = () => {
   const { auth, login, logout } = useAuth();
   const [orders, setOrders] = useState([]);
   const [addresses, setAddresses] = useState([]);
+  const [storeInfo, setStoreInfo] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -614,6 +615,132 @@ const MyProfile = () => {
     }
   };
 
+  const handleDownloadInvoice = (order) => {
+    const safeOrder = order || {};
+    const address = safeOrder?.address || {};
+    const items = Array.isArray(safeOrder?.products) ? safeOrder.products : [];
+    const subtotal = Number(safeOrder?.subtotal || 0);
+    const discount = Number(safeOrder?.discountAmount || 0);
+    const total = Number(safeOrder?.totalPrice || 0);
+    const paymentStamp = safeOrder.paymentMethod === "COD" && safeOrder.paymentStatus !== "Paid" ? "COD - UNPAID" : "PAID";
+    
+    const info = storeInfo || {
+      storeName: "Niyora Gifts",
+      storePhone: "+91-90000-00000",
+      storeAddress: "123 Commerce Street, Mumbai, Maharashtra 400001, India",
+      storeLogoUrl: "",
+    };
+
+    const logoHtml = info.storeLogoUrl
+      ? `<img src="${info.storeLogoUrl}" alt="Store Logo" class="store-logo" />`
+      : `<div class="logo-dot">N</div>`;
+
+    const printWindow = window.open("", "_blank", "width=900,height=1100");
+    if (!printWindow) {
+      setError("Popup blocked. Please allow popups to download invoice.");
+      return;
+    }
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${getOrderDisplayId(safeOrder)}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,450;0,650;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+            @page { size: A4 portrait; margin: 8mm; }
+            body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; color: #1a1a1a; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .sheet { width: 100%; max-width: 194mm; margin: 0 auto; border: 1px solid #e5dccb; padding: 10mm; box-sizing: border-box; background: #faf9f6; border-radius: 12px; position: relative; }
+            .top-banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #b89047; padding-bottom: 12px; }
+            .brand { display: flex; align-items: center; gap: 10px; }
+            .logo-dot { width: 36px; height: 36px; border-radius: 999px; background: linear-gradient(135deg, #b89047, #d4af37); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Playfair Display', serif; font-size: 16px; }
+            .store-logo { width: 42px; height: 42px; object-fit: contain; border-radius: 6px; border: 1px solid #e5dccb; background: #fff; padding: 2px; }
+            .brand-name { margin: 0; font-size: 16px; font-weight: 700; font-family: 'Playfair Display', serif; color: #1a1a1a; letter-spacing: 0.5px; }
+            .brand-subtitle { margin: 0; font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: #b89047; font-weight: 600; }
+            .pay-stamp { border: 1px solid; padding: 4px 12px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; font-family: 'Outfit', sans-serif; }
+            .pay-stamp.paid { color: #1b4332; border-color: #52b788; background-color: #d8f3dc; }
+            .pay-stamp.cod { color: #7f5539; border-color: #ddb892; background-color: #ede0d4; }
+            h1 { margin: 0; font-size: 22px; font-family: 'Playfair Display', serif; font-weight: 500; color: #1a1a1a; }
+            h2 { margin: 0 0 6px; font-size: 11px; font-family: 'Outfit', sans-serif; text-transform: uppercase; color: #8b7355; border-bottom: 1px solid #e5dccb; padding-bottom: 4px; font-weight: 700; letter-spacing: 1px; }
+            p { margin: 4px 0; font-size: 11px; line-height: 1.45; color: #4a4a4a; }
+            strong { color: #1a1a1a; }
+            .top { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+            .box { border: 1px solid #e5dccb; border-radius: 8px; padding: 10px; flex: 1; background: #fff; }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px; border-radius: 8px; overflow: hidden; border: 1px solid #e5dccb; }
+            th, td { text-align: left; padding: 8px 10px; font-size: 11px; border-bottom: 1px solid #e5dccb; }
+            th { color: #8b7355; font-family: 'Outfit', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; background-color: #f5f0e6; }
+            td { background-color: #fff; color: #333; }
+            tr:last-child td { border-bottom: none; }
+            .totals { margin-top: 12px; margin-left: auto; width: 240px; background: #fff; border: 1px solid #e5dccb; border-radius: 8px; padding: 10px; }
+            .totals p { display: flex; justify-content: space-between; margin: 4px 0; }
+            .grand { font-family: 'Outfit', sans-serif; font-weight: 700; border-top: 1px solid #e5dccb; padding-top: 8px; margin-top: 8px; color: #b89047; font-size: 13px; }
+            .muted { color: #6b7280; font-size: 10px; margin-top: 10px; }
+            .footer-note { margin-top: 25px; text-align: center; font-family: 'Playfair Display', serif; font-style: italic; font-size: 12px; color: #8b7355; border-top: 1px dashed #e5dccb; padding-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="sheet">
+            <div class="top-banner">
+              <div class="brand">
+                ${logoHtml}
+                <div>
+                  <p class="brand-name">${info.storeName || "Niyora Gifts"}</p>
+                  <p class="brand-subtitle">Customer Invoice</p>
+                </div>
+              </div>
+              <div class="pay-stamp ${paymentStamp === "PAID" ? "paid" : "cod"}">${paymentStamp}</div>
+            </div>
+            <div class="top">
+              <div class="box">
+                <h1>Tax Invoice</h1>
+                <p><strong>${info.storeName}</strong></p>
+                <p>${info.storeAddress}</p>
+                <p>Phone: ${info.storePhone}</p>
+              </div>
+              <div class="box">
+                <h2>Invoice Details</h2>
+                <p><strong>Order ID:</strong> ${getOrderDisplayId(safeOrder)}</p>
+                <p><strong>Date:</strong> ${new Date(safeOrder.createdAt || Date.now()).toLocaleString("en-IN")}</p>
+                <p><strong>Status:</strong> ${safeOrder.status || "Pending"}</p>
+                <p><strong>Coupon:</strong> ${safeOrder.couponCode || "-"}</p>
+              </div>
+            </div>
+            <div class="box">
+              <h2>Bill To / Ship To</h2>
+              <p><strong>${address.fullName || "N/A"}</strong></p>
+              <p>${address.phone || "-"}</p>
+              <p>${address.line1 || "-"}</p>
+              <p>${[address.city, address.state, address.postalCode].filter(Boolean).join(", ") || "-"}</p>
+              <p>${address.country || "-"}</p>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Item</th><th>Qty</th><th>Price</th><th>Line Total</th></tr>
+              </thead>
+              <tbody>
+                ${items.map((item) => {
+      const qty = Number(item.quantity || 0);
+      const price = Number(item.price || 0);
+      const lineTotal = (qty * price).toFixed(2);
+      return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+    }).join("")}
+              </tbody>
+            </table>
+            <div class="totals">
+              <p><span>Subtotal</span><span>INR ${subtotal.toFixed(2)}</span></p>
+              <p><span>Discount</span><span>- INR ${discount.toFixed(2)}</span></p>
+              <p class="grand"><span>Total</span><span>INR ${total.toFixed(2)}</span></p>
+            </div>
+            <div class="footer-note">
+              Thank you for letting us curate your special moments. With love, Niyora.
+            </div>
+          </div>
+          <script>window.onload = function() { window.print(); };</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   useEffect(() => {
     const state = location.state || {};
     if (state.activeTab === "addresses") {
@@ -637,12 +764,16 @@ const MyProfile = () => {
         setLoading(true);
         setError("");
         setSuccessMessage("");
-        const [ordersRes, addressesRes] = await Promise.all([
+        const [ordersRes, addressesRes, storeInfoRes] = await Promise.all([
           api.get("/orders/my"),
           api.get("/user/addresses"),
+          api.get("/store-info").catch(() => null),
         ]);
         setOrders(ordersRes.data);
         setAddresses(addressesRes.data);
+        if (storeInfoRes && storeInfoRes.data) {
+          setStoreInfo(storeInfoRes.data);
+        }
         await Promise.all([fetchReturns(), fetchNotifications()]);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load your profile data");
@@ -1867,6 +1998,18 @@ const MyProfile = () => {
                       Track Return: {getOrderReturn(order._id).status}
                     </button>
                   ) : null}
+                  {order.status === "Delivered" ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadInvoice(order)}
+                      className="rounded-full border border-luxury-black bg-luxury-black text-white hover:bg-gold-600 hover:border-gold-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:scale-[1.01] transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download Invoice
+                    </button>
+                  ) : null}
                 </div>
               </article>
             ))}
@@ -2309,18 +2452,32 @@ const MyProfile = () => {
 
                   {/* Progress Indicator */}
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">Delivery Status Track</h4>
-                      {["Shipped", "Delivered"].includes(order.status) && order.trackingId && (
-                        <a
-                          href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-full bg-gold-500 hover:bg-gold-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition duration-300 shadow-xs cursor-pointer"
-                        >
-                          Track Live Package
-                        </a>
-                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {["Shipped", "Delivered"].includes(order.status) && order.trackingId && (
+                          <a
+                            href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-gold-500 hover:bg-gold-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition duration-300 shadow-xs cursor-pointer"
+                          >
+                            Track Live Package
+                          </a>
+                        )}
+                        {order.status === "Delivered" && (
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadInvoice(order)}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-luxury-black hover:bg-gold-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition duration-300 shadow-xs cursor-pointer"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download Invoice
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {["Shipped", "Delivered"].includes(order.status) && order.trackingId && (
