@@ -3,13 +3,16 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import api, { resolveMediaUrl } from "../services/api";
 import { clearUserAuth, getUserAuth, saveUserAuth } from "../services/userAuth";
 import { useAuth } from "../context/AuthContext";
-
-const tabClass = (active) =>
-  `shrink-0 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition duration-300 ${
-    active
-      ? "bg-gold-500 text-white shadow-xs scale-[1.02]"
-      : "bg-white text-luxury-black hover:bg-gold-50 hover:text-gold-600 border border-champagne"
-  }`;
+import { useWishlist } from "../context/WishlistContext";
+import { useCart } from "../context/CartContext";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  User, Mail, Phone, Calendar, Award, Activity, ChevronRight, LogOut, Settings,
+  ShoppingBag, Heart, MapPin, Truck, Bell, Gift, Compass, ShieldCheck, HelpCircle,
+  Edit, Trash2, Plus, Search, Share2, Camera, FileText, CheckCircle, MessageSquare,
+  Paperclip, ArrowLeft, AlertCircle, TrendingUp, Lock, Moon, Globe, RefreshCw, Download,
+  Info, CreditCard, ChevronDown, Check, X, Shield, Eye, LockKeyhole, UserCog, ToggleLeft, HelpCircle as HelpIcon
+} from "lucide-react";
 
 const trackingSteps = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered"];
 
@@ -39,12 +42,12 @@ const getTrackingUrl = (trackingId, carrier = "generic") => {
 };
 
 const addressLabelOptions = [
-  { id: "home", label: "Home", icon: "🏠", color: "bg-gold-50 text-gold-800 border-gold-200/40" },
-  { id: "work", label: "Work", icon: "💼", color: "bg-gold-50 text-gold-800 border-gold-200/40" },
-  { id: "office", label: "Office", icon: "🏢", color: "bg-gold-50 text-gold-800 border-gold-200/40" },
-  { id: "parents", label: "Parents", icon: "👨‍👩‍👧‍👦", color: "bg-gold-50 text-gold-800 border-gold-200/40" },
-  { id: "friend", label: "Friend", icon: "👥", color: "bg-gold-50 text-gold-800 border-gold-200/40" },
-  { id: "other", label: "Other", icon: "📍", color: "bg-gold-50 text-gold-800 border-gold-200/40" },
+  { id: "home", label: "Home", icon: "🏠", color: "bg-amber-50/80 text-amber-900 border border-amber-200/50" },
+  { id: "work", label: "Work", icon: "💼", color: "bg-amber-50/80 text-amber-900 border border-amber-200/50" },
+  { id: "office", label: "Office", icon: "🏢", color: "bg-amber-50/80 text-amber-900 border border-amber-200/50" },
+  { id: "parents", label: "Parents", icon: "👨‍👩‍👧‍👦", color: "bg-amber-50/80 text-amber-900 border border-amber-200/50" },
+  { id: "friend", label: "Friend", icon: "👥", color: "bg-amber-50/80 text-amber-900 border border-amber-200/50" },
+  { id: "other", label: "Other", icon: "📍", color: "bg-amber-50/80 text-amber-900 border border-amber-200/50" },
 ];
 
 const initialAddressForm = {
@@ -64,8 +67,18 @@ const MyProfile = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const returnToAfterAddressSave = location.state?.returnTo || "";
-  
+
   const { auth, login, logout } = useAuth();
+  const { wishlistItems, removeFromWishlist, isLoading: wishlistLoading } = useWishlist();
+  const { addToCart, cartItems } = useCart();
+
+  const getGreeting = () => {
+    const hrs = new Date().getHours();
+    if (hrs < 12) return "Good morning";
+    if (hrs < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
   const [orders, setOrders] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [storeInfo, setStoreInfo] = useState(null);
@@ -77,13 +90,17 @@ const MyProfile = () => {
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState(initialAddressForm);
   const [savingAddress, setSavingAddress] = useState(false);
-  
+
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelTargetOrder, setCancelTargetOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelDetails, setCancelDetails] = useState("");
   const [cancelConfirmed, setCancelConfirmed] = useState(false);
   const [submittingCancel, setSubmittingCancel] = useState(false);
+
+  // Recommendations state
+  const [recommendations, setRecommendations] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   // Profile update form state
   const [profileForm, setProfileForm] = useState({
@@ -92,6 +109,12 @@ const MyProfile = () => {
     mobileNumber: auth?.mobileNumber || "",
   });
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // Future-ready setting toggles
+  const [darkMode, setDarkMode] = useState(false);
+  const [marketingEmails, setMarketingEmails] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(true);
+  const [whatsappUpdates, setWhatsappUpdates] = useState(true);
 
   // Sync profile form when auth updates
   useEffect(() => {
@@ -332,8 +355,7 @@ const MyProfile = () => {
     setCodIfscCode("");
     setError("");
     setSuccessMessage("");
-    
-    // Select all items by default
+
     const itemsSelection = {};
     const itemsQtys = {};
     order.products.forEach((p) => {
@@ -343,10 +365,9 @@ const MyProfile = () => {
     });
     setSelectedReturnItems(itemsSelection);
     setReturnItemQuantities(itemsQtys);
-    
+
     setReturnModalOpen(true);
 
-    // Fetch product details for these items to validate returns/replacements policies
     const productDetailMap = {};
     try {
       setUploadingFiles(true);
@@ -372,7 +393,7 @@ const MyProfile = () => {
   const handleReturnFileUpload = async (e) => {
     const files = e.target.files;
     if (!files || !files.length) return;
-    
+
     const formData = new FormData();
     setUploadingFiles(true);
     setError("");
@@ -470,7 +491,7 @@ const MyProfile = () => {
       setLoading(true);
       setError("");
       setSuccessMessage("");
-      
+
       const payload = {
         orderId: returnOrder._id,
         items: selectedItems.map(p => {
@@ -507,8 +528,7 @@ const MyProfile = () => {
       setSuccessMessage(data.message || "Request submitted successfully!");
       setReturnModalOpen(false);
       setReturnOrder(null);
-      
-      // Refresh lists
+
       await Promise.all([fetchReturns(), fetchTickets(), api.get("/orders/my").then(res => setOrders(res.data))]);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit request.");
@@ -529,7 +549,22 @@ const MyProfile = () => {
     }
   }, [activeTab, auth]);
 
-  // Calculate overview metrics
+  // Fetch product recommendations
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        setLoadingRecommendations(true);
+        const { data } = await api.get("/products");
+        setRecommendations(data.slice(0, 8));
+      } catch (err) {
+        console.error("Failed to load recommendations:", err);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+    fetchRecommendations();
+  }, []);
+
   const activeOrdersCount = useMemo(() => {
     return orders.filter((o) => !["Delivered", "Cancelled"].includes(o.status)).length;
   }, [orders]);
@@ -553,15 +588,13 @@ const MyProfile = () => {
   const canRequestReturn = (order) => {
     if (!order) return false;
     if (order.status !== "Delivered") return false;
-    
-    // Check if there is already a return request for this order
+
     const hasExisting = returnsList.some((ret) => {
       const orderId = ret.order?._id || ret.order;
       return orderId === order._id;
     });
     if (hasExisting) return false;
-    
-    // Check 30-day return window from updatedAt
+
     const deliveryDate = new Date(order.updatedAt);
     const diffTime = Math.abs(new Date() - deliveryDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -623,7 +656,7 @@ const MyProfile = () => {
     const discount = Number(safeOrder?.discountAmount || 0);
     const total = Number(safeOrder?.totalPrice || 0);
     const paymentStamp = safeOrder.paymentMethod === "COD" && safeOrder.paymentStatus !== "Paid" ? "COD - UNPAID" : "PAID";
-    
+
     const info = storeInfo || {
       storeName: "Niyora Gifts",
       storePhone: "+91-90000-00000",
@@ -718,11 +751,11 @@ const MyProfile = () => {
               </thead>
               <tbody>
                 ${items.map((item) => {
-      const qty = Number(item.quantity || 0);
-      const price = Number(item.price || 0);
-      const lineTotal = (qty * price).toFixed(2);
-      return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
-    }).join("")}
+                  const qty = Number(item.quantity || 0);
+                  const price = Number(item.price || 0);
+                  const lineTotal = (qty * price).toFixed(2);
+                  return `<tr><td>${item.name || "Item"}</td><td>${qty}</td><td>INR ${price.toFixed(2)}</td><td>INR ${lineTotal}</td></tr>`;
+                }).join("")}
               </tbody>
             </table>
             <div class="totals">
@@ -913,7 +946,7 @@ const MyProfile = () => {
       };
 
       const { data } = await api.put("/user/profile", payload);
-      login(data); // Syncs globally with context and localStorage
+      login(data);
       setSuccessMessage("Account settings updated successfully!");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update profile settings");
@@ -925,41 +958,41 @@ const MyProfile = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case "Delivered":
-        return "bg-gold-50 text-gold-800 border-gold-200/45";
+        return "bg-amber-100/50 text-amber-900 border border-amber-300/30";
       case "Shipped":
-        return "bg-blue-50 text-blue-800 border-blue-200/40";
+        return "bg-blue-100/40 text-blue-900 border border-blue-300/30";
       case "Processing":
-        return "bg-amber-50 text-amber-800 border-amber-200/40";
+        return "bg-indigo-100/40 text-indigo-900 border border-indigo-300/30";
       case "Order Confirmed":
-        return "bg-purple-50 text-purple-800 border-purple-200/40";
+        return "bg-emerald-100/40 text-emerald-900 border border-emerald-300/30";
       case "Pending":
-        return "bg-gray-50 text-gray-800 border-gray-200/40";
+        return "bg-gray-100/50 text-gray-700 border border-gray-300/30";
       case "Cancelled":
-        return "bg-red-50 text-red-800 border-red-200/40";
+        return "bg-rose-100/40 text-rose-900 border border-rose-300/30";
       default:
-        return "bg-gray-50 text-gray-800 border-gray-200/40";
+        return "bg-gray-100/50 text-gray-700 border border-gray-300/30";
     }
   };
 
   const getReturnStatusColor = (status) => {
     switch (status) {
       case "Return Requested":
-        return "bg-amber-50 text-amber-800 border-amber-200/40";
+        return "bg-indigo-50 text-indigo-800 border border-indigo-200/50";
       case "Under Review":
-        return "bg-blue-50 text-blue-800 border-blue-200/40";
+        return "bg-blue-50 text-blue-800 border border-blue-200/50";
       case "Approved":
       case "Refunded":
       case "Completed":
-        return "bg-gold-50 text-gold-800 border-gold-200/45";
+        return "bg-amber-50 text-amber-800 border border-gold-300/30";
       case "Pickup Scheduled":
       case "Product Received":
       case "Refund Processing":
       case "Replacement Shipped":
-        return "bg-purple-50 text-purple-800 border-purple-200/40";
+        return "bg-purple-50 text-purple-800 border border-purple-200/50";
       case "Rejected":
-        return "bg-red-50 text-red-800 border-red-200/40";
+        return "bg-red-50 text-red-800 border border-red-200/50";
       default:
-        return "bg-gray-50 text-gray-800 border-gray-200/40";
+        return "bg-gray-50 text-gray-800 border border-gray-200/50";
     }
   };
 
@@ -1004,9 +1037,9 @@ const MyProfile = () => {
     const selectedCount = returnOrder.products.filter(p => selectedReturnItems[p.productId || p._id]).length;
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/60 p-4 backdrop-blur-md overflow-y-auto animate-fade-in">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/60 p-4 backdrop-blur-md overflow-y-auto">
         <div className="w-full max-w-2xl rounded-3xl bg-white border border-gold-300/20 p-6 md:p-8 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto no-scrollbar">
-          <div className="flex items-start justify-between gap-3 border-b border-champagne/30 pb-4">
+          <div className="flex items-start justify-between gap-3 border-b border-champagne/35 pb-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gold-600">Return Request Portal</p>
               <h3 className="mt-1.5 text-xl font-serif font-light text-luxury-black">
@@ -1369,19 +1402,1809 @@ const MyProfile = () => {
     );
   };
 
-  const renderReturnsTab = () => {
+  // Modern Empty States Components
+  const renderEmptyState = (title, message, iconStr) => (
+    <div className="flex flex-col items-center justify-center p-12 text-center bg-white/40 border border-champagne/30 rounded-3xl min-h-[300px]">
+      <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-gold-100/50 border border-gold-200/20">
+        <span className="text-3xl">{iconStr}</span>
+      </div>
+      <h3 className="text-lg font-serif font-light text-luxury-black">{title}</h3>
+      <p className="mt-2 text-xs text-text-secondary max-w-sm font-light leading-relaxed">{message}</p>
+    </div>
+  );
+
+  return (
+    <section className="space-y-8 max-w-7xl mx-auto px-4 py-8">
+      {/* Luxury Hero Banner Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="rounded-3xl bg-gradient-to-tr from-luxury-black via-[#1E1E1E] to-[#2D2A22] text-white p-6 md:p-8 relative overflow-hidden shadow-2xl border border-gold-500/20"
+      >
+        <div className="absolute right-0 top-0 w-80 h-80 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute left-1/3 bottom-0 w-44 h-44 bg-gold-400/5 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="relative group">
+              <div className="w-24 h-24 rounded-full border-2 border-gold-500 bg-gold-500/10 flex items-center justify-center text-4xl font-serif text-gold-400 font-bold backdrop-blur-md shadow-inner transition-transform duration-300 group-hover:scale-105">
+                {(auth?.name || "G").charAt(0).toUpperCase()}
+              </div>
+              <span className="absolute bottom-1 right-1 bg-emerald-500 h-3 w-3 rounded-full border-2 border-luxury-black animate-pulse" />
+            </div>
+
+            <div className="text-center md:text-left space-y-1">
+              <div className="flex flex-wrap justify-center md:justify-start items-center gap-2">
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  <ShieldCheck className="w-2.5 h-2.5" /> Email Verified
+                </span>
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  <ShieldCheck className="w-2.5 h-2.5" /> Mobile Verified
+                </span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-serif font-light tracking-wide mt-1 text-white">
+                {getGreeting()}, {auth?.name ? auth.name.split(" ")[0] : "Gift Lover"}
+              </h1>
+              <div className="flex flex-col sm:flex-row gap-x-4 gap-y-1 pt-1.5 text-xs text-gold-100/70 font-light justify-center md:justify-start">
+                <p className="flex items-center justify-center md:justify-start gap-1">
+                  <Mail className="w-3.5 h-3.5" /> {auth?.email}
+                </p>
+                {auth?.mobileNumber && (
+                  <p className="flex items-center justify-center md:justify-start gap-1">
+                    <Phone className="w-3.5 h-3.5" /> {auth?.mobileNumber}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row md:flex-col items-center gap-4 self-center md:self-auto w-full sm:w-auto md:w-auto">
+            <div className="flex gap-2 w-full">
+              <button
+                onClick={() => setActiveTab("settings")}
+                className="flex-1 rounded-full border border-gold-500/40 hover:border-gold-500 text-gold-300 hover:text-white px-5 py-2 text-xs font-bold uppercase tracking-widest transition duration-300 cursor-pointer text-center bg-transparent"
+              >
+                Edit Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                className="rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-2 text-xs font-bold uppercase tracking-widest text-white transition hover:scale-[1.02] shadow-md cursor-pointer flex items-center justify-center gap-1"
+              >
+                <LogOut className="w-3.5 h-3.5" /> Logout
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Completion Progress */}
+        <div className="mt-6 pt-4 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-light text-gold-100/80">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="font-semibold text-gold-400 uppercase tracking-wider text-[10px]">Profile Status:</span>
+            <span>85% Completed</span>
+            <div className="w-32 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-gold-500 rounded-full" style={{ width: "85%" }} />
+            </div>
+          </div>
+          <span className="text-[10px] text-gray-400 uppercase tracking-widest">Joined {auth?.createdAt ? new Date(auth.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "June 2026"}</span>
+        </div>
+      </motion.div>
+
+
+      {/* Scrollable Sticky Tab Navigation */}
+      <div className="sticky top-0 bg-[#FAF7F2]/90 backdrop-blur-md z-30 py-3 border-b border-champagne/15 flex gap-2 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap -mx-4 px-4 md:mx-0 md:px-0">
+        {[
+          { id: "overview", label: "Overview", icon: <Activity className="w-3.5 h-3.5" /> },
+          { id: "orders", label: "My Orders", icon: <ShoppingBag className="w-3.5 h-3.5" /> },
+          { id: "wishlist", label: "Wishlist", icon: <Heart className="w-3.5 h-3.5" /> },
+          { id: "returns", label: "Returns", icon: <RefreshCw className="w-3.5 h-3.5" /> },
+          { id: "addresses", label: "Addresses", icon: <MapPin className="w-3.5 h-3.5" /> },
+          { id: "tracking", label: "Tracking", icon: <Truck className="w-3.5 h-3.5" /> },
+          { id: "coupons", label: "Coupons", icon: <Gift className="w-3.5 h-3.5" /> },
+          { id: "notifications", label: "Notifications", icon: <Bell className="w-3.5 h-3.5" />, count: unreadCount },
+          { id: "help", label: "Support", icon: <HelpCircle className="w-3.5 h-3.5" /> },
+          { id: "settings", label: "Settings", icon: <Settings className="w-3.5 h-3.5" /> }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`shrink-0 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer select-none ${
+              activeTab === tab.id
+                ? "bg-gold-500 text-white shadow-md scale-[1.02]"
+                : "bg-white text-luxury-black hover:bg-gold-50 hover:text-gold-600 border border-champagne/50"
+            }`}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+            {tab.count > 0 && (
+              <span className="rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 animate-pulse">
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Notification Banner messages */}
+      <AnimatePresence mode="wait">
+        {loading && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-3 text-xs text-text-secondary bg-white rounded-2xl p-4 border border-champagne/40 shadow-sm"
+          >
+            <RefreshCw className="w-4 h-4 text-gold-500 animate-spin" />
+            Loading details...
+          </motion.div>
+        )}
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-xs font-semibold text-rose-800 bg-rose-50 border border-rose-200/40 rounded-2xl p-4 flex items-center gap-2"
+          >
+            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+            {error}
+          </motion.div>
+        )}
+
+        {successMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-xs font-semibold text-gold-800 bg-gold-50 border border-gold-200/40 rounded-2xl p-4 flex items-center gap-2"
+          >
+            <CheckCircle className="w-4 h-4 text-gold-700 shrink-0" />
+            {successMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dynamic Tab Container with transitions */}
+      <div className="min-h-[400px]">
+        <AnimatePresence mode="wait">
+          {/* OVERVIEW TAB */}
+          {activeTab === "overview" && !loading && (
+            <motion.div
+              key="overview"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
+            >
+
+              <div className="grid gap-6 md:grid-cols-3">
+                {/* Recent Activity Card */}
+                <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300">
+                  <div>
+                    <h3 className="text-base font-serif font-semibold text-luxury-black mb-4 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-gold-600" /> Recent Order Status
+                    </h3>
+                    {latestOrder ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between border-b border-champagne/20 pb-2">
+                          <span className="text-sm font-bold text-luxury-black font-serif">Order #{getOrderDisplayId(latestOrder)}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${getStatusColor(latestOrder.status)}`}>
+                            {latestOrder.status}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-xs text-text-secondary font-light">
+                          <p>Placed: <span className="font-semibold text-luxury-black">{new Date(latestOrder.createdAt).toLocaleDateString("en-IN")}</span></p>
+                          <p>Total: <span className="font-semibold text-gold-700 font-serif">INR {latestOrder.totalPrice}</span></p>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="pt-2">
+                          <div className="h-1.5 w-full bg-champagne/50 rounded-full overflow-hidden">
+                            <div
+                              className="h-1.5 bg-gold-500 rounded-full"
+                              style={{
+                                width:
+                                  latestOrder.status === "Cancelled" ? "100%" :
+                                  latestOrder.status === "Delivered" ? "100%" :
+                                  latestOrder.status === "Shipped" ? "75%" :
+                                  latestOrder.status === "Processing" ? "50%" :
+                                  latestOrder.status === "Pending" ? "25%" : "0%",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-text-secondary font-light leading-relaxed py-4">No orders placed yet. Curate your first custom surprise box now!</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("orders")}
+                    className="mt-6 text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-800 inline-flex items-center gap-1.5 bg-transparent border-0 cursor-pointer"
+                  >
+                    View Order Logs &rarr;
+                  </button>
+                </div>
+
+                {/* Default Address Destination Card */}
+                <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300 relative overflow-hidden bg-gradient-to-br from-gold-50/5 via-white to-white">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gold-500/5 rounded-full blur-xl pointer-events-none" />
+                  <div>
+                    <h3 className="text-base font-serif font-semibold text-luxury-black mb-4 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gold-600" /> Default Delivery Address
+                    </h3>
+                    {defaultAddress ? (
+                      <div className="space-y-3.5 text-xs text-text-secondary font-light">
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const opt = addressLabelOptions.find((o) => o.label === defaultAddress.label) || { icon: "📍", color: "bg-gold-50 text-gold-800 border-gold-200/40" };
+                            return (
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase border tracking-wider ${opt.color}`}>
+                                <span>{opt.icon}</span>
+                                <span>{defaultAddress.label}</span>
+                              </span>
+                            );
+                          })()}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-luxury-black text-white uppercase tracking-wider">
+                            ✨ Default
+                          </span>
+                        </div>
+                        <p className="font-bold text-luxury-black text-sm leading-tight font-serif">{defaultAddress.fullName}</p>
+                        <div className="leading-relaxed">
+                          <p>{defaultAddress.line1}</p>
+                          <p className="font-semibold text-gray-700 mt-0.5">
+                            {defaultAddress.city}, {defaultAddress.state} - <span className="font-extrabold text-luxury-black font-sans">{defaultAddress.postalCode}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2 border-t border-champagne/30 text-luxury-black font-normal">
+                          <Phone className="w-3.5 h-3.5 text-gray-400" />
+                          <span className="font-bold">{defaultAddress.phone}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-text-secondary font-light leading-relaxed py-4">No default address registered yet. Save shipping details for frictionless checkout.</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("addresses")}
+                    className="mt-6 text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-800 inline-flex items-center gap-1.5 bg-transparent border-0 cursor-pointer"
+                  >
+                    Manage Locations &rarr;
+                  </button>
+                </div>
+
+                {/* Recent Activity Timeline Card */}
+                <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-300">
+                  <div>
+                    <h3 className="text-base font-serif font-semibold text-luxury-black mb-4 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-gold-600" /> Activity Timeline
+                    </h3>
+                    <div className="space-y-4 border-l border-champagne/40 pl-4 ml-2 pt-1 text-xs">
+                      <div className="relative">
+                        <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-gold-500 ring-4 ring-gold-50" />
+                        <p className="font-semibold text-luxury-black text-[11px]">Security settings updated</p>
+                        <p className="text-[9px] text-text-secondary">Just now &bull; Settings panel</p>
+                      </div>
+                      {orders.length > 0 && (
+                        <div className="relative">
+                          <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-gold-500 ring-4 ring-gold-50" />
+                          <p className="font-semibold text-luxury-black text-[11px]">Order placed successfully</p>
+                          <p className="text-[9px] text-text-secondary">Order Reference #{getOrderDisplayId(orders[0])}</p>
+                        </div>
+                      )}
+                      {wishlistItems.length > 0 && (
+                        <div className="relative">
+                          <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-gold-500 ring-4 ring-gold-50" />
+                          <p className="font-semibold text-luxury-black text-[11px]">Gifts saved to wishlist</p>
+                          <p className="text-[9px] text-text-secondary">{wishlistItems.length} curations loved</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("settings")}
+                    className="mt-6 text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-800 inline-flex items-center gap-1.5 bg-transparent border-0 cursor-pointer"
+                  >
+                    View Security Logs &rarr;
+                  </button>
+                </div>
+              </div>
+
+              {/* Recommended luxury products grid */}
+              <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-champagne/20 pb-3">
+                  <div>
+                    <h3 className="text-base font-serif font-semibold text-luxury-black flex items-center gap-2">
+                      <Compass className="w-4 h-4 text-gold-600 animate-spin-slow" /> Exquisite Recommendations
+                    </h3>
+                    <p className="text-[10px] text-text-secondary font-light mt-0.5">AI curated luxury gifts based on trend patterns.</p>
+                  </div>
+                  <Link to="/products" className="text-xs font-bold text-gold-700 hover:text-gold-800 uppercase tracking-wider">
+                    View Catalog &rarr;
+                  </Link>
+                </div>
+
+                {loadingRecommendations ? (
+                  <div className="py-8 text-center text-xs text-text-secondary">Analyzing catalog...</div>
+                ) : recommendations.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {recommendations.slice(0, 4).map((prod) => (
+                      <div key={prod._id} className="group border border-champagne/20 bg-white rounded-2xl overflow-hidden hover:border-gold-300/40 hover:shadow-md transition-all duration-300 flex flex-col justify-between">
+                        <div className="relative aspect-square bg-gold-50/20">
+                          <img
+                            src={resolveMediaUrl(prod.image || prod.images?.[0])}
+                            alt={prod.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        </div>
+                        <div className="p-3.5 space-y-1">
+                          <h4 className="text-xs font-serif font-semibold text-luxury-black line-clamp-1 group-hover:text-gold-650 transition-colors">
+                            <Link to={`/products/${prod.slug || prod._id}`}>{prod.name}</Link>
+                          </h4>
+                          <div className="flex justify-between items-baseline pt-1">
+                            <span className="text-xs font-serif font-bold text-luxury-black">INR {prod.price}</span>
+                            <span className="text-[8px] uppercase tracking-wider text-gold-650 bg-gold-50 px-1.5 py-0.5 rounded font-bold">{prod.category}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-text-secondary">Catalog products are being loaded...</p>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* MY ORDERS TAB */}
+          {activeTab === "orders" && !loading && (
+            <motion.div
+              key="orders"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs">
+                <h2 className="text-lg font-serif font-semibold text-luxury-black">Order History Logs</h2>
+                <p className="text-xs text-text-secondary mt-1 font-light">Detailed catalog of surprise boxes and customized gifts bought.</p>
+              </div>
+
+              {orders.length > 0 ? (
+                <div className="space-y-4">
+                  {orders.map((order) => (
+                    <article
+                      key={order._id}
+                      className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-5 shadow-xs hover:shadow-md transition-all duration-300"
+                    >
+                      {/* Card Top */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-champagne/20 pb-3.5">
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] font-bold text-gold-600 uppercase tracking-widest">Surprise Pack</span>
+                          <h4 className="text-sm font-bold text-luxury-black font-serif">Order #{getOrderDisplayId(order)}</h4>
+                          <p className="text-[10px] text-text-secondary font-light">Placed: {new Date(order.createdAt).toLocaleString("en-IN")}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Center: Products inside Order */}
+                      <div className="py-4 border-b border-champagne/10">
+                        <div className="space-y-3">
+                          {order.products?.map((prod, idx) => (
+                            <div key={idx} className="flex gap-3 items-center">
+                              {prod.image && (
+                                <img
+                                  src={resolveMediaUrl(prod.image)}
+                                  alt={prod.name}
+                                  className="w-12 h-12 object-cover rounded-xl border border-champagne/20 shadow-inner"
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h5 className="text-xs font-semibold text-luxury-black truncate">{prod.name}</h5>
+                                <p className="text-[10px] text-text-secondary mt-0.5 font-light">
+                                  Price: INR {prod.price} &bull; Qty: <strong>{prod.quantity}</strong>
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between items-center mt-4 text-xs font-light text-text-secondary bg-gold-50/10 p-3 rounded-2xl border border-champagne/15">
+                          <p>Items Count: <span className="font-semibold text-luxury-black">{order.products?.length || 0}</span></p>
+                          <p>Total Paid: <span className="font-bold text-gold-700 font-serif">INR {order.totalPrice}</span></p>
+                          <p>Payment: <span className="font-semibold uppercase text-luxury-black text-[10px]">{order.paymentMethod} ({order.paymentStatus})</span></p>
+                        </div>
+                      </div>
+
+                      {/* Cancellation Status details if exists */}
+                      {order.cancellationRequest?.status && order.cancellationRequest.status !== "None" && (
+                        <div className="rounded-2xl border border-amber-200 bg-amber-50/20 px-4 py-3 mt-3 text-xs">
+                          <p className="font-semibold text-amber-900">
+                            Cancellation request status: <span className="uppercase font-bold">{order.cancellationRequest.status}</span>
+                          </p>
+                          {order.cancellationRequest.reason && (
+                            <p className="text-amber-800 mt-1 font-light">Reason: {order.cancellationRequest.reason}</p>
+                          )}
+                          {order.cancellationRequest.adminNote && (
+                            <p className="text-amber-800 mt-1 font-light"><strong className="font-semibold">Concierge Note:</strong> {order.cancellationRequest.adminNote}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Card Actions Bottom */}
+                      <div className="pt-4 flex flex-wrap gap-2.5">
+                        {order.trackingId && (
+                          <div className="w-full flex items-center justify-between p-3 rounded-2xl bg-gold-50/20 border border-gold-200/20 mb-1 text-xs">
+                            <span className="font-light text-text-secondary">Logistics Carrier: <strong className="text-luxury-black capitalize">{order.trackingCarrier}</strong> AWB: <strong className="font-mono text-luxury-black">{order.trackingId}</strong></span>
+                            <a
+                              href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-full bg-gold-500 hover:bg-gold-600 px-4.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-sm transition"
+                            >
+                              Track Package
+                            </a>
+                          </div>
+                        )}
+
+                        {canRequestCancellation(order) && (
+                          <button
+                            type="button"
+                            onClick={() => openCancelModal(order)}
+                            className="rounded-full border border-rose-200 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:bg-rose-50 transition cursor-pointer"
+                          >
+                            Request Cancellation
+                          </button>
+                        )}
+
+                        {canRequestReturn(order) && (
+                          <button
+                            type="button"
+                            onClick={() => openReturnModal(order)}
+                            className="rounded-full border border-gold-500 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-gold-700 hover:bg-gold-50 transition cursor-pointer"
+                          >
+                            Return Order
+                          </button>
+                        )}
+
+                        {getOrderReturn(order._id) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const ret = getOrderReturn(order._id);
+                              setSelectedReturn(ret);
+                              setActiveTab("returns");
+                            }}
+                            className="rounded-full border border-gold-500 bg-gold-100/30 px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-gold-900 hover:bg-gold-200/30 transition cursor-pointer"
+                          >
+                            Track Return Claim: {getOrderReturn(order._id).status}
+                          </button>
+                        )}
+
+                        {order.status === "Delivered" && (
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadInvoice(order)}
+                            className="rounded-full bg-luxury-black hover:bg-gold-500 text-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest transition duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Download Invoice
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                renderEmptyState("No orders placed yet", "All your completed and running gift purchases will show up here. Select our finest packages to start shopping.", "🛍️")
+              )}
+            </motion.div>
+          )}
+
+          {/* WISHLIST TAB */}
+          {activeTab === "wishlist" && !loading && (
+            <motion.div
+              key="wishlist"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-serif font-semibold text-luxury-black">My Wishlist</h2>
+                  <p className="text-xs text-text-secondary mt-1 font-light">Fine selections that you saved to purchase later.</p>
+                </div>
+                <span className="px-3 py-1 bg-gold-100 border border-gold-200/50 rounded-full text-xs font-bold text-gold-800">
+                  {wishlistItems.length} Items
+                </span>
+              </div>
+
+              {wishlistLoading ? (
+                <div className="py-8 text-center text-xs animate-pulse">Syncing loved list...</div>
+              ) : wishlistItems.length > 0 ? (
+                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                  {wishlistItems.map((item) => {
+                    const product = item.product_id;
+                    if (!product) return null;
+
+                    const imageUrl = resolveMediaUrl(product.image || product.images?.[0] || "https://via.placeholder.com/600x400?text=Gift");
+                    const stock = product.stock !== undefined && product.stock !== null ? Number(product.stock) : null;
+                    const outOfStock = stock !== null && stock <= 0;
+
+                    const comparePrice = product.originalPrice || Math.round(Number(product.price || 0) * 1.18);
+                    const hasDiscount = comparePrice > product.price;
+                    const discountPercentage = product.discountPercentage || (hasDiscount ? Math.round(((comparePrice - product.price) / comparePrice) * 100) : 0);
+
+                    return (
+                      <article
+                        key={item._id}
+                        className="group overflow-hidden rounded-3xl border border-champagne/45 bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
+                      >
+                        <div className="relative aspect-[4/3] bg-gold-50/10 overflow-hidden">
+                          <img
+                            src={imageUrl}
+                            alt={product.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          {hasDiscount && discountPercentage > 0 && (
+                            <span className="absolute top-3 left-3 bg-red-500 text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                              {discountPercentage}% OFF
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-sm font-serif font-semibold text-luxury-black line-clamp-1 group-hover:text-gold-650 transition-colors">
+                              <Link to={`/products/${product.slug || product._id}`}>{product.name}</Link>
+                            </h4>
+                            <p className="text-[9px] text-text-secondary uppercase mt-0.5 tracking-wider font-light">{product.category}</p>
+                          </div>
+
+                          <div className="flex justify-between items-baseline pt-2 border-t border-champagne/20">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-sm font-serif font-bold text-luxury-black">INR {product.price}</span>
+                              {hasDiscount && (
+                                <span className="text-[10px] text-text-secondary line-through font-light">INR {comparePrice}</span>
+                              )}
+                            </div>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${outOfStock ? 'bg-rose-50 text-rose-800 border-rose-200' : 'bg-gold-50 text-gold-800 border-gold-200'}`}>
+                              {outOfStock ? 'Sold Out' : 'In Stock'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Card Buttons */}
+                        <div className="grid grid-cols-2 gap-1 p-2 bg-gold-50/10 border-t border-champagne/30">
+                          <button
+                            type="button"
+                            onClick={() => removeFromWishlist(product._id)}
+                            className="rounded-full border border-champagne bg-white py-2 text-[9px] font-bold uppercase tracking-wider text-red-500 hover:bg-rose-50 transition cursor-pointer select-none"
+                          >
+                            Remove
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              addToCart(product);
+                              removeFromWishlist(product._id);
+                            }}
+                            disabled={outOfStock}
+                            className="rounded-full bg-luxury-black text-white py-2 text-[9px] font-bold uppercase tracking-wider hover:bg-gold-500 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer select-none"
+                          >
+                            Move to Cart
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                renderEmptyState("Your wishlist is empty", "Save curated premium surprises and luxury boxes you like to explore them easily anytime.", "❤️")
+              )}
+            </motion.div>
+          )}
+
+          {/* MY RETURNS TAB */}
+          {activeTab === "returns" && !loading && (
+            <motion.div
+              key="returns"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              {renderReturnsTab()}
+            </motion.div>
+          )}
+
+          {/* ADDRESSES TAB */}
+          {activeTab === "addresses" && (
+            <motion.div
+              key="addresses"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
+            >
+              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-6 rounded-3xl shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-serif font-semibold text-luxury-black">Saved Delivery Addresses</h2>
+                  <p className="text-xs text-text-secondary mt-1 font-light font-sans">Manage ship-to information for immediate express checkout curate flows.</p>
+                </div>
+                <button
+                  onClick={handleAddAddress}
+                  className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Add Address
+                </button>
+              </div>
+
+              {showAddressForm && (
+                <div className="rounded-3xl border border-champagne/45 bg-white/80 p-6 md:p-8 shadow-md space-y-5 animate-slide-up">
+                  <div className="flex justify-between items-center border-b border-champagne/20 pb-3">
+                    <h3 className="text-base font-serif font-semibold text-luxury-black">
+                      {editingAddress ? "Modify Shipping Destination" : "Create Shipping Destination"}
+                    </h3>
+                    <button onClick={resetAddressForm} className="text-text-secondary hover:text-luxury-black font-light text-xl cursor-pointer">
+                      &times;
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveAddress} className="space-y-5">
+                    {/* Types Selection */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-luxury-black uppercase tracking-wider block">Address Category Type</label>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {addressLabelOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setAddressForm((prev) => ({ ...prev, label: opt.label }))}
+                            className={`flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border transition duration-200 hover:scale-[1.02] cursor-pointer ${
+                              addressForm.label === opt.label
+                                ? "border-gold-500 bg-gold-50 text-gold-900 font-bold"
+                                : "border-champagne bg-white hover:border-gold-300 text-text-secondary"
+                            }`}
+                          >
+                            <span className="text-xl mb-1">{opt.icon}</span>
+                            <span className="text-[10px] uppercase font-bold tracking-wider">{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {addressForm.label === "Other" && (
+                        <div className="pt-2">
+                          <input
+                            name="customLabel"
+                            value={addressForm.customLabel || ""}
+                            onChange={handleAddressFormChange}
+                            placeholder="Enter custom label name (e.g. Guest House, Friend)"
+                            required
+                            className="w-full rounded-full border border-champagne px-4 py-2 text-xs focus:border-gold-500 outline-none"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Recipient Full Name *</label>
+                        <input
+                          name="fullName"
+                          value={addressForm.fullName}
+                          onChange={handleAddressFormChange}
+                          required
+                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Mobile Phone Number *</label>
+                        <input
+                          name="phone"
+                          value={addressForm.phone}
+                          onChange={handleAddressFormChange}
+                          required
+                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Street Address Detail *</label>
+                        <input
+                          name="line1"
+                          value={addressForm.line1}
+                          onChange={handleAddressFormChange}
+                          required
+                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                        />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">City *</label>
+                          <input
+                            name="city"
+                            value={addressForm.city}
+                            onChange={handleAddressFormChange}
+                            required
+                            className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">State *</label>
+                          <input
+                            name="state"
+                            value={addressForm.state}
+                            onChange={handleAddressFormChange}
+                            required
+                            className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Pincode *</label>
+                          <input
+                            name="postalCode"
+                            value={addressForm.postalCode}
+                            onChange={handleAddressFormChange}
+                            required
+                            className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Country *</label>
+                        <input
+                          name="country"
+                          value={addressForm.country}
+                          onChange={handleAddressFormChange}
+                          required
+                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                        />
+                      </div>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer leading-none">
+                      <input
+                        type="checkbox"
+                        name="isDefault"
+                        checked={addressForm.isDefault}
+                        onChange={handleAddressFormChange}
+                        className="h-4.5 w-4.5 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer"
+                      />
+                      <span>Set as primary shipping address default</span>
+                    </label>
+
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                      <button
+                        type="submit"
+                        disabled={savingAddress}
+                        className="flex-1 rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-sm disabled:opacity-60 transition cursor-pointer text-center"
+                      >
+                        {savingAddress ? "Saving Address..." : editingAddress ? "Save Changes" : "Save Destination"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={resetAddressForm}
+                        className="rounded-full border border-champagne bg-white px-6 py-3 text-xs font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {addresses.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {addresses.map((address) => {
+                    const labelOption = addressLabelOptions.find((opt) => opt.label === address.label) || { icon: "📍", color: "bg-gold-50 text-gold-800 border-gold-200/40" };
+                    return (
+                      <div
+                        key={address._id}
+                        className={`rounded-3xl border p-5 flex flex-col justify-between transition duration-300 hover:shadow-md relative overflow-hidden bg-white/70 ${
+                          address.isDefault ? "border-gold-500 ring-1 ring-gold-500/10 shadow-sm" : "border-champagne/45 hover:border-gold-300"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-3.5">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase border tracking-wider ${labelOption.color}`}>
+                              <span>{labelOption.icon}</span>
+                              <span>{address.label}</span>
+                            </span>
+                            {address.isDefault && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-gold-500 text-white uppercase tracking-wider">
+                                Primary
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-2 text-xs text-text-secondary font-light">
+                            <p className="font-bold text-luxury-black text-sm font-serif">{address.fullName}</p>
+                            <p className="text-luxury-black">{address.line1}</p>
+                            <p className="font-semibold text-gray-700">
+                              {address.city}, {address.state} - <span className="font-bold text-luxury-black font-mono text-xs">{address.postalCode}</span>
+                            </p>
+                            <p className="text-[9px] uppercase tracking-widest font-semibold">{address.country}</p>
+                            <p className="pt-2 border-t border-champagne/15 text-luxury-black font-semibold flex items-center gap-1.5">
+                              <Phone className="w-3.5 h-3.5 text-gray-400" /> {address.phone}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 pt-3 border-t border-champagne/20 flex gap-2">
+                          {!address.isDefault && (
+                            <button
+                              onClick={() => handleSetDefaultAddress(address._id)}
+                              className="flex-1 rounded-xl border border-gold-200/60 bg-gold-50/20 py-2 text-[10px] font-bold text-gold-700 hover:bg-gold-100/50 transition cursor-pointer"
+                            >
+                              Default
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleEditAddress(address)}
+                            className="flex-1 rounded-xl border border-champagne bg-white py-2 text-[10px] font-bold text-luxury-black hover:bg-gold-50 transition cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            <Edit className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAddress(address._id)}
+                            className="rounded-xl border border-rose-200 bg-rose-50/50 p-2 text-rose-500 hover:bg-rose-100 hover:text-rose-700 transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                !showAddressForm && renderEmptyState("No saved addresses", "Add shipping addresses to save time during checkout on subsequent curate surprises.", "📍")
+              )}
+            </motion.div>
+          )}
+
+          {/* ORDER TRACKING TAB */}
+          {activeTab === "tracking" && !loading && (
+            <motion.div
+              key="tracking"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs">
+                <h2 className="text-lg font-serif font-semibold text-luxury-black">Active Shipment Tracking</h2>
+                <p className="text-xs text-text-secondary mt-1 font-light">Verify delivery logistics status, locations timeline routes, and courier partner coordinates.</p>
+              </div>
+
+              {orders.length > 0 ? (
+                <div className="space-y-4">
+                  {orders.map((order) => {
+                    const stepIdx = getStepIndex(order.status);
+                    return (
+                      <div key={order._id} className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-5 shadow-xs space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-champagne/20 pb-3">
+                          <div>
+                            <h4 className="text-sm font-bold text-luxury-black font-serif">Order #{getOrderDisplayId(order)}</h4>
+                            <p className="text-[9px] text-text-secondary font-light">Expected Date: {new Date(new Date(order.createdAt).getTime() + 5*24*60*60*1000).toLocaleDateString("en-IN")}</p>
+                          </div>
+                          <span className={`rounded-full px-3 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </span>
+                        </div>
+
+                        {/* Shipment Info details if shipped */}
+                        {order.trackingId && (
+                          <div className="grid gap-3 sm:grid-cols-3 bg-blue-50/20 border border-blue-200/50 p-3.5 rounded-2xl text-xs text-blue-900 font-light">
+                            <p><strong className="font-semibold">Courier Partner:</strong> <span className="capitalize">{order.trackingCarrier}</span></p>
+                            <p><strong className="font-semibold">Tracking Number AWB:</strong> {order.trackingId}</p>
+                            <a
+                              href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-700 underline font-semibold flex items-center gap-1"
+                            >
+                              Track Live Package &rarr;
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Timeline horizontal steps */}
+                        <div className="py-2.5">
+                          <div className="relative h-1.5 w-full bg-champagne/50 rounded-full">
+                            <div
+                              className="absolute h-1.5 bg-gold-500 rounded-full transition-all duration-500"
+                              style={{ width: `${(stepIdx / (trackingSteps.length - 1)) * 100}%` }}
+                            />
+                          </div>
+                          <div className="grid grid-cols-5 gap-1 text-[9px] font-bold text-text-secondary uppercase tracking-wider text-center mt-3">
+                            {trackingSteps.map((step, idx) => {
+                              const isCompleted = idx <= stepIdx;
+                              return (
+                                <div key={idx} className="space-y-1">
+                                  <div className={`mx-auto h-4 w-4 rounded-full border-2 flex items-center justify-center text-[7px] font-bold ${isCompleted ? 'border-gold-500 bg-gold-500 text-white' : 'border-champagne bg-white text-gray-300'}`}>
+                                    {isCompleted ? "✓" : idx + 1}
+                                  </div>
+                                  <span className={isCompleted ? "text-gold-800" : ""}>{step}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Live activity log mock details to look premium */}
+                        <div className="pt-2 border-t border-champagne/10">
+                          <h5 className="text-[10px] font-bold uppercase tracking-wider text-luxury-black mb-2.5">Fulfillment Pipeline Timeline</h5>
+                          <div className="space-y-3.5 text-xs font-light text-text-secondary border-l-2 border-gold-200/50 pl-4 ml-2">
+                            <div className="relative">
+                              <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-gold-500 ring-4 ring-gold-50" />
+                              <p className="font-semibold text-luxury-black text-[11px]">{order.status === "Delivered" ? "Delivered successfully" : order.status === "Shipped" ? "Package is in transit with carrier" : order.status === "Processing" ? "Gift curation validation in progress" : "Order Placed and queued"}</p>
+                              <p className="text-[9px] text-gray-400 mt-0.5">{new Date(order.updatedAt).toLocaleString("en-IN")}</p>
+                            </div>
+                            <div className="relative opacity-70">
+                              <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-gold-400" />
+                              <p className="font-semibold text-luxury-black text-[11px]">Surprise parcel details confirmed</p>
+                              <p className="text-[9px] text-gray-400 mt-0.5">{new Date(order.createdAt).toLocaleString("en-IN")}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                renderEmptyState("No active tracking", "You do not have any active packages running under delivery timelines. View order history for completed orders.", "🚚")
+              )}
+            </motion.div>
+          )}
+
+          {/* NOTIFICATIONS TAB */}
+          {activeTab === "notifications" && !loading && (
+            <motion.div
+              key="notifications"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 md:p-8 shadow-sm space-y-6"
+            >
+              <div className="border-b border-champagne/20 pb-4 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-serif font-semibold text-luxury-black flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-gold-600 animate-pulse" /> Notification Alerts
+                  </h2>
+                  <p className="text-xs text-text-secondary mt-1 font-light">Inbox details of promotions, account validations, and orders updates.</p>
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await Promise.all(
+                          notifications
+                            .filter((n) => n.status !== "Read")
+                            .map((n) => api.put(`/user/notifications/${n._id}/read`))
+                        );
+                        setNotifications((prev) => prev.map((n) => ({ ...n, status: "Read" })));
+                        setUnreadCount(0);
+                      } catch (err) {
+                        console.error("Mark all read failed:", err);
+                      }
+                    }}
+                    className="rounded-full border border-gold-300 text-gold-700 hover:bg-gold-50/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-all"
+                  >
+                    Mark All As Read
+                  </button>
+                )}
+              </div>
+
+              {notifications.length > 0 ? (
+                <div className="space-y-4">
+                  {notifications.map((n) => {
+                    const isRead = n.status === "Read";
+                    return (
+                      <div
+                        key={n._id}
+                        onClick={() => !isRead && handleMarkAsRead(n._id)}
+                        className={`rounded-2xl border p-4.5 transition duration-300 relative overflow-hidden cursor-pointer ${
+                          isRead
+                            ? "bg-white/30 border-champagne/20 text-luxury-black/60"
+                            : "bg-gold-50/15 border-gold-300/40 text-luxury-black shadow-xs hover:bg-gold-50/20"
+                        }`}
+                      >
+                        {!isRead && (
+                          <div className="absolute top-0 left-0 w-1.5 h-full bg-gold-500" />
+                        )}
+                        <div className="flex flex-wrap justify-between items-start gap-2">
+                          <div className="space-y-1">
+                            <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border bg-gold-50 border-gold-200 text-gold-800">
+                              {n.type || "Update"}
+                            </span>
+                            <h3 className="text-xs font-serif font-bold mt-1 text-luxury-black">
+                              {n.title}
+                            </h3>
+                          </div>
+                          <span className="text-[10px] text-text-secondary font-light">
+                            {new Date(n.createdAt).toLocaleDateString("en-IN", { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs font-light leading-relaxed text-text-secondary whitespace-pre-line">
+                          {n.message}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                renderEmptyState("Inbox is empty", "You do not have any notifications, alerts, or promotional gift coupons at this moment.", "📬")
+              )}
+            </motion.div>
+          )}
+
+          {/* SETTINGS TAB */}
+          {activeTab === "settings" && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6 animate-slide-up"
+            >
+              {/* Profile Details Edit */}
+              <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 md:p-8 shadow-sm space-y-5">
+                <div className="border-b border-champagne/20 pb-3 flex items-center gap-2">
+                  <UserCog className="w-5 h-5 text-gold-600" />
+                  <div>
+                    <h3 className="text-base font-serif font-semibold text-luxury-black">Personal Profile Settings</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-wider font-light mt-0.5">Edit basic registration properties details</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleUpdateProfile} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1.5">Full Name</label>
+                      <input
+                        name="name"
+                        value={profileForm.name}
+                        onChange={handleProfileFormChange}
+                        required
+                        className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1.5">Email Address</label>
+                      <input
+                        name="email"
+                        type="email"
+                        value={profileForm.email}
+                        disabled
+                        className="w-full rounded-full border border-champagne bg-gray-50 text-gray-500 px-4 py-2.5 text-xs cursor-not-allowed outline-none select-none"
+                      />
+                      <p className="text-[9px] text-text-secondary mt-1 font-light">
+                        Your email address is linked to your login credentials and cannot be modified.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1.5">Mobile Number</label>
+                      <input
+                        name="mobileNumber"
+                        type="tel"
+                        value={profileForm.mobileNumber}
+                        onChange={handleProfileFormChange}
+                        required
+                        className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="submit"
+                      disabled={savingProfile}
+                      className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-sm transition disabled:opacity-50 cursor-pointer"
+                    >
+                      {savingProfile ? "Saving changes..." : "Save Settings"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Preferences Settings Future Ready Toggles */}
+              <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 md:p-8 shadow-sm space-y-6">
+                <div className="border-b border-champagne/20 pb-3 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-gold-600" />
+                  <div>
+                    <h3 className="text-base font-serif font-semibold text-luxury-black">Preferences & Configurations</h3>
+                    <p className="text-[10px] text-text-secondary uppercase tracking-wider font-light mt-0.5">Toggle notification and dark-mode parameters</p>
+                  </div>
+                </div>
+
+                <div className="divide-y divide-champagne/25 space-y-4">
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="space-y-0.5 pr-4">
+                      <h4 className="text-xs font-bold text-luxury-black uppercase tracking-wider flex items-center gap-1.5">
+                        <Moon className="w-3.5 h-3.5 text-gold-600" /> Dark Mode
+                      </h4>
+                      <p className="text-[11px] text-text-secondary font-light">Toggle between soft cream luxury ivory and luxury high-contrast dark theme (Future Ready).</p>
+                    </div>
+                    <button
+                      onClick={() => setDarkMode(!darkMode)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${darkMode ? 'bg-gold-500' : 'bg-gray-200'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${darkMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="space-y-0.5 pr-4">
+                      <h4 className="text-xs font-bold text-luxury-black uppercase tracking-wider flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-gold-600" /> Marketing emails
+                      </h4>
+                      <p className="text-[11px] text-text-secondary font-light">Receive curated catalogs, luxury guides, and discount coupons codes.</p>
+                    </div>
+                    <button
+                      onClick={() => setMarketingEmails(!marketingEmails)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${marketingEmails ? 'bg-gold-500' : 'bg-gray-200'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${marketingEmails ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="space-y-0.5 pr-4">
+                      <h4 className="text-xs font-bold text-luxury-black uppercase tracking-wider flex items-center gap-1.5">
+                        <Bell className="w-3.5 h-3.5 text-gold-600" /> SMS alerts
+                      </h4>
+                      <p className="text-[11px] text-text-secondary font-light">Receive transactional notifications via text message regarding package tracking status.</p>
+                    </div>
+                    <button
+                      onClick={() => setSmsNotifications(!smsNotifications)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${smsNotifications ? 'bg-gold-500' : 'bg-gray-200'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${smsNotifications ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="space-y-0.5 pr-4">
+                      <h4 className="text-xs font-bold text-luxury-black uppercase tracking-wider flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" /> WhatsApp updates
+                      </h4>
+                      <p className="text-[11px] text-text-secondary font-light">Enable WhatsApp alerts for instant concierge response timelines and order receipts.</p>
+                    </div>
+                    <button
+                      onClick={() => setWhatsappUpdates(!whatsappUpdates)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${whatsappUpdates ? 'bg-gold-500' : 'bg-gray-200'}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${whatsappUpdates ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* SUPPORT TAB */}
+          {activeTab === "help" && !loading && (
+            <motion.div
+              key="help"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid gap-6 lg:grid-cols-3"
+            >
+              {/* Left Side Channels & FAQ */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-6 rounded-3xl shadow-sm space-y-4">
+                  <h3 className="text-base font-serif font-semibold text-luxury-black">Direct Concierge</h3>
+                  <p className="text-xs text-text-secondary font-light">Reach out via standard premium support pipelines for instant response curation.</p>
+
+                  <div className="space-y-3">
+                    <a
+                      href="mailto:niyoragifts@gmail.com"
+                      className="rounded-2xl border border-gold-200/35 bg-gold-50/5 p-4 hover:bg-gold-50/10 transition duration-300 block"
+                    >
+                      <h4 className="font-serif font-semibold text-luxury-black text-sm">Concierge Email</h4>
+                      <p className="text-[11px] text-text-secondary mt-0.5 font-light">niyoragifts@gmail.com</p>
+                      <p className="text-[9px] text-gold-700 mt-2.5 font-bold uppercase tracking-widest">12-24 Hour Reply SLA</p>
+                    </a>
+                    <a
+                      href="https://wa.me/919000000000"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl border border-gold-200/35 bg-gold-50/5 p-4 hover:bg-gold-50/10 transition duration-300 block"
+                    >
+                      <h4 className="font-serif font-semibold text-luxury-black text-sm">WhatsApp Line</h4>
+                      <p className="text-[11px] text-text-secondary mt-0.5 font-light">Instant Mobile Concierge</p>
+                      <p className="text-[9px] text-gold-700 mt-2.5 font-bold uppercase tracking-widest">Immediate Assistance</p>
+                    </a>
+                  </div>
+                </div>
+
+                {/* FAQ Accordion */}
+                <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-6 rounded-3xl shadow-sm">
+                  <h3 className="text-sm font-serif font-bold text-luxury-black mb-3">Frequently Asked Questions</h3>
+                  <div className="divide-y divide-champagne/25">
+                    {(dynamicFaqs.length > 0 ? dynamicFaqs : faqs).map((faq, idx) => {
+                      const isOpen = openFaqIndex === idx;
+                      return (
+                        <div key={idx} className="py-3">
+                          <button
+                            onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                            className="w-full flex items-center justify-between text-left font-serif font-semibold text-luxury-black text-xs bg-transparent border-0 cursor-pointer p-0"
+                          >
+                            <span className="pr-2">{faq.q}</span>
+                            <ChevronDown className={`w-4 h-4 text-gold-600 transition-transform duration-350 shrink-0 ${isOpen ? 'transform rotate-180' : ''}`} />
+                          </button>
+                          {isOpen && (
+                            <div className="mt-2 text-[11px] text-text-secondary leading-relaxed font-light animate-slide-up">
+                              {faq.a}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side Support tickets panel */}
+              <div className="lg:col-span-2 space-y-6">
+                {selectedTicket ? (
+                  /* Chat Thread Conversation view */
+                  <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-sm flex flex-col min-h-[500px]">
+                    <div className="border-b border-champagne/20 pb-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <button
+                          onClick={() => setSelectedTicket(null)}
+                          className="text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-800 flex items-center gap-1 bg-transparent border-0 cursor-pointer p-0 mb-2"
+                        >
+                          &larr; Back to Tickets
+                        </button>
+                        <h3 className="text-base font-serif font-semibold text-luxury-black">{selectedTicket.subject}</h3>
+                        <div className="flex items-center gap-2 mt-1.5 text-[10px] text-text-secondary font-light">
+                          <span className="font-mono font-bold text-luxury-black">{selectedTicket.ticketCode}</span>
+                          <span>&bull;</span>
+                          <span>Created {new Date(selectedTicket.createdAt).toLocaleDateString("en-IN")}</span>
+                        </div>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase border tracking-wider ${getStatusColor(selectedTicket.status)}`}>
+                        {selectedTicket.status}
+                      </span>
+                    </div>
+
+                    {/* Messages list */}
+                    <div className="flex-1 overflow-y-auto space-y-4 max-h-[350px] pr-2 mb-4 scroll-smooth">
+                      {selectedTicket.messages?.map((msg, index) => {
+                        const isSystem = msg.senderName === "System Note";
+                        if (isSystem) {
+                          return (
+                            <div key={index} className="rounded-xl bg-gray-50 border border-gray-150 py-1.5 px-3 text-[10px] text-center max-w-md mx-auto text-text-secondary font-light">
+                              {msg.message}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={index} className={`flex flex-col ${msg.isAdmin ? 'items-start' : 'items-end'}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[9px] font-bold text-luxury-black mb-0.5">{msg.senderName}</span>
+                              <span className="text-[9px] text-text-secondary font-light">{new Date(msg.createdAt).toLocaleString("en-IN", { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className={`rounded-2xl p-2.5 text-xs leading-relaxed max-w-sm ${msg.isAdmin ? 'bg-amber-50/60 border border-gold-200/50 text-luxury-black rounded-tl-none' : 'bg-gold-500 text-white rounded-tr-none'}`}>
+                              {msg.message}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Reply form */}
+                    {selectedTicket.status !== "Resolved" ? (
+                      <form onSubmit={handleSendReply} className="border-t border-champagne/25 pt-4 mt-auto">
+                        <div className="flex items-end gap-3">
+                          <textarea
+                            value={replyMessage}
+                            onChange={(e) => setReplyMessage(e.target.value)}
+                            placeholder="Type your reply here..."
+                            rows={2}
+                            className="flex-1 rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 outline-none resize-none"
+                            required
+                          />
+                          <button
+                            type="submit"
+                            disabled={sendingReply || !replyMessage.trim()}
+                            className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-sm disabled:opacity-50 cursor-pointer shrink-0"
+                          >
+                            Reply
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="border-t border-champagne/25 pt-4 text-center mt-auto space-y-3">
+                        <p className="text-xs text-text-secondary font-light">This ticket is marked resolved. Reply to reopen.</p>
+                        <form onSubmit={handleSendReply} className="flex items-end gap-3">
+                          <textarea
+                            value={replyMessage}
+                            onChange={(e) => setReplyMessage(e.target.value)}
+                            placeholder="Type message to reopen..."
+                            rows={2}
+                            className="flex-1 rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 outline-none resize-none"
+                            required
+                          />
+                          <button
+                            type="submit"
+                            disabled={sendingReply || !replyMessage.trim()}
+                            className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-sm disabled:opacity-50 cursor-pointer shrink-0"
+                          >
+                            Reopen
+                          </button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                ) : ticketFormOpen ? (
+                  /* Create ticket view */
+                  <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between pb-3 border-b border-champagne/25 mb-4">
+                      <h3 className="text-base font-serif font-semibold text-luxury-black">Raise Support Ticket</h3>
+                      <button onClick={() => setTicketFormOpen(false)} className="text-xs font-bold uppercase tracking-wider text-text-secondary bg-transparent border-0 cursor-pointer">Cancel</button>
+                    </div>
+
+                    <form onSubmit={handleCreateTicket} className="space-y-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Subject Issue Summary *</label>
+                        <input
+                          value={newTicketSubject}
+                          onChange={(e) => setNewTicketSubject(e.target.value)}
+                          placeholder="e.g. Broken packaging on transit, missing elements"
+                          required
+                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Associated Order (Optional)</label>
+                        <select
+                          value={newTicketOrderId}
+                          onChange={(e) => setNewTicketOrderId(e.target.value)}
+                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 outline-none cursor-pointer"
+                        >
+                          <option value="">General Query (No order association)</option>
+                          {orders.map((o) => (
+                            <option key={o._id} value={o._id}>Order #{getOrderDisplayId(o)} - INR {o.totalPrice}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Description *</label>
+                        <textarea
+                          value={newTicketMessage}
+                          onChange={(e) => setNewTicketMessage(e.target.value)}
+                          placeholder="Please detail your query..."
+                          rows={4}
+                          required
+                          className="w-full rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 outline-none resize-none"
+                        />
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          type="submit"
+                          disabled={submittingTicket}
+                          className="flex-1 rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white shadow-sm disabled:opacity-50 cursor-pointer"
+                        >
+                          Submit Ticket
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTicketFormOpen(false)}
+                          className="rounded-full border border-champagne bg-white px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ) : (
+                  /* Ticket list view */
+                  <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-champagne/25 pb-3">
+                      <div>
+                        <h3 className="text-base font-serif font-semibold text-luxury-black">Support Tickets Logs</h3>
+                        <p className="text-[10px] text-text-secondary mt-0.5 font-light">Track running queries and conversation history with concierge.</p>
+                      </div>
+                      <button
+                        onClick={() => setTicketFormOpen(true)}
+                        className="rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white shadow-sm transition cursor-pointer"
+                      >
+                        Raise Ticket
+                      </button>
+                    </div>
+
+                    {loadingTickets ? (
+                      <div className="py-10 text-center text-xs animate-pulse">Syncing tickets...</div>
+                    ) : tickets.length > 0 ? (
+                      <div className="divide-y divide-champagne/20">
+                        {tickets.map((t) => (
+                          <div key={t._id} className="py-4 flex flex-wrap items-center justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-bold text-luxury-black">{t.ticketCode}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${getStatusColor(t.status)}`}>
+                                  {t.status}
+                                </span>
+                              </div>
+                              <h4 className="text-sm font-semibold text-luxury-black">{t.subject}</h4>
+                              <p className="text-[9px] text-text-secondary font-light">Last update {new Date(t.updatedAt).toLocaleDateString("en-IN")}</p>
+                            </div>
+                            <button
+                              onClick={() => fetchTicketDetails(t._id)}
+                              className="rounded-full border border-champagne bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 transition cursor-pointer"
+                            >
+                              View Chat &rarr;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center border border-dashed border-champagne/60 rounded-2xl bg-gold-50/5">
+                        <p className="text-xs text-text-secondary font-light">No support tickets running at this time.</p>
+                        <button
+                          onClick={() => setTicketFormOpen(true)}
+                          className="mt-4 rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white shadow-sm transition cursor-pointer"
+                        >
+                          Open Support Ticket
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* TRACKING TAB */}
+          {activeTab === "tracking" && (
+            <motion.div
+              key="tracking"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs">
+                <h2 className="text-lg font-serif font-semibold text-luxury-black">Track Shipment Journeys</h2>
+                <p className="text-xs text-text-secondary mt-1 font-light">Review tracking statuses, shipping timelines, and download receipt records.</p>
+              </div>
+
+              {orders.length > 0 ? (
+                <div className="space-y-6">
+                  {orders.map((order) => (
+                    <div key={order._id} className="rounded-3xl border border-champagne/45 bg-white p-6 shadow-sm space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-champagne/25 pb-3">
+                        <div>
+                          <span className="text-[9px] font-bold text-gold-600 uppercase tracking-widest">Active Order Tracking</span>
+                          <h4 className="text-sm font-bold text-luxury-black font-serif">Order Reference: {getOrderDisplayId(order)}</h4>
+                          <p className="text-[10px] text-text-secondary font-light">Placed on {new Date(order.createdAt).toLocaleString("en-IN")}</p>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${getStatusColor(order.status)}`}>
+                          {order.status}
+                        </span>
+                      </div>
+
+                      {/* Timeline Milestones */}
+                      <div className="space-y-4 pt-2">
+                        <div className="relative">
+                          <div className="relative h-1 w-full bg-champagne/40 rounded-full">
+                            <div
+                              className="absolute h-full bg-gold-500 rounded-full transition-all duration-500"
+                              style={{ width: `${(getStepIndex(order.status) / (trackingSteps.length - 1)) * 100}%` }}
+                            />
+                          </div>
+                          <div className="grid grid-cols-5 gap-1 text-[9px] font-bold text-text-secondary uppercase tracking-wider text-center mt-3">
+                            {trackingSteps.map((step, idx) => {
+                              const currentIdx = getStepIndex(order.status);
+                              const isCompleted = idx <= currentIdx;
+                              return (
+                                <div key={idx} className="space-y-1">
+                                  <div className={`mx-auto h-4 w-4 rounded-full border flex items-center justify-center text-[7px] ${isCompleted ? 'border-gold-500 bg-gold-500 text-white' : 'border-champagne bg-white text-gray-300'}`}>
+                                    {isCompleted ? "✓" : idx + 1}
+                                  </div>
+                                  <span className={isCompleted ? "text-gold-700 font-bold" : "font-light"}>{step}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Courier Partner detail */}
+                      <div className="flex flex-wrap items-center justify-between p-4 rounded-2xl bg-gold-50/10 border border-gold-200/25 text-xs font-light text-text-secondary gap-3">
+                        <div className="space-y-1">
+                          <p>Estimated Delivery: <strong className="text-luxury-black font-semibold">{new Date(new Date(order.createdAt).setDate(new Date(order.createdAt).getDate() + 5)).toLocaleDateString("en-IN")}</strong></p>
+                          <p>Courier Partner: <strong className="text-luxury-black font-semibold capitalize">{order.trackingCarrier || "Niyora Curated Delivery"}</strong></p>
+                          <p>AWB Tracking ID: <strong className="text-luxury-black font-mono font-semibold">{order.trackingId || "Pending Allocation"}</strong></p>
+                        </div>
+                        <div className="flex gap-2">
+                          {order.trackingId && (
+                            <a
+                              href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-full bg-gold-500 hover:bg-gold-600 text-white text-[10px] font-bold uppercase tracking-widest px-4.5 py-2.5 transition cursor-pointer"
+                            >
+                              Track Live Courier
+                            </a>
+                          )}
+                          {order.status === "Delivered" && (
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadInvoice(order)}
+                              className="rounded-full bg-luxury-black hover:bg-gold-500 text-white text-[10px] font-bold uppercase tracking-widest px-4.5 py-2.5 transition cursor-pointer"
+                            >
+                              Invoice
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                renderEmptyState("No Orders Found", "Create your first curated gift box to track logistics logs here.", "🚚")
+              )}
+            </motion.div>
+          )}
+
+          {/* COUPONS TAB */}
+          {activeTab === "coupons" && (
+            <motion.div
+              key="coupons"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs">
+                <h2 className="text-lg font-serif font-semibold text-luxury-black">Luxury Coupons & Offers</h2>
+                <p className="text-xs text-text-secondary mt-1 font-light">Copy promotional codes to apply during checkout for exclusive discounts.</p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  { code: "NIYORALUXE10", desc: "Flat 10% Off on all hand-curated gift boxes.", type: "Percentage", val: "10% OFF", exp: "Expires 31 Dec 2026" },
+                  { code: "FREESHIP", desc: "Enjoy complimentary surprise delivery across India.", type: "Shipping", val: "FREE SHIPPING", exp: "Expires 31 Dec 2026" },
+                  { code: "WELCOMEGIFT", desc: "Complimentary handcrafted premium envelope card.", type: "Addon", val: "FREE GIFT CARD", exp: "Expires 30 Sep 2026" }
+                ].map((cp, idx) => (
+                  <div key={idx} className="group relative rounded-3xl border border-champagne/40 bg-white p-6 shadow-sm hover:shadow-md hover:border-gold-300/40 transition-all duration-300 flex flex-col justify-between space-y-4 overflow-hidden">
+                    <div className="absolute -right-6 -top-6 w-16 h-16 bg-gold-500/10 rounded-full blur-xl" />
+                    <div>
+                      <span className="text-[8px] font-extrabold uppercase tracking-widest text-gold-700 bg-gold-50 px-2 py-0.5 rounded-md">{cp.type}</span>
+                      <h4 className="text-lg font-serif font-bold text-luxury-black mt-2">{cp.val}</h4>
+                      <p className="text-xs text-text-secondary font-light mt-1">{cp.desc}</p>
+                    </div>
+                    <div className="pt-3 border-t border-champagne/20 flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs font-bold text-gold-800 bg-gold-50 border border-gold-200/35 rounded px-2.5 py-1 select-all">{cp.code}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(cp.code);
+                          setSuccessMessage(`Coupon code "${cp.code}" copied to clipboard!`);
+                          setTimeout(() => setSuccessMessage(""), 3000);
+                        }}
+                        className="rounded-full bg-luxury-black hover:bg-gold-500 text-white text-[9px] font-bold uppercase tracking-widest px-3.5 py-2 transition cursor-pointer select-none"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <p className="text-[8px] text-gray-400 font-mono text-right">{cp.exp}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* NOTIFICATIONS TAB */}
+          {activeTab === "notifications" && (
+            <motion.div
+              key="notifications"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 md:p-8 shadow-xs flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-serif font-semibold text-luxury-black flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-gold-600" /> Notifications & Inbox Alerts
+                  </h2>
+                  <p className="text-xs text-text-secondary mt-1 font-light">Inbox updates, customer alerts, and promotional announcements.</p>
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await Promise.all(
+                          notifications
+                            .filter((n) => n.status !== "Read")
+                            .map((n) => api.put(`/user/notifications/${n._id}/read`))
+                        );
+                        setNotifications((prev) => prev.map((n) => ({ ...n, status: "Read" })));
+                        setUnreadCount(0);
+                      } catch (err) {
+                        console.error("Mark all read failed:", err);
+                      }
+                    }}
+                    className="rounded-full border border-gold-300 text-gold-700 hover:bg-gold-50/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-all duration-300"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
+
+              {loadingNotifications && notifications.length === 0 ? (
+                <div className="py-12 flex justify-center items-center text-xs text-text-secondary gap-2">
+                  <RefreshCw className="animate-spin h-4 w-4 text-gold-500" /> Loading...
+                </div>
+              ) : notifications.length > 0 ? (
+                <div className="space-y-3">
+                  {notifications.map((n) => {
+                    const isRead = n.status === "Read";
+                    const isOffer = n.type === "Offer";
+                    const isAlert = n.type === "Alert";
+                    return (
+                      <div
+                        key={n._id}
+                        onClick={() => {
+                          if (!isRead) {
+                            handleMarkAsRead(n._id);
+                          }
+                        }}
+                        className={`rounded-2xl border p-4.5 transition duration-300 relative overflow-hidden cursor-pointer ${
+                          isRead
+                            ? "bg-white/40 border-champagne/30 text-luxury-black/70"
+                            : "bg-gold-50/15 border-gold-300/40 text-luxury-black shadow-xs hover:bg-gold-50/20"
+                        }`}
+                      >
+                        {!isRead && (
+                          <div className="absolute top-0 left-0 w-1 h-full bg-gold-500" />
+                        )}
+                        <div className="flex flex-wrap justify-between items-start gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${
+                                isOffer ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
+                                isAlert ? "bg-rose-50 border-rose-200 text-rose-800" :
+                                "bg-sky-50 border-sky-200 text-sky-800"
+                              }`}>
+                                {n.type || "Info"}
+                              </span>
+                              {!isRead && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-gold-500 animate-pulse" />
+                              )}
+                            </div>
+                            <h3 className={`text-xs font-serif font-bold ${isRead ? "text-luxury-black/75" : "text-luxury-black"}`}>
+                              {n.title}
+                            </h3>
+                            <p className="text-xs text-text-secondary font-light">{n.message}</p>
+                          </div>
+                          <span className="text-[10px] text-text-secondary font-light">{new Date(n.createdAt).toLocaleDateString("en-IN")}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                renderEmptyState("Inbox is empty", "You do not have any notifications, alerts, or promotional gift coupons at this moment.", "📬")
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* CANCELLATION DIALOG MODAL */}
+      {cancelModalOpen && cancelTargetOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/60 p-4 backdrop-blur-md">
+          <div className="w-full max-w-lg rounded-3xl bg-white border border-gold-300/20 p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between gap-3 border-b border-champagne/30 pb-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Cancellation Request form</p>
+                <h3 className="mt-1.5 text-lg font-serif font-light text-luxury-black">
+                  Order #{getOrderDisplayId(cancelTargetOrder)}
+                </h3>
+                <p className="mt-1 text-xs text-text-secondary font-light leading-relaxed">
+                  Cancellations requests will undergo concierge verification audit. Funds will route back to source.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCancelModalOpen(false)}
+                className="text-text-secondary hover:text-luxury-black text-2xl font-light cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">Reason *</label>
+                <select
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500 cursor-pointer"
+                >
+                  <option value="">Select a reason</option>
+                  <option value="Ordered by mistake">Ordered by mistake</option>
+                  <option value="Found a better price">Found a better price</option>
+                  <option value="Need to change address/phone">Need to change address/phone</option>
+                  <option value="Delivery taking too long">Delivery taking too long</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">Details (optional)</label>
+                <textarea
+                  value={cancelDetails}
+                  onChange={(e) => setCancelDetails(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500 resize-none"
+                  placeholder="Detail context if necessary..."
+                />
+              </div>
+              <label className="flex items-start gap-2.5 rounded-2xl border border-champagne bg-white/60 px-4 py-3.5 text-xs text-text-secondary cursor-pointer leading-normal select-none">
+                <input
+                  type="checkbox"
+                  checked={cancelConfirmed}
+                  onChange={(e) => setCancelConfirmed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer"
+                />
+                <span>I confirm that I request complete cancellation review of this order parcel.</span>
+              </label>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={submitCancellationRequest}
+                disabled={submittingCancel || !cancelConfirmed || !cancelReason}
+                className="flex-1 rounded-full bg-rose-650 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-rose-750 disabled:opacity-60 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                {submittingCancel ? "Submitting..." : "Submit request"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCancelModalOpen(false)}
+                className="rounded-full border border-champagne bg-white px-5 py-3 text-xs font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RENDER RETURN MODAL */}
+      {renderReturnModal()}
+    </section>
+  );
+
+  // Return request page tab details section
+  function renderReturnsTab() {
     return (
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column: Returns list */}
+        {/* Left Column: Claims list */}
         <div className="lg:col-span-1 space-y-4">
           <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-5 rounded-3xl shadow-xs">
-            <h2 className="text-base font-serif font-semibold text-luxury-black">Returns History</h2>
-            <p className="text-[10px] text-text-secondary mt-0.5 font-light">Track status pipelines of submitted product return claims.</p>
+            <h2 className="text-base font-serif font-semibold text-luxury-black">Returns History logs</h2>
+            <p className="text-[10px] text-text-secondary mt-0.5 font-light">Pipeline tracking records of return/replacement claims.</p>
           </div>
 
           <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 no-scrollbar">
             {loadingReturns ? (
-              <div className="py-8 text-center text-xs text-text-secondary animate-pulse">Loading return database records...</div>
+              <div className="py-8 text-center text-xs text-text-secondary animate-pulse">Syncing return history records...</div>
             ) : returnsList.length > 0 ? (
               returnsList.map((ret) => {
                 const isSelected = selectedReturn?._id === ret._id;
@@ -1410,7 +3233,7 @@ const MyProfile = () => {
                     <div className="mt-2.5 text-[11px] text-text-secondary font-light space-y-1">
                       <p>Order Code: <span className="font-semibold text-luxury-black">{orderCode}</span></p>
                       <p>Refund Resolution: <span className="font-semibold text-luxury-black">{ret.preferredResolution}</span></p>
-                      <p>Placed on {new Date(ret.createdAt).toLocaleDateString("en-IN")}</p>
+                      <p>Date: {new Date(ret.createdAt).toLocaleDateString("en-IN")}</p>
                     </div>
                   </div>
                 );
@@ -1423,38 +3246,28 @@ const MyProfile = () => {
           </div>
         </div>
 
-        {/* Right Column: Return Details & Ticket Chat */}
+        {/* Right Column: Claim details */}
         <div className="lg:col-span-2 space-y-6">
           {selectedReturn ? (
-            <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs flex flex-col space-y-6 animate-fade-in">
-              {/* Detail Header */}
+            <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs flex flex-col space-y-6 animate-slide-up">
               <div className="border-b border-champagne/30 pb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-serif font-semibold text-luxury-black flex items-center gap-2">
-                    Claim {selectedReturn.returnCode}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-2.5 mt-1.5 text-[10px] text-text-secondary font-light">
+                  <h3 className="text-base font-serif font-semibold text-luxury-black">Claim #{selectedReturn.returnCode}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-text-secondary font-light">
                     <span>Order #{selectedReturn.order?.orderCode || "N/A"}</span>
                     <span>&bull;</span>
-                    <span>Created {new Date(selectedReturn.createdAt).toLocaleDateString("en-IN")}</span>
-                    {selectedReturn.assignedSupportAgent && (
-                      <>
-                        <span>&bull;</span>
-                        <span>Concierge: <strong>{selectedReturn.assignedSupportAgent.name}</strong></span>
-                      </>
-                    )}
+                    <span>Created: {new Date(selectedReturn.createdAt).toLocaleDateString("en-IN")}</span>
                   </div>
                 </div>
-
-                <span className={`rounded-full px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${getReturnStatusColor(selectedReturn.status)}`}>
+                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase border tracking-wider ${getReturnStatusColor(selectedReturn.status)}`}>
                   {selectedReturn.status}
                 </span>
               </div>
 
-              {/* Status Timeline */}
-              <div className="rounded-2xl border border-gold-200/25 bg-gold-50/5 p-4 space-y-3.5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">{selectedReturn.type} Process Tracker</h4>
-                <div className={`grid ${selectedReturn.type === "Replacement" ? "grid-cols-6" : "grid-cols-4"} gap-1.5`}>
+              {/* Steps vertical tracking */}
+              <div className="rounded-2xl border border-gold-200/20 bg-gold-50/5 p-4 space-y-3.5">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-luxury-black">{selectedReturn.type} Process Tracker</h4>
+                <div className={`grid ${selectedReturn.type === "Replacement" ? 'grid-cols-6' : 'grid-cols-4'} gap-1.5`}>
                   {(selectedReturn.type === "Replacement" ? [
                     { label: "Submitted", test: ["Pending", "Under Review", "Investigation In Progress", "Evidence Verified", "Approved", "Pickup Scheduled", "Item Picked Up", "Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
                     { label: "Approved", test: ["Approved", "Pickup Scheduled", "Item Picked Up", "Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
@@ -1472,1625 +3285,139 @@ const MyProfile = () => {
                     const isRejected = selectedReturn.status === "Rejected";
                     return (
                       <div key={idx} className="flex flex-col items-center text-center">
-                        <div className={`mb-1.5 h-6.5 w-6.5 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
-                          reached ? "border-gold-500 bg-gold-500 text-white" :
-                          isRejected && idx === 1 ? "border-red-500 bg-red-500 text-white" :
-                          "border-champagne bg-white text-gray-400"
+                        <div className={`mb-1.5 h-6.5 w-6.5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
+                          reached ? 'border-gold-500 bg-gold-500 text-white' :
+                          isRejected && idx === 1 ? 'border-rose-500 bg-rose-500 text-white' :
+                          'border-champagne bg-white text-gray-400'
                         }`}>
                           {isRejected && idx === 1 ? "×" : idx + 1}
                         </div>
-                        <p className={`text-[9px] font-bold leading-tight ${
-                          reached ? "text-gold-800" :
-                          isRejected && idx === 1 ? "text-red-500" : "text-text-secondary"
-                        }`}>{step.label}</p>
+                        <p className={`text-[8px] font-bold leading-tight ${reached ? 'text-gold-800' : 'text-text-secondary'}`}>{step.label}</p>
                       </div>
                     );
                   })}
                 </div>
-
-                {/* Latest Status Note */}
-                {selectedReturn.statusHistory?.length > 0 && (
-                  <div className="mt-3 text-[11px] text-text-secondary font-light bg-white p-2.5 rounded-xl border border-champagne/20">
-                    <span className="font-bold text-luxury-black uppercase tracking-wider text-[9px] block mb-0.5">Fulfillment Note:</span>
-                    {selectedReturn.statusHistory[selectedReturn.statusHistory.length - 1].note || "Status updated."}
-                    <span className="block mt-1 text-[9px] text-gray-400">
-                      Last Updated: {new Date(selectedReturn.statusHistory[selectedReturn.statusHistory.length - 1].updatedAt).toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                )}
               </div>
 
-              {/* Items returning list */}
+              {/* Items in Return */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black mb-2.5">Items in Return Claim</h4>
-                <div className="divide-y divide-champagne/15 bg-white border border-champagne/30 rounded-2xl overflow-hidden p-2">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-luxury-black mb-2">Claim Items details</h4>
+                <div className="divide-y divide-champagne/15 border border-champagne/30 rounded-2xl p-2 bg-white">
                   {selectedReturn.items?.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-3 py-2 px-1">
+                    <div key={idx} className="flex items-center gap-3 py-2">
                       {item.image && (
                         <img src={resolveMediaUrl(item.image)} alt={item.name} className="w-10 h-10 object-cover rounded-lg border border-champagne/20" />
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-luxury-black truncate">{item.name}</p>
-                        <p className="text-[10px] text-text-secondary mt-0.5">Returning Qty: <strong>{item.quantity}</strong> &bull; Value: INR {item.price}</p>
+                      <div className="flex-1 min-w-0 text-xs">
+                        <p className="font-semibold text-luxury-black truncate">{item.name}</p>
+                        <p className="text-[10px] text-text-secondary mt-0.5">Quantity: <strong>{item.quantity}</strong> &bull; Value: INR {item.price}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Details sections (Refund/Pickup) */}
+              {/* Financial Refund details */}
               <div className="grid gap-4 sm:grid-cols-2 text-xs text-text-secondary font-light">
-                <div className="rounded-2xl border border-champagne/35 p-3.5 bg-white space-y-1.5">
+                <div className="rounded-2xl border border-champagne/30 p-3.5 bg-white space-y-1.5">
                   <h5 className="font-bold text-luxury-black uppercase tracking-widest text-[9px] border-b border-champagne/15 pb-1">Claim Resolution</h5>
-                  <p>Preference: <strong className="text-gold-800">{selectedReturn.preferredResolution}</strong></p>
-                  
+                  <p>Preference: <strong className="text-gold-850">{selectedReturn.preferredResolution}</strong></p>
+
                   {selectedReturn.refundDetails?.refundStatus && selectedReturn.refundDetails.refundStatus !== "None" && (
-                    <div className="mt-2 text-[10px]">
+                    <div className="mt-2 text-[10px] space-y-0.5">
                       <p>Refund Status: <strong className="text-emerald-700">{selectedReturn.refundDetails.refundStatus}</strong></p>
                       <p>Refund Method: <strong>{selectedReturn.refundDetails.refundMethod}</strong></p>
                       <p>Amount: <strong className="font-serif">INR {selectedReturn.refundDetails.refundAmount}</strong></p>
                       {selectedReturn.refundDetails.transactionReference && (
-                        <p className="truncate">Txn Ref: <code className="bg-gray-50 px-1 py-0.5 rounded">{selectedReturn.refundDetails.transactionReference}</code></p>
+                        <p className="truncate">Txn ID: <code className="bg-gray-50 px-1 py-0.5 rounded">{selectedReturn.refundDetails.transactionReference}</code></p>
                       )}
                     </div>
                   )}
 
-                  {selectedReturn.replacementOrder && (
-                    <div className="mt-2 text-[10px] bg-gold-50/20 border border-gold-200/30 p-2 rounded-xl">
-                      <p>Replacement Created: <strong>Order #{selectedReturn.replacementOrder.orderCode || selectedReturn.replacementOrder._id.slice(-8)}</strong></p>
-                      <p>Fulfillment Status: <strong>{selectedReturn.replacementOrder.status}</strong></p>
-                    </div>
-                  )}
-
                   {selectedReturn.codRefundMethod && (
-                    <div className="mt-2 text-[10px] bg-gold-50/15 border border-gold-200/20 p-2.5 rounded-xl space-y-1">
-                      <p className="font-bold text-gold-800 uppercase tracking-wider text-[8px] border-b border-champagne/15 pb-0.5">COD Refund Method</p>
+                    <div className="mt-2 text-[10px] bg-gold-50/15 border border-gold-200/20 p-2 rounded-xl space-y-0.5">
+                      <p className="font-bold text-gold-800 uppercase tracking-wider text-[8px]">COD Refund Account Details</p>
                       <p>Method: <strong>{selectedReturn.codRefundMethod}</strong></p>
                       {selectedReturn.codRefundMethod === "UPI" ? (
                         <p>UPI ID: <strong>{selectedReturn.codRefundDetails?.upiId}</strong></p>
                       ) : (
-                        <div className="space-y-0.5">
+                        <>
                           <p>Holder: <strong>{selectedReturn.codRefundDetails?.accountHolderName}</strong></p>
                           <p>Bank: <strong>{selectedReturn.codRefundDetails?.bankName}</strong></p>
                           <p>Account: <strong>{selectedReturn.codRefundDetails?.accountNumber}</strong></p>
-                          <p>IFSC: <strong className="uppercase">{selectedReturn.codRefundDetails?.ifscCode}</strong></p>
-                        </div>
+                          <p>IFSC: <strong>{selectedReturn.codRefundDetails?.ifscCode}</strong></p>
+                        </>
                       )}
                     </div>
                   )}
                 </div>
 
+                {/* Pickup details */}
                 {selectedReturn.pickupDetails?.trackingId && (
-                  <div className="rounded-2xl border border-champagne/35 p-3.5 bg-white space-y-1.5">
+                  <div className="rounded-2xl border border-champagne/30 p-3.5 bg-white space-y-1">
                     <h5 className="font-bold text-luxury-black uppercase tracking-widest text-[9px] border-b border-champagne/15 pb-1">Pickup Logistics</h5>
-                    <p>Courier: <strong>{selectedReturn.pickupDetails.courier || "Registered Partner"}</strong></p>
-                    <p>AWB Tracking ID: <strong>{selectedReturn.pickupDetails.trackingId}</strong></p>
+                    <p>Courier: <strong>{selectedReturn.pickupDetails.courier || "Registered Courier"}</strong></p>
+                    <p>AWB Tracking: <strong>{selectedReturn.pickupDetails.trackingId}</strong></p>
                     {selectedReturn.pickupDetails.pickupDate && (
-                      <p>Pickup Date: <strong>{new Date(selectedReturn.pickupDetails.pickupDate).toLocaleDateString("en-IN")}</strong></p>
-                    )}
-                    {selectedReturn.pickupDetails.note && (
-                      <p className="text-[10px] text-gray-400">Note: {selectedReturn.pickupDetails.note}</p>
-                    )}
-                  </div>
-                )}
-
-                {selectedReturn.shippingDetails?.trackingId && (
-                  <div className="rounded-2xl border border-champagne/35 p-3.5 bg-white space-y-1.5">
-                    <h5 className="font-bold text-luxury-black uppercase tracking-widest text-[9px] border-b border-champagne/15 pb-1">Replacement Forward Logistics</h5>
-                    <p>Courier: <strong>{selectedReturn.shippingDetails.courier || "Registered Partner"}</strong></p>
-                    <p>AWB Tracking ID: <strong>{selectedReturn.shippingDetails.trackingId}</strong></p>
-                    {selectedReturn.shippingDetails.shippedDate && (
-                      <p>Shipped Date: <strong>{new Date(selectedReturn.shippingDetails.shippedDate).toLocaleDateString("en-IN")}</strong></p>
-                    )}
-                    {selectedReturn.shippingDetails.deliveredDate && (
-                      <p>Delivered Date: <strong>{new Date(selectedReturn.shippingDetails.deliveredDate).toLocaleDateString("en-IN")}</strong></p>
-                    )}
-                    {selectedReturn.shippingDetails.note && (
-                      <p className="text-[10px] text-gray-400">Note: {selectedReturn.shippingDetails.note}</p>
+                      <p>Date: <strong>{new Date(selectedReturn.pickupDetails.pickupDate).toLocaleDateString("en-IN")}</strong></p>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Chat Thread */}
+              {/* Chat timeline thread details */}
               {selectedTicket && (
-                <div className="border-t border-champagne/30 pt-6 space-y-4 flex-1">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black flex items-center justify-between">
-                    <span>Chat thread with Support</span>
-                    <span className="font-mono text-[10px] font-medium text-gray-400">Ticket #{selectedTicket.ticketCode}</span>
-                  </h4>
-
-                  {/* Messages */}
+                <div className="border-t border-champagne/20 pt-5 space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">Chat Thread Concierge</h4>
                   <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
                     {selectedTicket.messages?.map((msg, index) => {
                       const isSystem = msg.senderName === "System Note";
                       if (isSystem) {
                         return (
-                          <div key={index} className="rounded-lg bg-gray-50 border border-gray-150 py-1.5 px-3 text-[10px] text-center max-w-sm mx-auto text-text-secondary font-light">
+                          <div key={index} className="rounded-lg bg-gray-50 border py-1.5 px-3 text-[10px] text-center max-w-sm mx-auto text-text-secondary">
                             {msg.message}
                           </div>
                         );
                       }
                       return (
-                        <div key={index} className={`flex flex-col ${msg.isAdmin ? "items-start" : "items-end"}`}>
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-[9px] font-bold text-luxury-black font-serif">{msg.senderName}</span>
-                            <span className="text-[8px] text-text-secondary font-light">
-                              {new Date(msg.createdAt).toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                          </div>
-                          <div className={`rounded-2xl p-2.5 text-xs leading-relaxed max-w-sm ${
-                            msg.isAdmin ? "bg-cream border border-champagne text-luxury-black rounded-tl-none" : "bg-gold-500 text-white rounded-tr-none"
-                          }`}>
+                        <div key={index} className={`flex flex-col ${msg.isAdmin ? 'items-start' : 'items-end'}`}>
+                          <span className="text-[9px] font-bold text-luxury-black mb-0.5">{msg.senderName}</span>
+                          <div className={`rounded-2xl p-2.5 text-xs max-w-sm ${msg.isAdmin ? 'bg-amber-50/60 border border-gold-200/50 text-luxury-black rounded-tl-none' : 'bg-gold-500 text-white rounded-tr-none'}`}>
                             {msg.message}
-
-                            {/* Render Attachments in message bubble */}
-                            {msg.attachments && msg.attachments.length > 0 && (
-                              <div className="mt-2.5 pt-2 border-t border-black/10 text-[10px] space-y-1">
-                                {msg.attachments.map((attach, idx) => {
-                                  const isImg = attach.fileType === "image" || /\.(jpg|jpeg|png|webp|gif)$/i.test(attach.url);
-                                  return (
-                                    <div key={idx} className="flex items-center gap-1.5 bg-black/5 p-1 rounded-lg">
-                                      {isImg ? (
-                                        <a href={resolveMediaUrl(attach.url)} target="_blank" rel="noreferrer" className="block max-w-[100px] rounded overflow-hidden">
-                                          <img src={resolveMediaUrl(attach.url)} alt="attached file" className="w-16 h-16 object-cover" />
-                                        </a>
-                                      ) : (
-                                        <a href={resolveMediaUrl(attach.url)} target="_blank" rel="noreferrer" className="underline font-bold text-white flex items-center gap-1">
-                                          <span>📄</span>
-                                          <span className="truncate max-w-[120px]">{attach.name || "Download Document"}</span>
-                                        </a>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Send Reply */}
-                  {selectedTicket.status !== "Resolved" ? (
-                    <form onSubmit={handleSendReply} className="border-t border-champagne/30 pt-3 flex flex-col gap-2">
-                      {chatAttachment && (
-                        <div className="flex items-center justify-between bg-gold-50/30 border border-gold-200/30 px-3 py-1.5 rounded-xl text-[10px] text-luxury-black max-w-xs">
-                          <span className="truncate">📎 Pending attachment: <strong>{chatAttachment.name}</strong></span>
-                          <button
-                            type="button"
-                            onClick={() => setChatAttachment(null)}
-                            className="text-red-500 font-bold bg-transparent border-0 cursor-pointer text-sm"
-                          >
-                            &times;
-                          </button>
-                        </div>
-                      )}
-                      <div className="flex items-end gap-2.5">
-                        {/* Paperclip upload button */}
-                        <div className="relative shrink-0">
-                          <input
-                            type="file"
-                            onChange={handleChatAttachmentUpload}
-                            disabled={uploadingChatAttachment}
-                            id="chat-file-input"
-                            className="hidden"
-                          />
-                          <label
-                            htmlFor="chat-file-input"
-                            className="flex h-9 w-9 items-center justify-center rounded-full border border-champagne bg-white hover:bg-gold-50 transition cursor-pointer text-sm select-none"
-                            title="Attach images or documents"
-                          >
-                            📎
-                          </label>
-                        </div>
-
-                        <textarea
-                          value={replyMessage}
-                          onChange={(e) => setReplyMessage(e.target.value)}
-                          placeholder={uploadingChatAttachment ? "Uploading attachment..." : "Send a message to support agents..."}
-                          disabled={uploadingChatAttachment}
-                          rows={1}
-                          className="flex-1 rounded-2xl border border-champagne bg-white px-4 py-2 text-xs focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none resize-none h-9 flex items-center py-2.5"
-                          required
-                        />
-                        <button
-                          type="submit"
-                          disabled={sendingReply || uploadingChatAttachment || !replyMessage.trim()}
-                          className="rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-2 text-xs font-bold uppercase tracking-widest text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs shrink-0 cursor-pointer h-9"
-                        >
-                          Send
-                        </button>
-                      </div>
+                  {selectedTicket.status !== "Resolved" && (
+                    <form onSubmit={handleSendReply} className="border-t border-champagne/20 pt-3 flex gap-2">
+                      <input
+                        value={replyMessage}
+                        onChange={(e) => setReplyMessage(e.target.value)}
+                        placeholder="Reply support..."
+                        className="flex-1 rounded-full border border-champagne px-4 py-2 text-xs focus:border-gold-500 outline-none"
+                        required
+                      />
+                      <button type="submit" disabled={sendingReply || !replyMessage.trim()} className="rounded-full bg-gold-500 text-white px-5 py-2 text-xs font-bold uppercase tracking-wider hover:bg-gold-600 transition cursor-pointer select-none">
+                        Send
+                      </button>
                     </form>
-                  ) : (
-                    <div className="text-center text-[10px] text-gray-400 bg-gray-50 border p-3 rounded-2xl">
-                      This return ticket has been marked as Resolved. Send a message to reopen if you need further help.
-                    </div>
                   )}
                 </div>
               )}
             </div>
           ) : (
-            <div className="rounded-3xl border border-champagne bg-white/50 p-12 text-center max-w-lg mx-auto shadow-xs flex flex-col justify-center items-center h-64">
+            <div className="rounded-3xl border border-champagne bg-white/50 p-12 text-center flex flex-col justify-center items-center h-64">
               <span className="text-3xl mb-2">🔄</span>
               <h4 className="text-sm font-serif font-semibold text-luxury-black">Select Return Claim</h4>
-              <p className="text-[11px] text-text-secondary mt-1 max-w-xs font-light">Choose a return from the history list to view progress timelines, courier details, and chat directly with support.</p>
+              <p className="text-[11px] text-text-secondary mt-1 max-w-xs font-light">Select a claim from the history pane to check logistics updates.</p>
             </div>
           )}
         </div>
       </div>
     );
-  };
-
-  return (
-    <section className="space-y-6 max-w-7xl mx-auto">
-      {/* Header Banner */}
-      <div className="rounded-3xl bg-luxury-black p-6 text-white md:p-8 shadow-xl relative overflow-hidden border border-gold-500/20 animate-fade-in">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute left-1/3 bottom-0 w-32 h-32 bg-gold-400/5 rounded-full blur-2xl pointer-events-none" />
-        
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-gold-500/10 border border-gold-500/30 text-gold-450 rounded-full flex items-center justify-center text-2xl md:text-3xl font-serif font-bold backdrop-blur-md shadow-inner">
-              {(auth?.name || "G").charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-gold-400">My Profile</p>
-              <h1 className="mt-1 text-2xl md:text-3xl font-serif font-light tracking-tight">Hello, {auth?.name || "Gift Lover"}!</h1>
-              <p className="mt-1 text-xs text-gray-350 font-light">{auth?.email}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="self-start md:self-auto rounded-full bg-gold-500 px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gold-600 hover:scale-102 shadow-xs cursor-pointer"
-          >
-            Logout Account
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs Menu */}
-      <div className="bg-white/60 backdrop-blur-md p-1.5 rounded-3xl md:rounded-full border border-champagne/45 shadow-xs flex overflow-x-auto md:flex-wrap gap-1 w-full md:w-fit no-scrollbar whitespace-nowrap scroll-smooth">
-        <button onClick={() => setActiveTab("overview")} className={tabClass(activeTab === "overview")}>Overview</button>
-        <button onClick={() => setActiveTab("orders")} className={tabClass(activeTab === "orders")}>My Orders</button>
-        <button onClick={() => setActiveTab("returns")} className={tabClass(activeTab === "returns")}>My Returns</button>
-        <button onClick={() => setActiveTab("addresses")} className={tabClass(activeTab === "addresses")}>My Addresses</button>
-        <button onClick={() => setActiveTab("tracking")} className={tabClass(activeTab === "tracking")}>Order Tracking</button>
-        <button onClick={() => setActiveTab("settings")} className={tabClass(activeTab === "settings")}>Settings</button>
-        <button onClick={() => setActiveTab("notifications")} className={tabClass(activeTab === "notifications")}>
-          Notifications
-          {unreadCount > 0 && (
-            <span className="ml-1.5 rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 animate-pulse">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-        <button onClick={() => setActiveTab("help")} className={tabClass(activeTab === "help")}>Support</button>
-      </div>
-
-      {/* Feedback Messages */}
-      {loading ? (
-        <div className="flex items-center gap-3 text-xs text-text-secondary bg-white rounded-2xl p-4 border border-champagne/40 shadow-xs">
-          <svg className="animate-spin h-4 w-4 text-gold-500" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Loading profile details...
-        </div>
-      ) : null}
-      {error ? (
-        <div className="text-xs font-semibold text-red-750 bg-red-50 border border-red-200/40 rounded-2xl p-4 flex items-center gap-2">
-          <svg className="w-4 h-4 text-red-550 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {error}
-        </div>
-      ) : null}
-      {successMessage ? (
-        <div className="text-xs font-semibold text-gold-800 bg-gold-50 border border-gold-200/40 rounded-2xl p-4 flex items-center gap-2">
-          <svg className="w-4 h-4 text-gold-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {successMessage}
-        </div>
-      ) : null}
-
-      {/* OVERVIEW TAB */}
-      {activeTab === "overview" && !loading ? (
-        <div className="space-y-6">
-          {/* Stats Grid */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs hover:shadow-sm transition duration-300 hover:scale-[1.01]">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Total Orders</p>
-              <h3 className="mt-2 text-3xl font-serif font-light text-luxury-black">{orders.length}</h3>
-              <p className="text-[10px] text-text-secondary mt-1">Surprises placed to date</p>
-            </div>
-            <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs hover:shadow-sm transition duration-300 hover:scale-[1.01]">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Active Orders</p>
-              <h3 className="mt-2 text-3xl font-serif font-light text-gold-700">{activeOrdersCount}</h3>
-              <p className="text-[10px] text-text-secondary mt-1">Preparing & on their way</p>
-            </div>
-            <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs hover:shadow-sm transition duration-300 hover:scale-[1.01]">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Saved Addresses</p>
-              <h3 className="mt-2 text-3xl font-serif font-light text-luxury-black">{addresses.length}</h3>
-              <p className="text-[10px] text-text-secondary mt-1">Registered delivery options</p>
-            </div>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Recent Activity Card */}
-            <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-xs flex flex-col justify-between hover:shadow-sm transition-all duration-300">
-              <div>
-                <h3 className="text-base font-serif font-semibold text-luxury-black mb-3">Recent Activity</h3>
-                {latestOrder ? (
-                  <div className="space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-luxury-black">Order #{getOrderDisplayId(latestOrder)}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${getStatusColor(latestOrder.status)}`}>
-                        {latestOrder.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-text-secondary font-light">Total Price: <span className="font-semibold font-serif text-luxury-black">INR {latestOrder.totalPrice}</span></p>
-                    <p className="text-[10px] text-text-secondary font-light">Placed on {new Date(latestOrder.createdAt).toLocaleDateString("en-IN")}</p>
-                    
-                    {/* Tiny Progress Tracker */}
-                    <div className="pt-2">
-                      <div className="h-1.5 w-full bg-champagne/50 rounded-full overflow-hidden">
-                        <div
-                          className="h-1.5 bg-gold-500 rounded-full"
-                          style={{
-                            width:
-                              latestOrder.status === "Cancelled" ? "100%" :
-                              latestOrder.status === "Delivered" ? "100%" :
-                              latestOrder.status === "Shipped" ? "75%" :
-                              latestOrder.status === "Processing" ? "50%" :
-                              latestOrder.status === "Pending" ? "25%" : "0%",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-text-secondary font-light leading-relaxed">No orders placed yet. Explore our catalog to make surprises!</p>
-                )}
-              </div>
-              <button
-                onClick={() => setActiveTab("orders")}
-                className="mt-6 text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-800 inline-flex items-center gap-1.5 w-fit bg-transparent border-0 cursor-pointer"
-              >
-                View all orders &rarr;
-              </button>
-            </div>
-
-            {/* Default Address Card */}
-            <div className="rounded-3xl border border-champagne/40 bg-white/70 backdrop-blur-md p-6 shadow-xs flex flex-col justify-between hover:shadow-sm transition-all duration-300 relative overflow-hidden bg-gradient-to-br from-gold-50/5 via-white to-white">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gold-500/5 rounded-full blur-xl pointer-events-none" />
-              <div>
-                <h3 className="text-base font-serif font-semibold text-luxury-black mb-3 flex items-center gap-2">
-                  <span>📍</span> Shipping Destination
-                </h3>
-                {defaultAddress ? (
-                  <div className="space-y-3 text-xs text-text-secondary font-light">
-                    <div className="flex items-center gap-2 mb-1">
-                      {(() => {
-                        const opt = addressLabelOptions.find((o) => o.label === defaultAddress.label) || { icon: "📍", color: "bg-gold-50 text-gold-800 border-gold-200/40" };
-                        return (
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase border tracking-wider ${opt.color}`}>
-                            <span>{opt.icon}</span>
-                            <span>{defaultAddress.label}</span>
-                          </span>
-                        );
-                      })()}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-luxury-black text-white shadow-xs border border-gold-500/20 uppercase tracking-wider">
-                        ✨ Default
-                      </span>
-                    </div>
-                    <p className="font-bold text-luxury-black text-sm leading-tight font-serif">{defaultAddress.fullName}</p>
-                    <div className="flex items-start gap-1.5 pt-0.5">
-                      <div className="leading-relaxed">
-                        <p>{defaultAddress.line1}</p>
-                        <p className="font-semibold text-gray-700 mt-0.5">
-                          {defaultAddress.city}, {defaultAddress.state} - <span className="font-extrabold text-luxury-black font-sans">{defaultAddress.postalCode}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 pt-2 border-t border-champagne/30 text-luxury-black font-normal">
-                      <span>📞</span>
-                      <span className="font-bold">{defaultAddress.phone}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-text-secondary font-light leading-relaxed">No default shipping address set. Save a shipping address for faster ordering.</p>
-                )}
-              </div>
-              <button
-                onClick={() => setActiveTab("addresses")}
-                className="mt-6 text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-800 inline-flex items-center gap-1.5 w-fit bg-transparent border-0 cursor-pointer"
-              >
-                Manage addresses &rarr;
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* ORDERS TAB */}
-      {activeTab === "orders" && !loading ? (
-        <div className="space-y-4">
-          <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs animate-fade-in">
-            <h2 className="text-lg font-serif font-semibold text-luxury-black">My Orders</h2>
-            <p className="text-xs text-text-secondary mt-1 font-light">Review status details, request cancellations, or download tracking codes.</p>
-          </div>
-          <div className="space-y-3">
-            {orders.map((order) => (
-              <article key={order._id} className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-5 shadow-xs hover:shadow-sm transition duration-300">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-champagne/30 pb-3">
-                  <div>
-                    <p className="text-sm font-bold text-luxury-black font-serif">Order #{getOrderDisplayId(order)}</p>
-                    <p className="text-[10px] text-text-secondary mt-0.5 font-light">Placed on {new Date(order.createdAt).toLocaleString("en-IN")}</p>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase border tracking-wider ${getStatusColor(order.status)}`}>
-                    {order.status}
-                  </span>
-                </div>
-                <div className="py-3 text-xs text-text-secondary font-light space-y-1.5">
-                  <p>Items Count: <span className="font-semibold text-luxury-black">{order.products?.length || 0}</span></p>
-                  <p>Total Cost: <span className="font-semibold text-gold-700 font-serif">INR {order.totalPrice}</span></p>
-                  
-                  {order.cancellationRequest?.status && order.cancellationRequest.status !== "None" ? (
-                    <div className="rounded-xl border border-amber-200/50 bg-amber-50/30 px-3.5 py-2.5 mt-2">
-                      <p className="text-xs font-semibold text-amber-900">
-                        Cancellation Request Status: <span className="uppercase">{order.cancellationRequest.status}</span>
-                      </p>
-                      {order.cancellationRequest.reason ? (
-                        <p className="text-[11px] text-amber-800 mt-0.5">Reason: {order.cancellationRequest.reason}</p>
-                      ) : null}
-                      {order.cancellationRequest.adminNote ? (
-                        <p className="text-[11px] text-amber-800 mt-1">Admin Response: {order.cancellationRequest.adminNote}</p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {order.trackingId ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-gold-200/30 bg-gold-50/10 p-3">
-                      <p className="text-[11px] text-gold-800 font-medium">Tracking ID: {order.trackingId}</p>
-                      <a
-                        href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full bg-gold-500 hover:bg-gold-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white shadow-xs transition duration-300 cursor-pointer"
-                      >
-                        Track Package
-                      </a>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="pt-2 flex flex-wrap gap-2">
-                  {canRequestCancellation(order) ? (
-                    <button
-                      type="button"
-                      onClick={() => openCancelModal(order)}
-                      className="rounded-full border border-red-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 hover:scale-[1.01] transition cursor-pointer"
-                    >
-                      Request Cancellation
-                    </button>
-                  ) : null}
-                  {canRequestReturn(order) ? (
-                    <button
-                      type="button"
-                      onClick={() => openReturnModal(order)}
-                      className="rounded-full border border-gold-450 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gold-750 hover:bg-gold-50 hover:scale-[1.01] transition cursor-pointer"
-                    >
-                      Return Order
-                    </button>
-                  ) : null}
-                  {getOrderReturn(order._id) ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const ret = getOrderReturn(order._id);
-                        setSelectedReturn(ret);
-                        setActiveTab("returns");
-                      }}
-                      className="rounded-full border border-gold-500 bg-gold-100/60 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gold-900 hover:bg-gold-200/50 hover:scale-[1.01] transition cursor-pointer"
-                    >
-                      Track Return: {getOrderReturn(order._id).status}
-                    </button>
-                  ) : null}
-                  {order.status === "Delivered" ? (
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadInvoice(order)}
-                      className="rounded-full border border-luxury-black bg-luxury-black text-white hover:bg-gold-600 hover:border-gold-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:scale-[1.01] transition cursor-pointer flex items-center gap-1.5"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Download Invoice
-                    </button>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-            {!orders.length ? (
-              <div className="bg-white/50 border border-champagne/40 text-center py-12 rounded-3xl">
-                <p className="text-xs text-text-secondary font-medium">No orders found yet. Start shopping now.</p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {/* CANCELLATION MODAL */}
-      {cancelModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/60 p-4 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-lg rounded-3xl bg-white/95 border border-gold-300/20 p-6 shadow-2xl space-y-4">
-            <div className="flex items-start justify-between gap-3 border-b border-champagne/30 pb-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Cancellation request</p>
-                <h3 className="mt-1.5 text-lg font-serif font-light text-luxury-black">
-                  Order #{getOrderDisplayId(cancelTargetOrder)}
-                </h3>
-                <p className="mt-1 text-xs text-text-secondary font-light leading-relaxed">
-                  Your request will be reviewed by admin. If approved, the order will be cancelled and refund will be initiated.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCancelModalOpen(false)}
-                className="text-text-secondary hover:text-luxury-black text-2xl font-light cursor-pointer transition-colors"
-                aria-label="Close modal"
-              >
-                &times;
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">Reason *</label>
-                <select
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                >
-                  <option value="">Select a reason</option>
-                  <option value="Ordered by mistake">Ordered by mistake</option>
-                  <option value="Found a better price">Found a better price</option>
-                  <option value="Need to change address/phone">Need to change address/phone</option>
-                  <option value="Delivery taking too long">Delivery taking too long</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">Details (optional)</label>
-                <textarea
-                  value={cancelDetails}
-                  onChange={(e) => setCancelDetails(e.target.value)}
-                  rows={3}
-                  className="w-2xl max-w-full rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none resize-none"
-                  placeholder="Add details to help us process the cancellation request faster..."
-                />
-              </div>
-              <label className="flex items-start gap-2.5 rounded-2xl border border-champagne bg-white/60 px-4 py-3 text-xs text-text-secondary cursor-pointer leading-normal select-none">
-                <input
-                  type="checkbox"
-                  checked={cancelConfirmed}
-                  onChange={(e) => setCancelConfirmed(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer"
-                />
-                <span>I understand this is a request and cancellation will be confirmed after review.</span>
-              </label>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <button
-                type="button"
-                onClick={submitCancellationRequest}
-                disabled={submittingCancel}
-                className="flex-1 rounded-full bg-red-650 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-red-750 disabled:cursor-not-allowed disabled:opacity-60 transition cursor-pointer"
-              >
-                {submittingCancel ? "Submitting..." : "Submit request"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCancelModalOpen(false)}
-                className="rounded-full border border-champagne bg-white px-5 py-3 text-xs font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 transition cursor-pointer"
-              >
-                Back
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* ADDRESSES TAB */}
-      {activeTab === "addresses" ? (
-        <div className="space-y-6">
-          <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-6 rounded-3xl shadow-xs flex flex-wrap items-center justify-between gap-4 relative overflow-hidden animate-fade-in">
-            <div className="absolute top-0 left-0 w-1 h-full bg-gold-500" />
-            <div>
-              <h2 className="text-lg font-serif font-semibold text-luxury-black flex items-center gap-2">
-                <span>📍</span> Delivery Addresses
-              </h2>
-              <p className="mt-1 text-xs text-text-secondary font-light">Manage your shipping details for frictionless checkout experiences.</p>
-            </div>
-            <button
-              onClick={handleAddAddress}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow-xs cursor-pointer"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              Add New Address
-            </button>
-          </div>
-
-          {showAddressForm && (
-            <div className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 md:p-8 shadow-xs space-y-6 animate-fade-in">
-              <div>
-                <h2 className="text-lg font-serif font-semibold text-luxury-black mb-1">
-                  {editingAddress ? "Edit Address" : "Add Address"}
-                </h2>
-                <p className="text-xs text-text-secondary font-light">
-                  {editingAddress ? "Update your saved shipping details." : "Save a shipping address to speed up order confirmation."}
-                </p>
-              </div>
-
-              <form onSubmit={handleSaveAddress} className="space-y-6">
-                <div className="rounded-2xl border border-champagne/45 bg-white/60 p-5 space-y-4">
-                  <h3 className="text-xs font-bold text-luxury-black uppercase tracking-wider">Select Address Type</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                    {addressLabelOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setAddressForm((prev) => ({ ...prev, label: option.label }))}
-                        className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border transition duration-300 hover:scale-[1.02] cursor-pointer ${
-                          addressForm.label === option.label
-                            ? "border-gold-500 bg-gold-50/40 text-gold-800 shadow-xs"
-                            : "border-champagne bg-white hover:border-gold-300 text-text-secondary hover:text-gold-700"
-                        }`}
-                      >
-                        <span className="text-2xl mb-1.5">{option.icon}</span>
-                        <span className="text-xs font-bold">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                  {addressForm.label === "Other" && (
-                    <div className="mt-4 animate-slide-down">
-                      <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Custom Label Name *</label>
-                      <input
-                        name="customLabel"
-                        value={addressForm.customLabel || ""}
-                        onChange={handleAddressFormChange}
-                        placeholder="e.g. Vacation Home, Friend's house"
-                        required
-                        className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-2xl border border-champagne/45 bg-white/60 p-5 space-y-4">
-                  <h3 className="text-xs font-bold text-luxury-black uppercase tracking-wider">Contact Information</h3>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">
-                        Full Name *
-                      </label>
-                      <input
-                        name="fullName"
-                        value={addressForm.fullName}
-                        onChange={handleAddressFormChange}
-                        placeholder="Enter recipient's full name"
-                        required
-                        className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">
-                        Phone Number *
-                      </label>
-                      <input
-                        name="phone"
-                        value={addressForm.phone}
-                        onChange={handleAddressFormChange}
-                        placeholder="10-digit mobile number"
-                        required
-                        className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-champagne/45 bg-white/60 p-5 space-y-4">
-                  <h3 className="text-xs font-bold text-luxury-black uppercase tracking-wider">Address Details</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">
-                        Street Address *
-                      </label>
-                      <input
-                        name="line1"
-                        value={addressForm.line1}
-                        onChange={handleAddressFormChange}
-                        placeholder="Flat/House number, Building name, Street name"
-                        required
-                        className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                      <div>
-                        <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">
-                          City *
-                        </label>
-                        <input
-                          name="city"
-                          value={addressForm.city}
-                          onChange={handleAddressFormChange}
-                          placeholder="City"
-                          required
-                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">
-                          State *
-                        </label>
-                        <input
-                          name="state"
-                          value={addressForm.state}
-                          onChange={handleAddressFormChange}
-                          placeholder="State"
-                          required
-                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">
-                          Postal Code *
-                        </label>
-                        <input
-                          name="postalCode"
-                          value={addressForm.postalCode}
-                          onChange={handleAddressFormChange}
-                          placeholder="Pincode (e.g. 400001)"
-                          required
-                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">
-                        Country *
-                      </label>
-                      <input
-                        name="country"
-                        value={addressForm.country}
-                        onChange={handleAddressFormChange}
-                        placeholder="Country"
-                        required
-                        className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-champagne/45 bg-white/60 p-5">
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      id="isDefault"
-                      name="isDefault"
-                      checked={addressForm.isDefault}
-                      onChange={handleAddressFormChange}
-                      className="h-5 w-5 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 mt-0.5 cursor-pointer"
-                    />
-                    <div>
-                      <label htmlFor="isDefault" className="text-sm font-bold text-luxury-black cursor-pointer block select-none">
-                        Set as Default Address
-                      </label>
-                      <p className="text-xs text-text-secondary mt-0.5 select-none font-light">
-                        This address will be auto-selected during your next checkout process.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 pt-3 sm:flex-row">
-                  <button
-                    type="submit"
-                    disabled={savingAddress}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gold-500 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-gold-600 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed shadow-xs hover:shadow-sm cursor-pointer"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                    {savingAddress ? "Saving Address..." : editingAddress ? "Update Address" : "Save Address"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resetAddressForm}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-full border border-champagne px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-luxury-black transition hover:bg-gold-50 hover:scale-[1.01] cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* Addresses Cards Grid */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 animate-fade-in">
-            {addresses.map((address) => {
-              const labelOption = addressLabelOptions.find((opt) => opt.label === address.label) || { icon: "📍", color: "bg-gold-50 text-gold-800 border-gold-200/40" };
-              return (
-                <div
-                  key={address._id}
-                  className={`group relative rounded-3xl border transition duration-300 hover:shadow-md p-6 flex flex-col justify-between ${
-                    address.isDefault
-                      ? "border-gold-500 bg-gradient-to-br from-gold-50/20 via-white to-white shadow-xs"
-                      : "border-champagne/45 bg-white hover:border-gold-300/40"
-                  }`}
-                >
-                  <div>
-                    {/* Header line of the card */}
-                    <div className="flex items-center justify-between gap-3 mb-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${labelOption.color}`}>
-                        <span>{labelOption.icon}</span>
-                        <span>{address.label}</span>
-                      </span>
-                      
-                      {address.isDefault ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gold-500 text-white shadow-xs border border-gold-450 uppercase tracking-wider">
-                          ✨ Default
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {/* Content line of the card */}
-                    <div className="space-y-2.5 text-sm text-text-secondary font-light">
-                      <p className="font-bold text-luxury-black text-base leading-tight font-serif">{address.fullName}</p>
-                      
-                      <div className="flex items-start gap-2 pt-1">
-                        <span className="text-gray-405 mt-0.5 text-base shrink-0">📍</span>
-                        <div className="leading-relaxed">
-                          <p className="text-luxury-black">{address.line1}</p>
-                          <p className="font-semibold text-luxury-black mt-0.5">
-                            {address.city}, {address.state} - <span className="font-extrabold text-luxury-black font-sans">{address.postalCode}</span>
-                          </p>
-                          <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-1 font-semibold">{address.country}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-2 border-t border-champagne/30 text-luxury-black font-normal">
-                        <span className="text-gray-400 shrink-0">📞</span>
-                        <span className="font-bold tracking-wide text-sm">{address.phone}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Buttons line of the card */}
-                  <div className="mt-6 pt-4 border-t border-champagne/30 flex items-center gap-2.5">
-                    {!address.isDefault && (
-                      <button
-                        onClick={() => handleSetDefaultAddress(address._id)}
-                        className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl border border-gold-200/60 bg-gold-50/40 py-2.5 text-xs font-bold text-gold-800 transition hover:bg-gold-100/50 cursor-pointer"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Set Default
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleEditAddress(address)}
-                      className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl border border-champagne bg-white py-2.5 text-xs font-bold text-luxury-black transition hover:bg-gold-50 cursor-pointer"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteAddress(address._id)}
-                      className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50/50 p-2.5 text-red-650 transition hover:bg-red-100 hover:text-red-700 cursor-pointer"
-                    >
-                      <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {!addresses.length && !showAddressForm && (
-            <div className="rounded-3xl border-2 border-dashed border-gold-200 bg-gold-50/5 p-12 text-center max-w-xl mx-auto shadow-inner animate-fade-in">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gold-50 text-gold-600 border border-gold-100 text-3xl">
-                📍
-              </div>
-              <h3 className="text-lg font-serif font-semibold text-luxury-black mb-1">No delivery addresses saved</h3>
-              <p className="text-xs text-text-secondary mb-6 font-light">Create your first shipping details to save time on your next checkout.</p>
-              <button
-                onClick={handleAddAddress}
-                className="inline-flex items-center gap-2 rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow-xs hover:shadow-sm cursor-pointer"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Shipping Address
-              </button>
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      {/* TRACKING TAB */}
-      {activeTab === "tracking" && !loading ? (
-        <div className="space-y-6">
-          <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-6 rounded-3xl shadow-xs animate-fade-in">
-            <h2 className="text-lg font-serif font-semibold text-luxury-black">Track Shipment Journeys</h2>
-            <p className="text-xs text-text-secondary mt-1 font-light">Review tracking statuses, shipping timelines, and download receipt records.</p>
-          </div>
-
-          {orders.length > 0 ? (
-            <div className="space-y-4">
-              {orders.map((order) => (
-                <div key={order._id} className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-5 shadow-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-champagne/30 pb-3">
-                    <div>
-                      <p className="text-sm font-bold text-luxury-black font-serif">Order #{getOrderDisplayId(order)}</p>
-                      <p className="text-[10px] text-text-secondary mt-0.5 font-light">Placed on {new Date(order.createdAt).toLocaleString("en-IN")}</p>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase border tracking-wider ${getStatusColor(order.status)}`}>
-                      {order.status}
-                    </span>
-                  </div>
-
-                  {/* Progress Indicator */}
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">Delivery Status Track</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {["Shipped", "Delivered"].includes(order.status) && order.trackingId && (
-                          <a
-                            href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-full bg-gold-500 hover:bg-gold-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition duration-300 shadow-xs cursor-pointer"
-                          >
-                            Track Live Package
-                          </a>
-                        )}
-                        {order.status === "Delivered" && (
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadInvoice(order)}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-luxury-black hover:bg-gold-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition duration-300 shadow-xs cursor-pointer"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Download Invoice
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {["Shipped", "Delivered"].includes(order.status) && order.trackingId && (
-                      <div className="rounded-xl bg-blue-50/30 p-3.5 border border-blue-200/50">
-                        <p className="text-xs text-blue-900">
-                          <span className="font-semibold">Tracking Number:</span> {order.trackingId}
-                        </p>
-                        {order.trackingCarrier && (
-                          <p className="text-[11px] text-blue-700 mt-1 capitalize">
-                            <span className="font-semibold">Courier Partner:</span> {order.trackingCarrier}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="pt-2">
-                      <div className="relative mb-4 h-2 rounded-full bg-champagne/50">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-500 ${
-                            order.status === "Cancelled" ? "bg-red-500" : "bg-gold-500"
-                          }`}
-                          style={{
-                            width:
-                              order.status === "Cancelled" ? "100%" :
-                              order.status === "Delivered" ? "100%" :
-                              order.status === "Shipped" ? "75%" :
-                              order.status === "Processing" ? "50%" :
-                              order.status === "Pending" ? "25%" : "0%",
-                          }}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-5 gap-1 text-center">
-                        {trackingSteps.map((step, idx) => {
-                          const reached = getStepIndex(order.status) >= idx && order.status !== "Cancelled";
-                          const isCurrent = getStepIndex(order.status) === idx && order.status !== "Cancelled" && order.status !== "Delivered";
-                          return (
-                            <div key={step} className="flex flex-col items-center">
-                              <div
-                                className={`mb-1.5 h-6.5 w-6.5 rounded-full border-2 flex items-center justify-center text-xs font-bold ${
-                                  reached ? "border-gold-500 bg-gold-500 text-white" :
-                                  isCurrent ? "border-gold-500 bg-white text-gold-500 animate-pulse" :
-                                  "border-champagne bg-white text-gray-400"
-                                }`}
-                              >
-                                {idx + 1}
-                              </div>
-                              <p className={`text-[9px] md:text-[10px] font-bold leading-tight ${
-                                reached ? "text-gold-800" :
-                                isCurrent ? "text-gold-500" : "text-text-secondary"
-                              }`}>
-                                {step}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-3xl border border-champagne bg-white/50 p-8 text-center max-w-xl mx-auto shadow-xs animate-fade-in">
-              <div className="mx-auto mb-3 text-2xl">📦</div>
-              <h3 className="text-base font-serif font-semibold text-luxury-black">No orders placed</h3>
-              <p className="text-xs text-text-secondary mt-1 font-light">Start buying gifts to track their delivery statuses here.</p>
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      {/* ACCOUNT SETTINGS TAB */}
-      {activeTab === "settings" && !loading ? (
-        <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 md:p-8 shadow-xs animate-fade-in">
-          <div className="border-b border-champagne/30 pb-4 mb-6">
-            <h2 className="text-lg font-serif font-semibold text-luxury-black">Account Settings</h2>
-            <p className="text-xs text-text-secondary mt-1 font-light">Manage your profile details and registered contact information.</p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {/* Left side info card */}
-            <div className="md:col-span-1 border border-champagne/30 rounded-2xl p-5 bg-gold-50/10 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold-600 to-gold-400 text-white font-serif font-bold text-xl flex items-center justify-center shadow-md select-none">
-                {(auth?.name || "G").charAt(0).toUpperCase()}
-              </div>
-              <h3 className="text-sm font-serif font-medium text-luxury-black mt-3">{auth?.name || "Gift Lover"}</h3>
-              <p className="text-[10px] text-gold-700 bg-gold-50/50 border border-gold-200/20 px-3 py-1 rounded-full font-medium mt-2 flex items-center gap-1">
-                ✓ Email OTP Secured
-              </p>
-              <div className="w-10 h-[1px] bg-gold-300/40 my-4" />
-              <p className="text-[10px] text-text-secondary leading-relaxed font-light">
-                Your account is protected by standard passwordless email verification. No password updates are needed.
-              </p>
-            </div>
-
-            {/* Right side form */}
-            <form onSubmit={handleUpdateProfile} className="md:col-span-2 space-y-5">
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-luxury-black uppercase tracking-wider mb-2">Profile Information</h3>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Email Address</label>
-                  <input
-                    name="email"
-                    type="email"
-                    value={profileForm.email}
-                    disabled
-                    className="w-full rounded-full border border-champagne bg-gray-50 text-gray-500 px-4 py-2.5 text-xs cursor-not-allowed outline-none select-none"
-                  />
-                  <p className="text-[9px] text-text-secondary mt-1 font-light">
-                    Your email address is linked to your login and cannot be changed.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Full Name</label>
-                  <input
-                    name="name"
-                    value={profileForm.name}
-                    onChange={handleProfileFormChange}
-                    required
-                    className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                    placeholder="Update name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-luxury-black uppercase mb-1.5">Mobile Number</label>
-                  <input
-                    name="mobileNumber"
-                    type="tel"
-                    value={profileForm.mobileNumber}
-                    onChange={handleProfileFormChange}
-                    required
-                    className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                    placeholder="Update mobile number"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-champagne/30 pt-4 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={savingProfile}
-                  className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs hover:shadow-sm cursor-pointer"
-                >
-                  {savingProfile ? "Saving changes..." : "Save Settings"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
-      {/* NOTIFICATIONS TAB */}
-      {activeTab === "notifications" && !loading ? (
-        <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 md:p-8 shadow-xs animate-fade-in space-y-6">
-          <div className="border-b border-champagne/30 pb-4 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-serif font-semibold text-luxury-black flex items-center gap-2">
-                <span>🔔</span> Notifications & Alerts
-              </h2>
-              <p className="text-xs text-text-secondary mt-1 font-light">Inbox updates, customer alerts, and promotional announcements.</p>
-            </div>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await Promise.all(
-                      notifications
-                        .filter((n) => n.status !== "Read")
-                        .map((n) => api.put(`/user/notifications/${n._id}/read`))
-                    );
-                    setNotifications((prev) => prev.map((n) => ({ ...n, status: "Read" })));
-                    setUnreadCount(0);
-                  } catch (err) {
-                    console.error("Mark all read failed:", err);
-                  }
-                }}
-                className="rounded-full border border-gold-300 text-gold-700 hover:bg-gold-50/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-all duration-300"
-              >
-                Mark all as read
-              </button>
-            )}
-          </div>
-
-          {loadingNotifications && notifications.length === 0 ? (
-            <div className="py-12 flex justify-center items-center">
-              <svg className="animate-spin h-6 w-6 text-gold-500" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-          ) : notifications.length > 0 ? (
-            <div className="space-y-4">
-              {notifications.map((n) => {
-                const isRead = n.status === "Read";
-                const isOffer = n.type === "Offer";
-                const isAlert = n.type === "Alert";
-                return (
-                  <div
-                    key={n._id}
-                    onClick={() => {
-                      if (!isRead) {
-                        handleMarkAsRead(n._id);
-                      }
-                    }}
-                    className={`rounded-2xl border p-5 transition duration-300 relative overflow-hidden cursor-pointer ${
-                      isRead
-                        ? "bg-white/40 border-champagne/30 text-luxury-black/70"
-                        : "bg-gold-50/15 border-gold-300/40 text-luxury-black shadow-xs hover:bg-gold-50/20"
-                    }`}
-                  >
-                    {!isRead && (
-                      <div className="absolute top-0 left-0 w-1.5 h-full bg-gold-500" />
-                    )}
-                    <div className="flex flex-wrap justify-between items-start gap-2">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-                            isOffer ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
-                            isAlert ? "bg-rose-50 border-rose-200 text-rose-800" :
-                            "bg-sky-50 border-sky-200 text-sky-800"
-                          }`}>
-                            {n.type || "Info"}
-                          </span>
-                          {!isRead && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 animate-pulse" />
-                          )}
-                        </div>
-                        <h3 className={`text-xs font-serif font-bold ${isRead ? "text-luxury-black/75" : "text-luxury-black"}`}>
-                          {n.title}
-                        </h3>
-                      </div>
-                      <span className="text-[10px] text-text-secondary font-light">
-                        {new Date(n.createdAt).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit"
-                        })}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs font-light leading-relaxed whitespace-pre-line text-text-secondary">
-                      {n.message}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-3xl border border-champagne bg-white/50 p-12 text-center max-w-xl mx-auto shadow-xs flex flex-col justify-center items-center h-64">
-              <span className="text-3xl mb-2">📬</span>
-              <h4 className="text-sm font-serif font-semibold text-luxury-black">Inbox Empty</h4>
-              <p className="text-[11px] text-text-secondary mt-1 max-w-xs font-light">You have no notifications or alerts at this time.</p>
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      {/* HELP & SUPPORT TAB */}
-      {activeTab === "help" && !loading ? (
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column: Quick Contact & FAQs */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-6 rounded-3xl shadow-xs animate-fade-in">
-              <h2 className="text-lg font-serif font-semibold text-luxury-black">Support Channels</h2>
-              <p className="text-xs text-text-secondary mt-1 font-light leading-relaxed">Reach out directly via email or our concierge service.</p>
-              
-              <div className="mt-4 space-y-3">
-                <a
-                  href="mailto:niyoragifts@gmail.com"
-                  className="rounded-2xl border border-gold-200/40 bg-gold-50/5 p-4 hover:bg-gold-50/10 transition duration-300 block"
-                >
-                  <h3 className="font-serif font-semibold text-luxury-black text-sm">Send Email</h3>
-                  <p className="text-[11px] text-text-secondary mt-0.5 font-light">niyoragifts@gmail.com</p>
-                  <p className="text-[9px] text-gold-700 mt-2 font-bold uppercase tracking-widest">12-24 Hour Turnaround</p>
-                </a>
-                <a
-                  href="https://wa.me/919000000000"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-2xl border border-gold-200/40 bg-gold-50/5 p-4 hover:bg-gold-50/10 transition duration-300 block"
-                >
-                  <h3 className="font-serif font-semibold text-luxury-black text-sm">WhatsApp Chat</h3>
-                  <p className="text-[11px] text-text-secondary mt-0.5 font-light">Instant mobile concierge</p>
-                  <p className="text-[9px] text-gold-700 mt-2 font-bold uppercase tracking-widest">Immediate Assistance</p>
-                </a>
-              </div>
-            </div>
-
-            {/* FAQs Accordion */}
-            <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-6 rounded-3xl shadow-xs animate-fade-in">
-              <h3 className="text-sm font-serif font-bold text-luxury-black mb-3">Frequently Asked Questions</h3>
-              <div className="divide-y divide-champagne/30">
-                {(dynamicFaqs.length > 0 ? dynamicFaqs : faqs).map((faq, idx) => {
-                  const isOpen = openFaqIndex === idx;
-                  return (
-                    <div key={idx} className="py-3">
-                      <button
-                        onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                        className="w-full flex items-center justify-between text-left font-serif font-semibold text-luxury-black text-xs focus:outline-none bg-transparent border-0 cursor-pointer p-0"
-                      >
-                        <span className="pr-2">{faq.q}</span>
-                        <svg
-                          className={`w-3.5 h-3.5 text-gold-600 transition-transform duration-300 shrink-0 ${isOpen ? "transform rotate-180" : ""}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                      {isOpen && (
-                        <div className="mt-2 text-[11px] text-text-secondary leading-relaxed animate-slide-down font-light">
-                          {faq.a}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Support Tickets Panel */}
-          <div className="lg:col-span-2 space-y-6">
-            {selectedTicket ? (
-              /* Ticket Detail / Conversation Thread View */
-              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs animate-fade-in flex flex-col min-h-[500px]">
-                {/* Header */}
-                <div className="border-b border-champagne/40 pb-4 mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <button
-                      onClick={() => setSelectedTicket(null)}
-                      className="text-xs font-bold uppercase tracking-widest text-gold-700 hover:text-gold-800 flex items-center gap-1 bg-transparent border-0 cursor-pointer p-0 mb-2"
-                    >
-                      &larr; Back to Tickets
-                    </button>
-                    <h3 className="text-base font-serif font-semibold text-luxury-black">
-                      {selectedTicket.subject}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-text-secondary font-light">
-                      <span className="font-bold font-mono">{selectedTicket.ticketCode}</span>
-                      <span>&bull;</span>
-                      <span>Created {new Date(selectedTicket.createdAt).toLocaleDateString("en-IN")}</span>
-                      {selectedTicket.order && (
-                        <>
-                          <span>&bull;</span>
-                          <span>Order #{selectedTicket.order.orderCode}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase border tracking-wider ${getStatusColor(selectedTicket.status)}`}>
-                    {selectedTicket.status}
-                  </span>
-                </div>
-
-                {/* Messages Body */}
-                <div className="flex-1 overflow-y-auto space-y-4 max-h-[350px] pr-2 mb-4 scroll-smooth">
-                  {selectedTicket.messages?.map((msg, index) => {
-                    const isSystem = msg.senderName === "System Note";
-                    if (isSystem) {
-                      return (
-                        <div key={index} className="rounded-xl bg-gray-50 border border-gray-150 py-1.5 px-3 text-[10px] text-center max-w-md mx-auto text-text-secondary font-light">
-                          {msg.message}
-                        </div>
-                      );
-                    }
-                    return (
-                      <div
-                        key={index}
-                        className={`flex flex-col ${msg.isAdmin ? "items-start" : "items-end"}`}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-bold text-luxury-black font-serif">
-                            {msg.senderName}
-                          </span>
-                          <span className="text-[9px] text-text-secondary font-light">
-                            {new Date(msg.createdAt).toLocaleString("en-IN", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
-                        <div
-                          className={`rounded-2xl p-3 text-xs leading-relaxed max-w-md ${
-                            msg.isAdmin
-                              ? "bg-cream border border-champagne text-luxury-black rounded-tl-none"
-                              : "bg-gold-500 text-white rounded-tr-none"
-                          }`}
-                        >
-                          {msg.message}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Send Reply Form */}
-                {selectedTicket.status !== "Resolved" ? (
-                  <form onSubmit={handleSendReply} className="border-t border-champagne/45 pt-4 mt-auto">
-                    <div className="flex items-end gap-3">
-                      <textarea
-                        value={replyMessage}
-                        onChange={(e) => setReplyMessage(e.target.value)}
-                        placeholder="Type your reply here..."
-                        rows={2}
-                        className="flex-1 rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none resize-none"
-                        required
-                      />
-                      <button
-                        type="submit"
-                        disabled={sendingReply || !replyMessage.trim()}
-                        className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs shrink-0 cursor-pointer"
-                      >
-                        {sendingReply ? "Sending..." : "Reply"}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className="border-t border-champagne/45 pt-4 text-center mt-auto">
-                    <p className="text-xs text-text-secondary font-light">
-                      This ticket has been marked as Resolved. You can send a message below to reopen it.
-                    </p>
-                    <form onSubmit={handleSendReply} className="mt-3 flex items-end gap-3">
-                      <textarea
-                        value={replyMessage}
-                        onChange={(e) => setReplyMessage(e.target.value)}
-                        placeholder="Reopen ticket by replying..."
-                        rows={2}
-                        className="flex-1 rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none resize-none"
-                        required
-                      />
-                      <button
-                        type="submit"
-                        disabled={sendingReply || !replyMessage.trim()}
-                        className="rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs shrink-0 cursor-pointer"
-                      >
-                        {sendingReply ? "Reopen" : "Send"}
-                      </button>
-                    </form>
-                  </div>
-                )}
-              </div>
-            ) : ticketFormOpen ? (
-              /* New Ticket Form */
-              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs animate-fade-in">
-                <div className="flex items-center justify-between pb-3 border-b border-champagne/40 mb-4">
-                  <h3 className="text-base font-serif font-semibold text-luxury-black">
-                    Raise a Support Ticket
-                  </h3>
-                  <button
-                    onClick={() => setTicketFormOpen(false)}
-                    className="text-xs font-bold uppercase tracking-widest text-text-secondary hover:text-luxury-black bg-transparent border-0 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-
-                <form onSubmit={handleCreateTicket} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1.5">
-                      Subject / Issue Summary *
-                    </label>
-                    <input
-                      value={newTicketSubject}
-                      onChange={(e) => setNewTicketSubject(e.target.value)}
-                      placeholder="e.g. Damage during delivery, Missing gift card"
-                      required
-                      className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1.5">
-                      Associated Order (optional)
-                    </label>
-                    <select
-                      value={newTicketOrderId}
-                      onChange={(e) => setNewTicketOrderId(e.target.value)}
-                      className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none"
-                    >
-                      <option value="">General Query (No Order)</option>
-                      {orders.map((order) => (
-                        <option key={order._id} value={order._id}>
-                          Order #{getOrderDisplayId(order)} ({new Date(order.createdAt).toLocaleDateString("en-IN")}) - INR {order.totalPrice}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1.5">
-                      Detailed Message *
-                    </label>
-                    <textarea
-                      value={newTicketMessage}
-                      onChange={(e) => setNewTicketMessage(e.target.value)}
-                      placeholder="Describe your issue in detail. If it relates to a specific package, let us know what happened..."
-                      rows={4}
-                      required
-                      className="w-full rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs transition-all focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none resize-none"
-                    />
-                  </div>
-
-                  <div className="pt-2 flex gap-3">
-                    <button
-                      type="submit"
-                      disabled={submittingTicket}
-                      className="flex-1 rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-xs hover:shadow-sm cursor-pointer"
-                    >
-                      {submittingTicket ? "Submitting..." : "Submit Ticket"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTicketFormOpen(false)}
-                      className="rounded-full border border-champagne bg-white px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-luxury-black transition hover:bg-gold-50 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            ) : (
-              /* Tickets List View */
-              <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs animate-fade-in">
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-champagne/40 mb-4">
-                  <div>
-                    <h3 className="text-base font-serif font-semibold text-luxury-black">
-                      Support Tickets
-                    </h3>
-                    <p className="text-[11px] text-text-secondary mt-0.5 font-light">
-                      Track open tickets and review conversation logs with support concierge.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setTicketFormOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow-xs cursor-pointer"
-                  >
-                    Raise Ticket
-                  </button>
-                </div>
-
-                {loadingTickets ? (
-                  <div className="py-12 flex justify-center text-xs text-text-secondary items-center gap-2">
-                    <svg className="animate-spin h-4 w-4 text-gold-500" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Loading tickets...
-                  </div>
-                ) : tickets.length > 0 ? (
-                  <div className="divide-y divide-champagne/30">
-                    {tickets.map((t) => (
-                      <div key={t._id} className="py-4 flex flex-wrap items-center justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-bold text-luxury-black">{t.ticketCode}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${getStatusColor(t.status)}`}>
-                              {t.status}
-                            </span>
-                          </div>
-                          <h4 className="text-sm font-semibold text-luxury-black">{t.subject}</h4>
-                          <div className="text-[10px] text-text-secondary font-light flex items-center gap-2">
-                            <span>Last updated {new Date(t.updatedAt).toLocaleDateString("en-IN")}</span>
-                            {t.order && (
-                              <>
-                                <span>&bull;</span>
-                                <span className="font-mono">Order #{t.order.orderCode}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => fetchTicketDetails(t._id)}
-                          className="rounded-full border border-champagne bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 hover:border-gold-300 transition cursor-pointer"
-                        >
-                          View Thread &rarr;
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-12 text-center border-2 border-dashed border-champagne/60 rounded-2xl bg-gold-50/5">
-                    <p className="text-xs text-text-secondary font-light">
-                      No support tickets created yet.
-                    </p>
-                    <button
-                      onClick={() => setTicketFormOpen(true)}
-                      className="mt-4 rounded-full bg-gold-500 hover:bg-gold-600 px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white shadow-xs transition cursor-pointer"
-                    >
-                      Raise Your First Ticket
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : null}
-
-      {/* RETURNS TAB */}
-      {activeTab === "returns" && !loading ? renderReturnsTab() : null}
-
-      {/* RETURN MODAL */}
-      {renderReturnModal()}
-    </section>
-  );
+  }
 };
 
 export default MyProfile;
