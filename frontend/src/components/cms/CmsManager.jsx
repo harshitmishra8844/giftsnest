@@ -659,24 +659,101 @@ export default function CmsManager({ authHeader, adminAuth }) {
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-serif text-luxury-black font-semibold">About Page Editor</h3>
-            {renderInput("Main Heading Title", "draftContent.heading", content.heading)}
-            {renderTextarea("Summary Description Block", "draftContent.description", content.description)}
-
             <div className="grid gap-4 md:grid-cols-2">
-              {renderTextarea("Our Gifting Mission statement", "draftContent.mission", content.mission)}
-              {renderTextarea("Our Corporate Vision", "draftContent.vision", content.vision)}
+              {renderInput("Hero Accent Text", "draftContent.accentText", content.accentText)}
+              {renderInput("Main Heading Title", "draftContent.heading", content.heading)}
+            </div>
+            {renderTextarea("Summary Description Block", "draftContent.description", content.description)}
+            {renderImageField("Hero Background Image", "draftContent.images.0", content.images?.[0])}
+
+            <div className="border-t border-gray-100 pt-6 space-y-4">
+              <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Mission & Vision</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                {renderTextarea("Our Gifting Mission statement", "draftContent.mission", content.mission)}
+                {renderTextarea("Our Corporate Vision", "draftContent.vision", content.vision)}
+              </div>
+              {renderImageField("Mission & Vision Section Image", "draftContent.missionImage", content.missionImage)}
             </div>
 
-            {renderRichEditor("Company Founding Story (HTML)", "draftContent.companyStory", content.companyStory)}
+            <div className="border-t border-gray-100 pt-6 space-y-4">
+              <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Our Story</h4>
+              {renderRichEditor("Company Founding Story (HTML)", "draftContent.companyStory", content.companyStory)}
+              {renderImageField("Our Story Section Image", "draftContent.storyImage", content.storyImage)}
+            </div>
 
             <div className="border-t border-gray-100 pt-6 space-y-4">
               <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Gifting Core Values</h4>
-              {content.values?.map((v, idx) => (
-                <div key={idx} className="bg-gray-50 p-4 rounded-xl space-y-3">
-                  {renderInput("Value Title", `draftContent.values.${idx}.title`, v.title)}
-                  {renderTextarea("Value Description Subtext", `draftContent.values.${idx}.text`, v.text)}
-                </div>
-              ))}
+              <div className="space-y-4">
+                {content.values?.map((v, idx) => (
+                  <div key={idx} className="bg-gray-50 p-4 rounded-xl space-y-3 relative border border-gray-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-gray-500 uppercase">Value Card {idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...(content.values || [])];
+                          updated.splice(idx, 1);
+                          setNestedField("draftContent.values", updated);
+                        }}
+                        className="text-xs text-red-500 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {renderInput("Value Title", `draftContent.values.${idx}.title`, v.title)}
+                    {renderTextarea("Value Description Subtext", `draftContent.values.${idx}.text`, v.text)}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setNestedField("draftContent.values", [...(content.values || []), { title: "", text: "" }])}
+                className="rounded-xl border border-dashed border-gray-300 hover:border-gold-400 p-3 w-full text-center text-xs text-gray-500 font-bold uppercase tracking-wider"
+              >
+                + Add Value Card
+              </button>
+            </div>
+
+            <div className="border-t border-gray-100 pt-6 space-y-4">
+              <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Why Choose Us Points</h4>
+              {renderInput("Why Choose Us Section Title", "draftContent.whyChooseUsTitle", content.whyChooseUsTitle)}
+              <div className="space-y-4 mt-3">
+                {content.whyChooseUsList?.map((item, idx) => (
+                  <div key={idx} className="bg-gray-50 p-4 rounded-xl space-y-3 relative border border-gray-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-gray-500 uppercase">Point {idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...(content.whyChooseUsList || [])];
+                          updated.splice(idx, 1);
+                          setNestedField("draftContent.whyChooseUsList", updated);
+                        }}
+                        className="text-xs text-red-500 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {renderInput("Point Title", `draftContent.whyChooseUsList.${idx}.title`, item.title)}
+                    {renderTextarea("Point Description", `draftContent.whyChooseUsList.${idx}.text`, item.text)}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setNestedField("draftContent.whyChooseUsList", [...(content.whyChooseUsList || []), { title: "", text: "" }])}
+                className="rounded-xl border border-dashed border-gray-300 hover:border-gold-400 p-3 w-full text-center text-xs text-gray-500 font-bold uppercase tracking-wider"
+              >
+                + Add Feature Point
+              </button>
+            </div>
+
+            <div className="border-t border-gray-100 pt-6 space-y-4">
+              <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Call To Action (CTA)</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                {renderInput("CTA Button Text", "draftContent.ctaText", content.ctaText)}
+                {renderInput("CTA Button Link", "draftContent.ctaLink", content.ctaLink)}
+              </div>
             </div>
 
             {renderSeoFields(cmsData)}

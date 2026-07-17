@@ -16,6 +16,7 @@ import TrackOrder from "./pages/TrackOrder";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import ReturnsRefunds from "./pages/ReturnsRefunds";
 import PersonalizedMug from "./pages/PersonalizedMug";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import { useCart } from "./context/CartContext";
 import { useWishlist } from "./context/WishlistContext";
 import { useAuth } from "./context/AuthContext";
@@ -677,6 +678,7 @@ function App() {
           <Route path="/returns-replacement" element={<Navigate to="/returns-refunds" replace />} />
           <Route path="/return-and-replacement" element={<Navigate to="/returns-refunds" replace />} />
           <Route path="/personalized-mug" element={<PersonalizedMug />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
         </Routes>
       </main>
 

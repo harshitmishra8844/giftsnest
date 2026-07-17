@@ -17,6 +17,25 @@ const defaultValues = [
   }
 ];
 
+const defaultWhyChooseUs = [
+  {
+    title: "Premium Selections",
+    text: "Premium flowers, cakes and personalized gifts curated for high-end celebrations."
+  },
+  {
+    title: "Luxury Packaging",
+    text: "Beautiful custom packaging and rigorous quality checks for every single order."
+  },
+  {
+    title: "Timed Delivery Options",
+    text: "Same-day, slot-based, and midnight delivery options so you never miss a moment."
+  },
+  {
+    title: "Dedicated Support",
+    text: "Friendly customer support team ready to assist you throughout your ordering journey."
+  }
+];
+
 const About = () => {
   const [cmsContent, setCmsContent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,85 +86,181 @@ const About = () => {
     };
   }, [cmsContent]);
 
+  const accentText = cmsContent?.content?.accentText || "About Niyora Gifts";
   const heading = cmsContent?.content?.heading || "We help people celebrate with meaningful gifts.";
   const description = cmsContent?.content?.description || "Niyora Gifts is built for moments that matter. Whether it's a birthday, anniversary, thank-you gesture, or festive celebration, we combine premium products with dependable service to create gifting experiences people remember.";
   const values = cmsContent?.content?.values || defaultValues;
-  const image = cmsContent?.content?.images?.[0] || "";
+  const image = cmsContent?.content?.images?.[0] || "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200";
+
+  const mission = cmsContent?.content?.mission || "Our mission is to bring joy to every celebration through high quality, handpicked gifts delivered right on time.";
+  const vision = cmsContent?.content?.vision || "To be the most trusted and premium online gifting brand known for exceptional customer satisfaction and elegant collections.";
+  const missionImage = cmsContent?.content?.missionImage || "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?w=800";
+
+  const companyStory = cmsContent?.content?.companyStory || "Founded in 2026, Niyora Gifts started with a simple belief: that every gift should carry a deep emotion. Over time, we've grown into a destination for luxury flowers, gourmet cakes, and bespoke customized keepsakes.";
+  const storyImage = cmsContent?.content?.storyImage || "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800";
+
+  const whyChooseUsTitle = cmsContent?.content?.whyChooseUsTitle || "Why customers choose us";
+  const whyChooseUsList = cmsContent?.content?.whyChooseUsList || defaultWhyChooseUs;
+
+  const ctaText = cmsContent?.content?.ctaText || "Explore Products";
+  const ctaLink = cmsContent?.content?.ctaLink || "/products";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-16 pb-12">
+      {/* 1. Hero Section */}
       <section 
-        className="rounded-3xl bg-luxury-black px-8 py-12 text-white shadow-2xl md:px-16 relative overflow-hidden border border-gold-500/20 scroll-reveal"
-        style={image ? { backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.9) 30%, rgba(0, 0, 0, 0.5) 100%), url(${image})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
+        className="rounded-3xl bg-luxury-black px-8 py-16 text-white shadow-2xl md:px-16 relative overflow-hidden border border-gold-500/20 scroll-reveal min-h-[450px] flex items-center"
+        style={{ 
+          backgroundImage: `linear-gradient(to right, rgba(28, 28, 28, 0.95) 30%, rgba(28, 28, 28, 0.8) 60%, rgba(28, 28, 28, 0.4) 100%), url(${image})`, 
+          backgroundSize: "cover", 
+          backgroundPosition: "center" 
+        }}
       >
-        {/* Luxury subtle glows */}
-        {!image && <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />}
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold-400">About Niyora Gifts</p>
-        <h1 className="mt-3 text-3xl font-serif text-white md:text-5xl">{heading}</h1>
-        <p className="mt-4 max-w-3xl text-sm text-gray-300 leading-7 font-light md:text-base">
-          {description}
-        </p>
+        <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/35 to-transparent pointer-events-none" />
+        <div className="relative z-10 max-w-4xl">
+          <span className="inline-block px-3 py-1 mb-4 rounded-full border border-gold-400/30 bg-gold-400/10 text-gold-400 text-[10px] uppercase font-bold tracking-widest">
+            {accentText}
+          </span>
+          <h1 className="text-3xl font-serif text-white md:text-6xl leading-tight font-normal">
+            {heading}
+          </h1>
+          <p className="mt-6 max-w-2xl text-sm md:text-base text-gray-300 leading-relaxed font-light">
+            {description}
+          </p>
+        </div>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-3 scroll-reveal">
-        {values.map((item) => (
-          <article key={item.title} className="rounded-2xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm hover:border-gold-300/40 transition-all duration-300">
-            <h2 className="text-lg font-bold font-serif text-gold-700">{item.title}</h2>
-            <p className="mt-2 text-sm text-text-secondary font-light leading-6">{item.text}</p>
-          </article>
-        ))}
+      {/* 2. Core Values Grid */}
+      <section className="scroll-reveal space-y-10">
+        <div className="text-center space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-gold-600">Our Core Pillars</p>
+          <h2 className="font-serif text-3xl md:text-4xl text-luxury-black font-semibold">Gifting Core Values</h2>
+        </div>
+        <div className="grid gap-8 md:grid-cols-3">
+          {values.map((item, idx) => (
+            <article key={idx} className="rounded-3xl border border-champagne bg-white/70 backdrop-blur-md p-8 shadow-sm hover:border-gold-300/40 transition-all duration-300 hover-float relative overflow-hidden group">
+              <div className="text-5xl font-serif text-gold-200/30 group-hover:text-gold-200/50 transition-colors duration-300 select-none absolute top-4 right-6">
+                {String(idx + 1).padStart(2, "0")}
+              </div>
+              <div className="text-xs font-semibold text-gold-600 font-serif mb-4">
+                — VALUE {idx + 1}
+              </div>
+              <h3 className="text-xl font-bold font-serif text-luxury-black mt-2 mb-3">{item.title}</h3>
+              <p className="text-sm text-text-secondary font-light leading-relaxed">{item.text}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
-      {/* Mission & Vision */}
-      {(cmsContent?.content?.mission || cmsContent?.content?.vision) && (
-        <section className="grid gap-6 md:grid-cols-2 scroll-reveal">
-          {cmsContent.content.mission && (
-            <div className="rounded-2xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm">
-              <h2 className="text-xl font-serif font-bold text-luxury-black mb-3 border-b border-champagne/20 pb-2">Our Mission</h2>
-              <p className="text-xs text-text-secondary font-light leading-relaxed">{cmsContent.content.mission}</p>
-            </div>
-          )}
-          {cmsContent.content.vision && (
-            <div className="rounded-2xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm">
-              <h2 className="text-xl font-serif font-bold text-luxury-black mb-3 border-b border-champagne/20 pb-2">Our Vision</h2>
-              <p className="text-xs text-text-secondary font-light leading-relaxed">{cmsContent.content.vision}</p>
-            </div>
-          )}
-        </section>
-      )}
+      {/* 3. Company Story Section */}
+      <section className="grid gap-12 items-center md:grid-cols-2 scroll-reveal">
+        <div className="relative group">
+          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-gold-500/20 to-gold-200/10 blur-xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+          <div className="relative rounded-3xl overflow-hidden border border-gold-200/30 bg-white p-2.5 shadow-xl">
+            <img 
+              src={storyImage} 
+              alt="Our Story" 
+              className="rounded-2xl object-cover w-full h-[400px] transform hover:scale-[1.02] transition duration-700" 
+            />
+          </div>
+        </div>
+        <div className="space-y-6">
+          <span className="text-xs font-bold uppercase tracking-widest text-gold-600">The Journey</span>
+          <h2 className="font-serif text-3xl md:text-4xl text-luxury-black font-semibold">Our Story & History</h2>
+          <div 
+            className="text-sm text-text-secondary font-light leading-relaxed prose prose-stone max-w-none space-y-4"
+            dangerouslySetInnerHTML={{ __html: companyStory }} 
+          />
+        </div>
+      </section>
 
-      {/* Company Story */}
-      {cmsContent?.content?.companyStory && (
-        <section className="rounded-2xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 md:p-8 shadow-sm scroll-reveal">
-          <h2 className="text-xl font-serif font-bold text-luxury-black mb-4">Our Story & Journey</h2>
-          <div className="text-xs text-text-secondary font-light leading-relaxed prose max-w-none" dangerouslySetInnerHTML={{ __html: cmsContent.content.companyStory }} />
-        </section>
-      )}
+      {/* 4. Mission & Vision Section */}
+      <section className="grid gap-12 items-center md:grid-cols-2 scroll-reveal">
+        <div className="space-y-8 order-2 md:order-1">
+          <span className="text-xs font-bold uppercase tracking-widest text-gold-600">Purpose & Inspiration</span>
+          <h2 className="font-serif text-3xl md:text-4xl text-luxury-black font-semibold">Why We Do What We Do</h2>
+          
+          <div className="space-y-6">
+            <div className="border-l-2 border-gold-400 pl-6 space-y-2">
+              <h3 className="text-lg font-bold font-serif text-gold-800">Our Mission</h3>
+              <p className="text-sm text-text-secondary font-light leading-relaxed italic">
+                "{mission}"
+              </p>
+            </div>
+            <div className="border-l-2 border-gold-400 pl-6 space-y-2">
+              <h3 className="text-lg font-bold font-serif text-gold-800">Our Vision</h3>
+              <p className="text-sm text-text-secondary font-light leading-relaxed italic">
+                "{vision}"
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="relative group order-1 md:order-2">
+          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-gold-500/20 to-gold-200/10 blur-xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+          <div className="relative rounded-3xl overflow-hidden border border-gold-200/30 bg-white p-2.5 shadow-xl">
+            <img 
+              src={missionImage} 
+              alt="Our Mission" 
+              className="rounded-2xl object-cover w-full h-[400px] transform hover:scale-[1.02] transition duration-700" 
+            />
+          </div>
+        </div>
+      </section>
 
-      <section className="rounded-2xl border border-champagne/45 bg-white/70 backdrop-blur-md p-6 shadow-sm md:p-8 scroll-reveal">
-        <h2 className="text-2xl font-bold font-serif text-luxury-black">Why customers choose us</h2>
-        <ul className="mt-6 grid gap-3 text-sm text-luxury-black md:grid-cols-2">
-          <li className="rounded-xl bg-gold-50/40 border border-gold-100/40 px-4 py-3 font-light flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 shrink-0" />
-            Premium flowers, cakes and personalized gifts
-          </li>
-          <li className="rounded-xl bg-gold-50/40 border border-gold-100/40 px-4 py-3 font-light flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 shrink-0" />
-            Beautiful packaging and quality checks
-          </li>
-          <li className="rounded-xl bg-gold-50/40 border border-gold-100/40 px-4 py-3 font-light flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 shrink-0" />
-            Same-day and midnight delivery options
-          </li>
-          <li className="rounded-xl bg-gold-50/40 border border-gold-100/40 px-4 py-3 font-light flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold-500 shrink-0" />
-            Friendly support throughout your order journey
-          </li>
-        </ul>
-        <div className="mt-8">
-          <Link to="/products" className="inline-flex rounded-full bg-gold-500 hover:bg-gold-600 text-white font-bold tracking-widest text-xs uppercase px-7 py-3 transition shadow-sm">
-            Explore Products
-          </Link>
+      {/* 5. Why Choose Us Section */}
+      <section className="rounded-3xl border border-champagne bg-white/70 backdrop-blur-md p-8 md:p-12 shadow-sm scroll-reveal space-y-10">
+        <div className="text-center space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-gold-600">The Niyora Promise</p>
+          <h2 className="text-2xl md:text-3xl font-bold font-serif text-luxury-black text-center">
+            {whyChooseUsTitle}
+          </h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {whyChooseUsList.map((item, idx) => (
+            <div 
+              key={idx} 
+              className="flex gap-4 p-5 rounded-2xl border border-gold-100/50 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-gold-300/40 transition-all duration-300"
+            >
+              <div className="h-10 w-10 shrink-0 rounded-full bg-gold-50/70 flex items-center justify-center text-gold-600 border border-gold-200/30">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-serif text-base font-bold text-luxury-black">
+                  {item.title}
+                </h3>
+                <p className="text-xs text-text-secondary font-light leading-relaxed">
+                  {item.text}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 6. Call To Action (CTA) */}
+      <section className="rounded-3xl bg-gradient-to-r from-stone-900 via-luxury-black to-stone-900 border border-gold-500/20 p-10 md:p-16 text-center relative overflow-hidden shadow-2xl scroll-reveal">
+        <div className="absolute right-0 bottom-0 h-40 w-40 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />
+        <div className="absolute left-0 top-0 h-40 w-40 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />
+        <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-gold-400">
+            Share the Joy
+          </p>
+          <h2 className="font-serif text-3xl md:text-4xl text-white font-normal">
+            Ready to make someone's day special?
+          </h2>
+          <p className="text-xs text-gray-400 font-light leading-relaxed max-w-lg mx-auto">
+            Browse our curated collections of luxury flowers, custom cakes, and custom hand-engraved gifts today.
+          </p>
+          <div className="pt-4">
+            <Link 
+              to={ctaLink} 
+              className="inline-block rounded-full bg-gradient-to-r from-gold-450 to-gold-600 hover:from-gold-500 hover:to-gold-700 text-luxury-black font-bold tracking-widest text-xs uppercase px-8 py-3.5 transition duration-300 shadow-lg shadow-gold-500/20 transform hover:-translate-y-0.5"
+            >
+              {ctaText}
+            </Link>
+          </div>
         </div>
       </section>
     </div>

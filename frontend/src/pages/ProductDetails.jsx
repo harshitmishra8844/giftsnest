@@ -1058,7 +1058,12 @@ const ProductDetails = () => {
                     <Link to={`/products/${item.slug || item._id}`} className="block overflow-hidden rounded-xl bg-gold-50/10 aspect-[4/3]">
                       <img src={cardImage} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     </Link>
-                    <p className="mt-3 line-clamp-1 text-xs font-serif font-bold text-luxury-black group-hover:text-gold-600 transition-colors">{item.name}</p>
+                    <Link
+                      to={`/products/${item.slug || item._id}`}
+                      className="mt-3 block line-clamp-1 text-xs font-serif font-bold text-luxury-black group-hover:text-gold-600 transition-colors"
+                    >
+                      {item.name}
+                    </Link>
                     <p className="mt-1 text-[9px] uppercase tracking-wider font-bold text-gold-600">{item.category}</p>
                     <p className="mt-2 text-sm font-semibold font-serif text-luxury-black">INR {item.price}</p>
                   </div>

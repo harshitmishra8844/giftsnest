@@ -49,16 +49,21 @@ const Cart = () => {
             key={item.cartItemId || item._id}
             className="flex flex-col gap-4 rounded-2xl border border-champagne/45 bg-white/70 p-4 shadow-xs backdrop-blur-sm hover:border-gold-300/40 transition-all duration-300 sm:flex-row"
           >
-            <div className="h-24 w-full sm:w-28 rounded-xl overflow-hidden bg-gold-50/20 flex-shrink-0 flex items-center justify-center p-1 border border-champagne/20">
+            <Link
+              to={`/products/${item.slug || item._id}`}
+              className="h-24 w-full sm:w-28 rounded-xl overflow-hidden bg-gold-50/20 flex-shrink-0 flex items-center justify-center p-1 border border-champagne/20 hover:opacity-85 transition-opacity"
+            >
               <img 
                 src={resolveMediaUrl(item.customization?.uploadedImage || item.image)} 
                 alt={item.name} 
                 className="h-full w-full object-contain" 
               />
-            </div>
+            </Link>
             <div className="flex w-full flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
-                <h3 className="text-base font-serif font-semibold text-luxury-black">{item.name}</h3>
+                <h3 className="text-base font-serif font-semibold text-luxury-black hover:text-gold-600 transition-colors">
+                  <Link to={`/products/${item.slug || item._id}`}>{item.name}</Link>
+                </h3>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-gold-600 mt-0.5">{item.category}</p>
                 {item.customization && (item.customization.text || item.customization.uploadedImage || item.customization.textSize || item.customization.position) && (
                   <div className="mt-2 space-y-1 rounded-lg bg-gold-50/20 p-2.5 border border-gold-100/10">

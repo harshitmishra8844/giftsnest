@@ -287,9 +287,10 @@ const Checkout = () => {
 
       if (selectedMethod === "COD") {
         clearCart();
-        navigate("/cart", {
+        navigate("/payment-success", {
           state: {
-            orderSuccess: `Order placed successfully (Cash on Delivery). Order ID: ${getOrderDisplayId(appOrder)}`,
+            order: appOrder,
+            message: `Your order has been placed successfully using Cash on Delivery (COD).`,
           },
         });
         setPlacingOrder(false);
@@ -311,11 +312,12 @@ const Checkout = () => {
 
       if (paymentConfig.demoMode) {
         setInfo("Demo mode: completing test payment (no Razorpay popup)...");
-        await api.post("/payments/demo-complete", { appOrderId: appOrder._id });
+        const res = await api.post("/payments/demo-complete", { appOrderId: appOrder._id });
         clearCart();
-        navigate("/cart", {
+        navigate("/payment-success", {
           state: {
-            orderSuccess: `Demo payment successful. Order ID: ${getOrderDisplayId(appOrder)}`,
+            order: res.data.order || appOrder,
+            message: `Demo transaction completed successfully in testing mode.`,
           },
         });
         setPlacingOrder(false);
@@ -323,7 +325,7 @@ const Checkout = () => {
       }
 
       const razorpay = new window.Razorpay({
-        key: paymentConfig.key,
+        key: paymentConfig.key || import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: paymentConfig.amount,
         currency: paymentConfig.currency,
         name: "Niyora Gifts",
@@ -339,9 +341,10 @@ const Checkout = () => {
             });
 
             clearCart();
-            navigate("/cart", {
+            navigate("/payment-success", {
               state: {
-                orderSuccess: `Payment successful. Order ID: ${getOrderDisplayId(appOrder)}`,
+                order: appOrder,
+                message: `Payment processed and verified successfully.`,
               },
             });
           } catch (verifyError) {
