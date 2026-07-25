@@ -9,7 +9,7 @@ export const WishlistProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  const { auth, showLoginModal } = useAuth();
+  const { auth } = useAuth();
   const token = auth?.token;
 
   // Show a toast message that auto-dismisses after 1800ms
@@ -52,7 +52,7 @@ export const WishlistProvider = ({ children }) => {
     if (!token) {
       // Store pending action
       localStorage.setItem("pending_wishlist_add", product._id);
-      showLoginModal();
+      window.location.href = `/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
       return;
     }
 

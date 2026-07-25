@@ -15,12 +15,12 @@ import AdminDashboard from "./pages/AdminDashboard";
 import TrackOrder from "./pages/TrackOrder";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import ReturnsRefunds from "./pages/ReturnsRefunds";
+import TermsConditions from "./pages/TermsConditions";
 import PersonalizedMug from "./pages/PersonalizedMug";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import { useCart } from "./context/CartContext";
 import { useWishlist } from "./context/WishlistContext";
 import { useAuth } from "./context/AuthContext";
-import AuthModal from "./components/AuthModal";
 import SearchBar from "./components/search/SearchBar";
 import { mockGiftProducts, trendingSearches } from "./data/mockGiftProducts";
 import api from "./services/api";
@@ -29,17 +29,14 @@ import SEO from "./components/SEO";
 
 const UserProtectedRoute = ({ children }) => {
   const location = useLocation();
-  const { auth, showLoginModal } = useAuth();
+  const { auth } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!auth?.token) {
-      showLoginModal(() => {
-        navigate(location.pathname, { replace: true });
-      });
-      navigate("/cart", { replace: true });
+      navigate("/login", { state: { redirectTo: location.pathname }, replace: true });
     }
-  }, [auth, location, navigate, showLoginModal]);
+  }, [auth, location, navigate]);
 
   if (!auth?.token) {
     return null;
@@ -114,8 +111,8 @@ function App() {
       title = "Home | Niyora Gifts";
       description = "Niyora Gifts is India's leading luxury curated gifting portal. Buy premium personalized gifts, anniversary gifts, flowers, cakes, and plants.";
     } else if (path === "/about") {
-      title = "About Us | Niyora Gifts";
-      description = "Discover the story of Niyora Gifts. Learn about our commitment to luxury curated gifting, premium quality, and personalized celebrations.";
+      title = "About Niyora Gifts | Online Gift Store for Every Occasion";
+      description = "Discover the story behind Niyora Gifts — your trusted online gift shop for personalized, unique, and thoughtful gifts. Shop with confidence, delivered with love.";
     } else if (path === "/products") {
       const category = searchParams.get("category");
       if (category) {
@@ -153,6 +150,9 @@ function App() {
     } else if (path === "/returns-refunds" || path === "/return-replacement" || path === "/returns-replacement" || path === "/return-and-replacement") {
       title = "Returns, Refunds & Replacement | Niyora Gifts";
       description = "Review our policy on returns, refunds, damaged product checks, and custom gift replacements at Niyora Gifts.";
+    } else if (path === "/terms-conditions" || path === "/pages/terms-and-conditions" || path === "/terms-and-conditions") {
+      title = "Terms & Conditions | Niyora Gifts Account & Website Usage Policy";
+      description = "Read the Terms & Conditions for creating an account and shopping on Niyora Gifts. Understand your rights, responsibilities, and our policies before you sign up.";
     } else if (path === "/personalized-mug") {
       title = "Personalized Mug | Niyora Gifts";
       description = "Create a custom personalized ceramic mug. Upload photos, add bespoke text, and choose premium gift packaging.";
@@ -489,7 +489,7 @@ function App() {
                   if (auth?.token) {
                     navigate("/my-profile");
                   } else {
-                    showLoginModal(() => navigate("/my-profile"));
+                    navigate("/login", { state: { redirectTo: "/my-profile" } });
                   }
                 }}
                 className={navLinkClass({ isActive: location.pathname === "/my-profile" })}
@@ -597,7 +597,7 @@ function App() {
                     if (auth?.token) {
                       navigate("/my-profile");
                     } else {
-                      showLoginModal(() => navigate("/my-profile"));
+                      navigate("/login", { state: { redirectTo: "/my-profile" } });
                     }
                   }}
                   className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 cursor-pointer ${
@@ -643,6 +643,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
+          <Route path="/pages/about-us" element={<Navigate to="/about" replace />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:idOrSlug" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
@@ -674,6 +675,8 @@ function App() {
           <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/shipping-policy" element={<ShippingPolicy />} />
           <Route path="/returns-refunds" element={<ReturnsRefunds />} />
+          <Route path="/terms-conditions" element={<TermsConditions />} />
+          <Route path="/pages/terms-and-conditions" element={<Navigate to="/terms-conditions" replace />} />
           <Route path="/return-replacement" element={<Navigate to="/returns-refunds" replace />} />
           <Route path="/returns-replacement" element={<Navigate to="/returns-refunds" replace />} />
           <Route path="/return-and-replacement" element={<Navigate to="/returns-refunds" replace />} />
@@ -744,7 +747,8 @@ function App() {
                 {(cmsShell?.footer?.customerServiceLinks || [
                   { label: "Track Order", link: "/track-order" },
                   { label: "Shipping Policy", link: "/shipping-policy" },
-                  { label: "Returns, Refunds & Replacement", link: "/returns-refunds" }
+                  { label: "Returns, Refunds & Replacement", link: "/returns-refunds" },
+                  { label: "Terms & Conditions", link: "/terms-conditions" }
                 ]).map((link, index) => (
                   <li key={index}>
                     <Link to={link.link} className="hover:text-gold-500 transition">{link.label}</Link>
@@ -815,7 +819,6 @@ function App() {
         </div>
       </footer>
       )}
-      <AuthModal />
       {/* Dynamic Popup promo dialog */}
       {showPopup && cmsShell?.popups && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-backdrop">

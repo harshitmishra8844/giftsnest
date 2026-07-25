@@ -83,6 +83,7 @@ const MyProfile = () => {
   const [addresses, setAddresses] = useState([]);
   const [storeInfo, setStoreInfo] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [expandedTrackerOrderId, setExpandedTrackerOrderId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -1566,9 +1567,7 @@ const MyProfile = () => {
           { id: "overview", label: "Overview", icon: <Activity className="w-3.5 h-3.5" /> },
           { id: "orders", label: "My Orders", icon: <ShoppingBag className="w-3.5 h-3.5" /> },
           { id: "wishlist", label: "Wishlist", icon: <Heart className="w-3.5 h-3.5" /> },
-          { id: "returns", label: "Returns", icon: <RefreshCw className="w-3.5 h-3.5" /> },
           { id: "addresses", label: "Addresses", icon: <MapPin className="w-3.5 h-3.5" /> },
-          { id: "tracking", label: "Tracking", icon: <Truck className="w-3.5 h-3.5" /> },
           { id: "coupons", label: "Coupons", icon: <Gift className="w-3.5 h-3.5" /> },
           { id: "help", label: "Support", icon: <HelpCircle className="w-3.5 h-3.5" /> },
           { id: "settings", label: "Settings", icon: <Settings className="w-3.5 h-3.5" /> }
@@ -1901,20 +1900,89 @@ const MyProfile = () => {
                         </div>
                       )}
 
+                      {/* Expanded Tracker and Claims Drawer */}
+                      {expandedTrackerOrderId === order._id && (
+                        <div className="mt-4 p-4.5 rounded-2xl border border-gold-300 bg-gold-50/5 space-y-4 animate-fade-slide">
+                          {/* 1. Visual timeline */}
+                          <div className="space-y-3.5">
+                            <h5 className="text-[10px] font-bold uppercase tracking-wider text-luxury-black flex items-center gap-1.5">
+                              <Truck className="w-3.5 h-3.5 text-gold-600 animate-pulse-subtle" /> Shipment Tracking Status
+                            </h5>
+                            <div className="relative pt-2 pb-1">
+                              <div className="relative h-1 w-full bg-champagne/40 rounded-full">
+                                <div
+                                  className="absolute h-full bg-gold-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${(getStepIndex(order.status) / (trackingSteps.length - 1)) * 100}%` }}
+                                />
+                              </div>
+                              <div className="grid grid-cols-5 gap-1 text-[8px] font-bold text-text-secondary uppercase tracking-wider text-center mt-3">
+                                {trackingSteps.map((step, idx) => {
+                                  const currentIdx = getStepIndex(order.status);
+                                  const isCompleted = idx <= currentIdx;
+                                  return (
+                                    <div key={idx} className="space-y-1">
+                                      <div className={`mx-auto h-3.5 w-3.5 rounded-full border flex items-center justify-center text-[7px] ${isCompleted ? 'border-gold-500 bg-gold-500 text-white' : 'border-champagne bg-white text-gray-300'}`}>
+                                        {isCompleted ? "✓" : idx + 1}
+                                      </div>
+                                      <span className={isCompleted ? "text-gold-700 font-bold" : "font-light"}>{step}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 2. Courier and live link info */}
+                          <div className="flex flex-wrap items-center justify-between p-3 rounded-xl bg-white border border-champagne/15 text-xs font-light text-text-secondary gap-3">
+                            <div className="space-y-0.5">
+                              <p>Estimated Delivery: <strong className="text-luxury-black font-semibold">{new Date(new Date(order.createdAt).setDate(new Date(order.createdAt).getDate() + 5)).toLocaleDateString("en-IN")}</strong></p>
+                              <p>Courier Partner: <strong className="text-luxury-black font-semibold capitalize">{order.trackingCarrier || "Niyora Curated Delivery"}</strong></p>
+                              <p>AWB Tracking ID: <strong className="text-luxury-black font-mono font-semibold">{order.trackingId || "Pending Allocation"}</strong></p>
+                            </div>
+                            <div className="flex gap-2">
+                              {order.trackingId && (
+                                <a
+                                  href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="rounded-full bg-gold-500 hover:bg-gold-600 text-white text-[9px] font-bold uppercase tracking-widest px-4 py-2 transition cursor-pointer"
+                                >
+                                  Live Tracking
+                                </a>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 3. Return Claim updates inside Order card */}
+                          {getOrderReturn(order._id) && (
+                            <div className="rounded-xl border border-gold-300 bg-gold-50/10 p-3.5 space-y-2 text-xs">
+                              <div className="flex items-center justify-between gap-2 border-b border-champagne/10 pb-1.5">
+                                <span className="font-bold text-luxury-black font-serif">Return Claim: #{getOrderReturn(order._id).returnCode}</span>
+                                <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase border tracking-wider ${getReturnStatusColor(getOrderReturn(order._id).status)}`}>
+                                  {getOrderReturn(order._id).status}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-text-secondary font-light space-y-1">
+                                <p>Preferred Resolution: <span className="font-semibold text-luxury-black">{getOrderReturn(order._id).preferredResolution}</span></p>
+                                <p>Requested on: <span className="font-semibold text-luxury-black">{new Date(getOrderReturn(order._id).createdAt).toLocaleDateString("en-IN")}</span></p>
+                                {getOrderReturn(order._id).reason && <p>Reason: <span className="font-semibold text-luxury-black">{getOrderReturn(order._id).reason}</span></p>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Card Actions Bottom */}
                       <div className="pt-4 flex flex-wrap gap-2.5">
-                        {order.trackingId && (
-                          <div className="w-full flex items-center justify-between p-3 rounded-2xl bg-gold-50/20 border border-gold-200/20 mb-1 text-xs">
-                            <span className="font-light text-text-secondary">Logistics Carrier: <strong className="text-luxury-black capitalize">{order.trackingCarrier}</strong> AWB: <strong className="font-mono text-luxury-black">{order.trackingId}</strong></span>
-                            <a
-                              href={getTrackingUrl(order.trackingId, order.trackingCarrier)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-full bg-gold-500 hover:bg-gold-600 px-4.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-sm transition"
-                            >
-                              Track Package
-                            </a>
-                          </div>
+                        {order.status !== "Cancelled" && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedTrackerOrderId(expandedTrackerOrderId === order._id ? null : order._id)}
+                            className="rounded-full border border-gold-450 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-gold-800 hover:bg-gold-50 transition cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            <span>{expandedTrackerOrderId === order._id ? "Hide Tracker" : "Track Order & Claims"}</span>
+                          </button>
                         )}
 
                         {canRequestCancellation(order) && (
@@ -1934,20 +2002,6 @@ const MyProfile = () => {
                             className="rounded-full border border-gold-500 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-gold-700 hover:bg-gold-50 transition cursor-pointer"
                           >
                             Return Order
-                          </button>
-                        )}
-
-                        {getOrderReturn(order._id) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const ret = getOrderReturn(order._id);
-                              setSelectedReturn(ret);
-                              setActiveTab("returns");
-                            }}
-                            className="rounded-full border border-gold-500 bg-gold-100/30 px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-gold-900 hover:bg-gold-200/30 transition cursor-pointer"
-                          >
-                            Track Return Claim: {getOrderReturn(order._id).status}
                           </button>
                         )}
 

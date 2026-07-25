@@ -7,18 +7,18 @@ import { resolveMediaUrl } from "../services/api";
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { auth, showLoginModal } = useAuth();
+  const { auth } = useAuth();
   const { state } = useLocation();
   const { cartItems, itemCount, totalPrice, updateQuantity, removeFromCart } = useCart();
 
-  const hasOpenedModalRef = useRef(false);
+  const hasNavigatedRef = useRef(false);
 
   useEffect(() => {
-    if (!auth?.token && cartItems.length > 0 && !hasOpenedModalRef.current) {
-      hasOpenedModalRef.current = true;
-      showLoginModal(() => navigate("/checkout"));
+    if (!auth?.token && cartItems.length > 0 && !hasNavigatedRef.current) {
+      hasNavigatedRef.current = true;
+      navigate("/login", { state: { redirectTo: "/checkout" } });
     }
-  }, [auth, cartItems, showLoginModal, navigate]);
+  }, [auth, cartItems, navigate]);
 
   const subtotal = Number(totalPrice.toFixed(2));
 
@@ -130,7 +130,7 @@ const Cart = () => {
             if (auth?.token) {
               navigate("/checkout");
             } else {
-              showLoginModal(() => navigate("/checkout"));
+              navigate("/login", { state: { redirectTo: "/checkout" } });
             }
           }}
           className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow-sm font-semibold cursor-pointer border-0"

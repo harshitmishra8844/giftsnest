@@ -134,3 +134,4 @@ const startServer = async () => {
 };
 
 startServer();
+// Server initialization triggered.

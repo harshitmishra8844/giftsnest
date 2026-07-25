@@ -1,40 +1,22 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { 
+  Gift, 
+  Heart, 
+  ShoppingBag, 
+  Home as HomeIcon, 
+  Sparkles, 
+  CheckCircle2, 
+  Mail, 
+  Phone, 
+  Clock, 
+  ArrowRight,
+  ShieldCheck,
+  Truck,
+  RotateCcw,
+  Headphones
+} from "lucide-react";
 import api from "../services/api";
-
-const defaultValues = [
-  {
-    title: "Thoughtful Curation",
-    text: "Every flower, cake and gift in our catalog is handpicked for quality, design and gifting impact."
-  },
-  {
-    title: "On-Time Delivery",
-    text: "From same-day surprises to planned celebrations, we focus on timely and reliable doorstep delivery."
-  },
-  {
-    title: "Personalized Experience",
-    text: "Custom notes, elegant packaging and occasion-based recommendations make every gift feel unique."
-  }
-];
-
-const defaultWhyChooseUs = [
-  {
-    title: "Premium Selections",
-    text: "Premium flowers, cakes and personalized gifts curated for high-end celebrations."
-  },
-  {
-    title: "Luxury Packaging",
-    text: "Beautiful custom packaging and rigorous quality checks for every single order."
-  },
-  {
-    title: "Timed Delivery Options",
-    text: "Same-day, slot-based, and midnight delivery options so you never miss a moment."
-  },
-  {
-    title: "Dedicated Support",
-    text: "Friendly customer support team ready to assist you throughout your ordering journey."
-  }
-];
 
 const About = () => {
   const [cmsContent, setCmsContent] = useState(null);
@@ -66,18 +48,22 @@ const About = () => {
       element.setAttribute("content", content);
     };
 
-    if (cmsContent?.seo?.title) {
+    const useCmsSeo = cmsContent?.seo?.title && 
+      !cmsContent.seo.title.includes("Premium Gift Store") && 
+      !cmsContent.seo.title.includes("We help people celebrate");
+
+    if (useCmsSeo) {
       document.title = cmsContent.seo.title;
       if (cmsContent.seo.description) setMeta("description", cmsContent.seo.description);
       if (cmsContent.seo.keywords) setMeta("keywords", cmsContent.seo.keywords);
       if (cmsContent.seo.ogTitle) setMeta("og:title", cmsContent.seo.ogTitle, "property");
       if (cmsContent.seo.ogDescription) setMeta("og:description", cmsContent.seo.ogDescription, "property");
     } else {
-      document.title = "About Niyora Gifts | Premium Gift Store";
-      setMeta("description", "Learn about Niyora Gifts, your trusted online gift store for flowers, cakes and personalized gifts with reliable delivery.");
-      setMeta("keywords", "Niyora Gifts, online gifts, flowers delivery, cakes, personalized gifts, gift store");
-      setMeta("og:title", "About Niyora Gifts | Premium Gift Store", "property");
-      setMeta("og:description", "Discover Niyora Gifts's mission, gifting values and premium celebration experiences.", "property");
+      document.title = "About Niyora Gifts | Online Gift Store for Every Occasion";
+      setMeta("description", "Discover the story behind Niyora Gifts — your trusted online gift shop for personalized, unique, and thoughtful gifts. Shop with confidence, delivered with love.");
+      setMeta("keywords", "Niyora Gifts, online gift store, personalized gifts, gift shop, buy gifts online");
+      setMeta("og:title", "About Niyora Gifts | Online Gift Store for Every Occasion", "property");
+      setMeta("og:description", "Discover the story behind Niyora Gifts — your trusted online gift shop for personalized, unique, and thoughtful gifts.", "property");
     }
     setMeta("og:type", "website", "property");
 
@@ -86,180 +72,287 @@ const About = () => {
     };
   }, [cmsContent]);
 
-  const accentText = cmsContent?.content?.accentText || "About Niyora Gifts";
-  const heading = cmsContent?.content?.heading || "We help people celebrate with meaningful gifts.";
-  const description = cmsContent?.content?.description || "Niyora Gifts is built for moments that matter. Whether it's a birthday, anniversary, thank-you gesture, or festive celebration, we combine premium products with dependable service to create gifting experiences people remember.";
-  const values = cmsContent?.content?.values || defaultValues;
-  const image = cmsContent?.content?.images?.[0] || "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200";
+  const isDefaultAbout = (headingText) => {
+    return (
+      !headingText ||
+      headingText.includes("We help people celebrate") ||
+      headingText.includes("meaningful gifts")
+    );
+  };
 
-  const mission = cmsContent?.content?.mission || "Our mission is to bring joy to every celebration through high quality, handpicked gifts delivered right on time.";
-  const vision = cmsContent?.content?.vision || "To be the most trusted and premium online gifting brand known for exceptional customer satisfaction and elegant collections.";
-  const missionImage = cmsContent?.content?.missionImage || "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?w=800";
+  const useCms = cmsContent?.content && !isDefaultAbout(cmsContent.content.heading);
 
-  const companyStory = cmsContent?.content?.companyStory || "Founded in 2026, Niyora Gifts started with a simple belief: that every gift should carry a deep emotion. Over time, we've grown into a destination for luxury flowers, gourmet cakes, and bespoke customized keepsakes.";
-  const storyImage = cmsContent?.content?.storyImage || "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800";
+  const accentText = useCms ? cmsContent.content.accentText : "About Niyora Gifts";
+  const heading = useCms ? cmsContent.content.heading : "Welcome to Niyora Gifts";
+  const description = useCms ? (cmsContent.content.description || "") : "At Niyora Gifts, we believe every gift tells a story. What started as a simple idea — to make gifting easier, more meaningful, and more personal — has grown into a trusted online gift store loved by customers who want to celebrate life's special moments in style. Whether you're looking for a birthday gift, an anniversary surprise, a wedding present, or a thoughtful token for a loved one, Niyora Gifts brings you a carefully curated collection designed to make every occasion unforgettable.";
+  
+  const image = (useCms && cmsContent.content.images?.[0]) || "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200";
+  const storyImage = (useCms && cmsContent.content.storyImage) || "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800";
 
-  const whyChooseUsTitle = cmsContent?.content?.whyChooseUsTitle || "Why customers choose us";
-  const whyChooseUsList = cmsContent?.content?.whyChooseUsList || defaultWhyChooseUs;
+  const companyStory = useCms ? cmsContent.content.companyStory : `
+    <p>Niyora Gifts was founded with one simple mission: <strong>to bring joy through thoughtful gifting</strong>. We noticed how difficult it can be to find the perfect gift — something unique, meaningful, and delivered on time. So, we set out to build an online gifting destination that combines <strong>quality products, affordable prices, and a seamless shopping experience</strong>.</p>
+    <p>Today, Niyora Gifts is proud to serve customers across Delhi and all of India with a growing range of gifts for birthdays, anniversaries, weddings, festivals, and everyday "just because" moments.</p>
+  `;
 
-  const ctaText = cmsContent?.content?.ctaText || "Explore Products";
-  const ctaLink = cmsContent?.content?.ctaLink || "/products";
+  // Custom static content for "What We Offer"
+  const offerCategories = [
+    {
+      title: "Personalized & Customized Gifts",
+      description: "Photo frames, custom ceramic mugs, engraved keepsakes, and bespoke memory items.",
+      icon: Gift,
+      link: "/products"
+    },
+    {
+      title: "Birthday & Anniversary Gifts",
+      description: "Curated gift items tailored for every milestone age and close relationship.",
+      icon: Heart,
+      link: "/products"
+    },
+    {
+      title: "Gift Hampers & Combos",
+      description: "Thoughtfully assembled and wrapped gift boxes matching diverse occasion themes.",
+      icon: ShoppingBag,
+      link: "/products"
+    },
+    {
+      title: "Home Décor & Lifestyle Gifts",
+      description: "Premium items for housewarmings, special anniversaries, and modern lifestyles.",
+      icon: HomeIcon,
+      link: "/products"
+    },
+    {
+      title: "Festive & Seasonal Gifts",
+      description: "Special holiday collections and seasonal surprises for festive moments.",
+      icon: Sparkles,
+      link: "/products"
+    }
+  ];
+
+  // Custom static content for "Why Choose Niyora Gifts"
+  const chooseUsReasons = [
+    {
+      title: "Wide Range of Unique Gifts",
+      text: "Something special for every relationship and occasion.",
+      icon: Gift
+    },
+    {
+      title: "Quality You Can Trust",
+      text: "Every single product is inspected before it reaches your door.",
+      icon: ShieldCheck
+    },
+    {
+      title: "Affordable Pricing",
+      text: "Premium gifting designs without the premium price tag.",
+      icon: CheckCircle2
+    },
+    {
+      title: "Fast & Reliable Shipping",
+      text: "So your curated surprises arrive on time, every time.",
+      icon: Truck
+    },
+    {
+      title: "Easy Returns & Replacements",
+      text: "Shop with peace of mind under our clear return policy.",
+      icon: RotateCcw
+    },
+    {
+      title: "Dedicated Customer Support",
+      text: "Our team is always here to guide you and resolve issues.",
+      icon: Headphones
+    }
+  ];
 
   return (
-    <div className="space-y-16 pb-12">
-      {/* 1. Hero Section */}
+    <div className="space-y-16 pb-16 bg-[#FDFCF9]">
+      {/* Ambient background glow */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gold-400/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-0 w-96 h-96 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* 1. Hero / Welcome Section */}
       <section 
-        className="rounded-3xl bg-luxury-black px-8 py-16 text-white shadow-2xl md:px-16 relative overflow-hidden border border-gold-500/20 scroll-reveal min-h-[450px] flex items-center"
+        className="rounded-3xl bg-luxury-black px-8 py-16 text-white shadow-2xl md:px-16 relative overflow-hidden border border-gold-500/20 animate-fade-in min-h-[450px] flex items-center"
         style={{ 
-          backgroundImage: `linear-gradient(to right, rgba(28, 28, 28, 0.95) 30%, rgba(28, 28, 28, 0.8) 60%, rgba(28, 28, 28, 0.4) 100%), url(${image})`, 
+          backgroundImage: `linear-gradient(to right, rgba(18, 18, 18, 0.95) 30%, rgba(18, 18, 18, 0.8) 60%, rgba(18, 18, 18, 0.4) 100%), url(${image})`, 
           backgroundSize: "cover", 
           backgroundPosition: "center" 
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/35 to-transparent pointer-events-none" />
-        <div className="relative z-10 max-w-4xl">
-          <span className="inline-block px-3 py-1 mb-4 rounded-full border border-gold-400/30 bg-gold-400/10 text-gold-400 text-[10px] uppercase font-bold tracking-widest">
+        <div className="relative z-10 max-w-4xl space-y-4">
+          <span className="inline-block px-3 py-1 rounded-full border border-gold-400/30 bg-gold-400/10 text-gold-400 text-[10px] uppercase font-bold tracking-widest animate-pulse">
             {accentText}
           </span>
-          <h1 className="text-3xl font-serif text-white md:text-6xl leading-tight font-normal">
+          <h1 className="text-3xl font-serif text-white md:text-5xl leading-tight font-light">
             {heading}
           </h1>
-          <p className="mt-6 max-w-2xl text-sm md:text-base text-gray-300 leading-relaxed font-light">
+          <p className="max-w-2xl text-xs md:text-sm text-gray-300 leading-relaxed font-light font-sans font-extralight">
             {description}
           </p>
         </div>
       </section>
 
-      {/* 2. Core Values Grid */}
-      <section className="scroll-reveal space-y-10">
-        <div className="text-center space-y-2">
-          <p className="text-xs font-bold uppercase tracking-widest text-gold-600">Our Core Pillars</p>
-          <h2 className="font-serif text-3xl md:text-4xl text-luxury-black font-semibold">Gifting Core Values</h2>
-        </div>
-        <div className="grid gap-8 md:grid-cols-3">
-          {values.map((item, idx) => (
-            <article key={idx} className="rounded-3xl border border-champagne bg-white/70 backdrop-blur-md p-8 shadow-sm hover:border-gold-300/40 transition-all duration-300 hover-float relative overflow-hidden group">
-              <div className="text-5xl font-serif text-gold-200/30 group-hover:text-gold-200/50 transition-colors duration-300 select-none absolute top-4 right-6">
-                {String(idx + 1).padStart(2, "0")}
-              </div>
-              <div className="text-xs font-semibold text-gold-600 font-serif mb-4">
-                — VALUE {idx + 1}
-              </div>
-              <h3 className="text-xl font-bold font-serif text-luxury-black mt-2 mb-3">{item.title}</h3>
-              <p className="text-sm text-text-secondary font-light leading-relaxed">{item.text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* 3. Company Story Section */}
-      <section className="grid gap-12 items-center md:grid-cols-2 scroll-reveal">
+      {/* 2. Our Story Section */}
+      <section className="grid gap-12 items-center md:grid-cols-2 max-w-6xl mx-auto px-4 md:px-8 animate-fade-in">
         <div className="relative group">
-          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-gold-500/20 to-gold-200/10 blur-xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-gold-500/20 to-gold-200/10 blur-xl opacity-75 group-hover:opacity-100 transition duration-1000" />
           <div className="relative rounded-3xl overflow-hidden border border-gold-200/30 bg-white p-2.5 shadow-xl">
             <img 
               src={storyImage} 
-              alt="Our Story" 
-              className="rounded-2xl object-cover w-full h-[400px] transform hover:scale-[1.02] transition duration-700" 
+              alt="Niyora Gifts unboxing experience" 
+              className="rounded-2xl object-cover w-full h-[380px] transform hover:scale-[1.02] transition duration-700" 
             />
           </div>
         </div>
         <div className="space-y-6">
           <span className="text-xs font-bold uppercase tracking-widest text-gold-600">The Journey</span>
-          <h2 className="font-serif text-3xl md:text-4xl text-luxury-black font-semibold">Our Story & History</h2>
+          <h2 className="font-serif text-3xl text-luxury-black font-semibold">Our Story & Mission</h2>
           <div 
-            className="text-sm text-text-secondary font-light leading-relaxed prose prose-stone max-w-none space-y-4"
+            className="text-xs text-text-secondary font-light leading-relaxed prose prose-stone max-w-none space-y-4 font-sans font-extralight"
             dangerouslySetInnerHTML={{ __html: companyStory }} 
           />
         </div>
       </section>
 
-      {/* 4. Mission & Vision Section */}
-      <section className="grid gap-12 items-center md:grid-cols-2 scroll-reveal">
-        <div className="space-y-8 order-2 md:order-1">
-          <span className="text-xs font-bold uppercase tracking-widest text-gold-600">Purpose & Inspiration</span>
-          <h2 className="font-serif text-3xl md:text-4xl text-luxury-black font-semibold">Why We Do What We Do</h2>
-          
-          <div className="space-y-6">
-            <div className="border-l-2 border-gold-400 pl-6 space-y-2">
-              <h3 className="text-lg font-bold font-serif text-gold-800">Our Mission</h3>
-              <p className="text-sm text-text-secondary font-light leading-relaxed italic">
-                "{mission}"
-              </p>
-            </div>
-            <div className="border-l-2 border-gold-400 pl-6 space-y-2">
-              <h3 className="text-lg font-bold font-serif text-gold-800">Our Vision</h3>
-              <p className="text-sm text-text-secondary font-light leading-relaxed italic">
-                "{vision}"
-              </p>
-            </div>
-          </div>
+      {/* 3. What We Offer Section */}
+      <section className="space-y-10 max-w-6xl mx-auto px-4 md:px-8">
+        <div className="text-center space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-gold-600">Explore Collections</p>
+          <h2 className="font-serif text-3xl text-luxury-black font-semibold">What We Offer</h2>
         </div>
-        <div className="relative group order-1 md:order-2">
-          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-gold-500/20 to-gold-200/10 blur-xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
-          <div className="relative rounded-3xl overflow-hidden border border-gold-200/30 bg-white p-2.5 shadow-xl">
-            <img 
-              src={missionImage} 
-              alt="Our Mission" 
-              className="rounded-2xl object-cover w-full h-[400px] transform hover:scale-[1.02] transition duration-700" 
-            />
-          </div>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {offerCategories.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <Link 
+                to={item.link} 
+                key={idx} 
+                className="rounded-3xl border border-champagne/45 bg-white p-6 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group hover:border-gold-500/35 animate-fade-in"
+              >
+                <div className="space-y-4">
+                  <div className="p-3.5 w-fit rounded-2xl bg-gold-500/5 border border-gold-500/10 text-gold-600 group-hover:bg-gold-500/10 group-hover:border-gold-500/20 transition duration-300">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-serif font-semibold text-luxury-black group-hover:text-gold-700 transition">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-text-secondary font-light leading-relaxed font-sans font-extralight">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gold-600 mt-2">
+                  View Items <ArrowRight className="w-3 h-3 transform group-hover:translate-x-0.5 transition" />
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
-      {/* 5. Why Choose Us Section */}
-      <section className="rounded-3xl border border-champagne bg-white/70 backdrop-blur-md p-8 md:p-12 shadow-sm scroll-reveal space-y-10">
+      {/* 4. Why Choose Us Section */}
+      <section className="rounded-3xl border border-champagne/45 bg-white/70 backdrop-blur-md p-8 md:p-12 max-w-6xl mx-auto shadow-xs space-y-10">
         <div className="text-center space-y-2">
           <p className="text-xs font-bold uppercase tracking-widest text-gold-600">The Niyora Promise</p>
-          <h2 className="text-2xl md:text-3xl font-bold font-serif text-luxury-black text-center">
-            {whyChooseUsTitle}
+          <h2 className="text-3xl font-serif text-luxury-black font-semibold text-center">
+            Why Choose Niyora Gifts?
           </h2>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
-          {whyChooseUsList.map((item, idx) => (
-            <div 
-              key={idx} 
-              className="flex gap-4 p-5 rounded-2xl border border-gold-100/50 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-gold-300/40 transition-all duration-300"
-            >
-              <div className="h-10 w-10 shrink-0 rounded-full bg-gold-50/70 flex items-center justify-center text-gold-600 border border-gold-200/30">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
+          {chooseUsReasons.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div 
+                key={idx} 
+                className="flex gap-4 p-5 rounded-2xl border border-gold-100/50 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-gold-300/40 transition-all duration-300 animate-fade-in"
+              >
+                <div className="h-10 w-10 shrink-0 rounded-full bg-gold-50/70 flex items-center justify-center text-gold-600 border border-gold-200/30">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-serif text-sm font-bold text-luxury-black">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-text-secondary font-light leading-relaxed font-sans font-extralight">
+                    {item.text}
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <h3 className="font-serif text-base font-bold text-luxury-black">
-                  {item.title}
-                </h3>
-                <p className="text-xs text-text-secondary font-light leading-relaxed">
-                  {item.text}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
-      {/* 6. Call To Action (CTA) */}
-      <section className="rounded-3xl bg-gradient-to-r from-stone-900 via-luxury-black to-stone-900 border border-gold-500/20 p-10 md:p-16 text-center relative overflow-hidden shadow-2xl scroll-reveal">
+      {/* 5. Our Promise Callout */}
+      <section className="max-w-6xl mx-auto px-4 md:px-8">
+        <div className="rounded-3xl border border-gold-500/15 bg-gold-50/15 p-6 shadow-xs flex flex-col md:flex-row items-center gap-6 animate-fade-in">
+          <div className="p-4 rounded-full bg-gold-500/5 text-gold-600 shrink-0">
+            <Sparkles className="w-8 h-8 animate-pulse" />
+          </div>
+          <div className="space-y-2 text-center md:text-left">
+            <h4 className="text-sm font-serif font-bold uppercase tracking-wider text-luxury-black">Our Promise To You</h4>
+            <p className="text-xs text-text-secondary font-light leading-relaxed font-sans font-extralight">
+              At Niyora Gifts, customer satisfaction is at the heart of everything we do. From the moment you browse our store to the moment your gift is unwrapped, we're committed to making your experience smooth, joyful, and memorable. We continuously work to bring you new, exciting, and trending gift ideas — so you always find the perfect gift, no matter the occasion.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. Join the Family & CTA Section */}
+      <section className="rounded-3xl bg-gradient-to-r from-stone-900 via-luxury-black to-stone-900 border border-gold-500/20 p-10 md:p-16 text-center relative overflow-hidden shadow-2xl max-w-6xl mx-auto animate-fade-in">
         <div className="absolute right-0 bottom-0 h-40 w-40 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />
         <div className="absolute left-0 top-0 h-40 w-40 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />
+        
         <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-gold-400">
-            Share the Joy
+            Join the Niyora Gifts Family
           </p>
-          <h2 className="font-serif text-3xl md:text-4xl text-white font-normal">
+          <h2 className="font-serif text-3xl text-white font-light">
             Ready to make someone's day special?
           </h2>
-          <p className="text-xs text-gray-400 font-light leading-relaxed max-w-lg mx-auto">
-            Browse our curated collections of luxury flowers, custom cakes, and custom hand-engraved gifts today.
+          <p className="text-xs text-gray-400 font-light leading-relaxed max-w-lg mx-auto font-sans font-extralight">
+            Thousands of customers trust Niyora Gifts to help them celebrate the moments that matter most. We'd love for you to be part of our story. Browse our collections or review our store policies below.
           </p>
-          <div className="pt-4">
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
             <Link 
-              to={ctaLink} 
-              className="inline-block rounded-full bg-gradient-to-r from-gold-450 to-gold-600 hover:from-gold-500 hover:to-gold-700 text-luxury-black font-bold tracking-widest text-xs uppercase px-8 py-3.5 transition duration-300 shadow-lg shadow-gold-500/20 transform hover:-translate-y-0.5"
+              to="/products" 
+              className="rounded-full bg-gradient-to-r from-gold-450 to-gold-600 hover:from-gold-500 hover:to-gold-700 text-luxury-black font-bold tracking-widest text-[10px] uppercase px-8 py-3.5 transition duration-300 shadow-lg shadow-gold-500/20"
             >
-              {ctaText}
+              Explore Collections
             </Link>
+            <Link 
+              to="/shipping-policy" 
+              className="rounded-full border border-gray-400 hover:border-white text-gray-300 hover:text-white font-semibold text-[10px] uppercase px-6 py-3.5 transition"
+            >
+              Shipping Policy
+            </Link>
+            <Link 
+              to="/returns-refunds" 
+              className="rounded-full border border-gray-400 hover:border-white text-gray-300 hover:text-white font-semibold text-[10px] uppercase px-6 py-3.5 transition"
+            >
+              Return Policy
+            </Link>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 pt-8 border-t border-white/10 text-left text-gray-400 max-w-lg mx-auto font-sans font-light">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-gold-400 shrink-0" />
+              <div>
+                <span className="block text-[8px] font-bold text-gray-500 uppercase tracking-wider">Email Support</span>
+                <a href="mailto:niyoragifts@gmail.com" className="text-xs font-semibold text-white hover:text-gold-400 transition">
+                  niyoragifts@gmail.com
+                </a>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-gold-400 shrink-0" />
+              <div>
+                <span className="block text-[8px] font-bold text-gray-500 uppercase tracking-wider">Call Support</span>
+                <a href="tel:+919000000000" className="text-xs font-semibold text-white hover:text-gold-400 transition">
+                  +91 90000-00000
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>

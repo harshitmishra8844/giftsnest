@@ -339,9 +339,58 @@ const verifyOtp = async (req, res) => {
   }
 };
 
+const googleLogin = async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email || !name) {
+      return res.status(400).json({ message: "Email and Name are required for Google Login" });
+    }
+
+    const trimmedEmail = email.toLowerCase().trim();
+    let user = await User.findOne({ email: trimmedEmail });
+
+    if (!user) {
+      // Auto-register new users logging in via Google
+      const randomPasswordSeed = crypto.randomBytes(16).toString("hex");
+      const passwordSalt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(randomPasswordSeed, passwordSalt);
+
+      user = await User.create({
+        name: name.trim(),
+        email: trimmedEmail,
+        mobileNumber: "",
+        password: hashedPassword,
+        loginMethod: "Email", // Using Email since Google Login is email-based and avoids validation enum constraints
+        verificationStatus: "Verified",
+      });
+    } else {
+      if (user.status === "Suspended") {
+        await logUserLoginAttempt(user.name, user.email, "Failed", user._id, req);
+        return res.status(403).json({ message: "Your account has been suspended. Please contact support." });
+      }
+      if (user.status === "Deleted") {
+        await logUserLoginAttempt(user.name, user.email, "Failed", user._id, req);
+        return res.status(403).json({ message: "Your account has been deactivated." });
+      }
+    }
+
+    user.lastLogin = new Date();
+    await user.save();
+
+    await logUserLoginAttempt(user.name, user.email, "Success", user._id, req);
+
+    return res.status(200).json(serializeUserAuth(user));
+  } catch (error) {
+    console.error("Google authentication error:", error.message);
+    return res.status(500).json({ message: "Google login failed. Please try again." });
+  }
+};
+
 module.exports = {
   checkEmail,
   registerSendOtp,
   verifyOtp,
+  googleLogin,
   generateToken,
 };
