@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const { uploadImage } = require("../controllers/uploadController");
 const { imageUpload } = require("../middleware/uploadMiddleware");
+const { validateImageContent } = require("../middleware/fileValidation");
 
 const router = express.Router();
 
@@ -18,6 +19,6 @@ router.post("/", (req, res, next) => {
     }
     return next();
   });
-}, uploadImage);
+}, validateImageContent, uploadImage);
 
 module.exports = router;

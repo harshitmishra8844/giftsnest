@@ -10,6 +10,10 @@ const {
   ticketAttachmentUpload,
 } = require("../middleware/fileUploadMiddleware");
 const {
+  validateReturnContent,
+  validateAttachmentContent,
+} = require("../middleware/fileValidation");
+const {
   createReturn,
   getMyReturns,
   getReturnDetails,
@@ -111,8 +115,9 @@ router.post("/upload", protect, rateLimiter(25, 5 * 60 * 1000), (req, res) => {
       return res.status(400).json({ message: err.message || "File upload failed." });
     }
 
-    try {
-      const files = req.files;
+    validateReturnContent(req, res, async () => {
+      try {
+        const files = req.files;
       const responseData = { images: [], video: null };
       const protocol = req.headers["x-forwarded-proto"] || req.protocol;
 
@@ -211,6 +216,7 @@ router.post("/upload", protect, rateLimiter(25, 5 * 60 * 1000), (req, res) => {
       console.error("Return upload logic error:", uploadError.message);
       res.status(500).json({ message: `Upload failed: ${uploadError.message}` });
     }
+    });
   });
 });
 
@@ -223,8 +229,9 @@ router.post("/upload-attachment", protect, rateLimiter(20, 5 * 60 * 1000), (req,
       return res.status(400).json({ message: err.message || "Attachment upload failed." });
     }
 
-    try {
-      const file = req.file;
+    validateAttachmentContent(req, res, async () => {
+      try {
+        const file = req.file;
       if (!file) {
         return res.status(400).json({ message: "Attachment file is required." });
       }
@@ -273,6 +280,7 @@ router.post("/upload-attachment", protect, rateLimiter(20, 5 * 60 * 1000), (req,
       console.error("Attachment upload error:", attachmentError.message);
       res.status(500).json({ message: `Attachment upload failed: ${attachmentError.message}` });
     }
+    });
   });
 });
 

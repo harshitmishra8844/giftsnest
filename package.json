@@ -25,7 +25,8 @@
     "nodemailer": "^6.10.1",
     "qrcode": "^1.5.4",
     "razorpay": "^2.9.6",
-    "speakeasy": "^2.0.0"
+    "speakeasy": "^2.0.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

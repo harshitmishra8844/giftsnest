@@ -894,7 +894,12 @@ const MyProfile = () => {
   };
 
   const handleAddressFormChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    let { name, value, type, checked } = e.target;
+    if (name === "fullName") {
+      value = value.replace(/[0-9]/g, "");
+    } else if (name === "phone") {
+      value = value.replace(/[a-zA-Z]/g, "");
+    }
     setAddressForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -989,7 +994,12 @@ const MyProfile = () => {
   };
 
   const handleProfileFormChange = (e) => {
-    const { name, value } = e.target;
+    let { name, value } = e.target;
+    if (name === "name") {
+      value = value.replace(/[0-9]/g, "");
+    } else if (name === "mobileNumber") {
+      value = value.replace(/[a-zA-Z]/g, "");
+    }
     setProfileForm((prev) => ({ ...prev, [name]: value }));
   };
 

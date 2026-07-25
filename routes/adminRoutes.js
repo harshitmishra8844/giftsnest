@@ -1,5 +1,6 @@
 const express = require("express");
 const { adminLogin, getStoreInfo, updateStoreInfo, getEmailDiagnostics, setup2FA, enable2FA, disable2FA, verify2FA, adminLogout, getLoginLogs } = require("../controllers/adminController");
+const { validateBody, adminLoginSchema } = require("../middleware/validationMiddleware");
 const {
   getProducts,
   createProduct,
@@ -36,7 +37,7 @@ const {
 
 const router = express.Router();
 
-router.post("/login", loginRateLimiter, adminLogin);
+router.post("/login", loginRateLimiter, validateBody(adminLoginSchema), adminLogin);
 router.post("/logout", adminLogout);
 router.post("/verify-2fa", verify2FA);
 router.get("/login-logs", protect, getLoginLogs);

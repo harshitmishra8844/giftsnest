@@ -14,6 +14,7 @@ const {
 } = require("../controllers/cmsController");
 const { protect } = require("../middleware/authMiddleware");
 const { imageUpload } = require("../middleware/uploadMiddleware");
+const { validateImageContent } = require("../middleware/fileValidation");
 const multer = require("multer");
 
 const router = express.Router();
@@ -80,6 +81,7 @@ router.post(
       return next();
     });
   },
+  validateImageContent,
   uploadMedia
 );
 router.delete("/media/:id", protect, checkMediaPermission, deleteMedia);

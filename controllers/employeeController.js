@@ -43,7 +43,7 @@ const createEmployee = async (req, res) => {
 
     // Auto-generate ID
     const empId = await generateEmployeeId();
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const employee = await User.create({
       name: name.trim(),
@@ -117,7 +117,7 @@ const updateEmployee = async (req, res) => {
     if (roles) employee.roles = roles;
 
     if (password) {
-      employee.password = await bcrypt.hash(password, 10);
+      employee.password = await bcrypt.hash(password, 12);
     }
 
     await employee.save();

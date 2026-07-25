@@ -1678,6 +1678,23 @@ const sendOtpEmail = async (email, otp) => {
   return await queueEmail(email.toLowerCase().trim(), title, bodyHtml, textContent, "otp_verification");
 };
 
+const sendAccountLockoutEmail = async (email, lockDurationMinutes) => {
+  const storeInfo = await getStoreDetails();
+  const title = `Security Alert: Account Temporarily Locked`;
+  const headline = `Security Alert: Your Account Has Been Locked`;
+
+  const bodyHtml = `
+    <p>Hello,</p>
+    <p>We detected multiple failed login attempts on your account. For your security, your account has been temporarily locked for <strong>${lockDurationMinutes} minutes</strong>.</p>
+    <p>If you did not perform these login attempts, someone else might be trying to guess your credentials. Please change your password or contact the system administrator once the lock duration has expired.</p>
+  `;
+
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
+  const textContent = `Hello,\nWe detected multiple failed login attempts on your account. For your security, your account has been temporarily locked for ${lockDurationMinutes} minutes.`;
+
+  return queueEmail(email.toLowerCase().trim(), title, htmlContent, textContent, "account_lockout");
+};
+
 module.exports = {
   queueEmail,
   retryEmail,
@@ -1718,4 +1735,5 @@ module.exports = {
   sendReplacementRequestDelivered,
   sendAdminReturnRequestAlertV2,
   sendAdminReplacementRequestAlertV2,
+  sendAccountLockoutEmail,
 };

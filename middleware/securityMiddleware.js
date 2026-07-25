@@ -72,10 +72,11 @@ const csrfProtection = (req, res, next) => {
 
 const loginLimiterMap = {};
 const loginRateLimiter = (req, res, next) => {
-  const ip = req.ip || req.headers["x-forwarded-for"] || req.connection.remoteAddress || "127.0.0.1";
+  const rawIp = req.ip || req.headers["x-forwarded-for"] || req.connection?.remoteAddress || "127.0.0.1";
+  const ip = String(rawIp).split(",")[0].trim();
   const now = Date.now();
-  const windowMs = 15 * 60 * 1000;
-  const maxAttempts = 5;
+  const windowMs = 60 * 1000; // 1 minute window
+  const maxAttempts = 15; // 15 attempts
 
   if (!loginLimiterMap[ip]) {
     loginLimiterMap[ip] = [];
@@ -84,19 +85,10 @@ const loginRateLimiter = (req, res, next) => {
   loginLimiterMap[ip] = loginLimiterMap[ip].filter((t) => now - t < windowMs);
 
   if (loginLimiterMap[ip].length >= maxAttempts) {
-    return res.status(429).json({
-      message: "Too many failed login attempts from this IP. Please try again after 15 minutes.",
-    });
+    return res.status(401).json({ message: "Incorrect email or password" });
   }
 
-  const originalJson = res.json;
-  res.json = function (data) {
-    if (res.statusCode >= 400 && res.statusCode < 500) {
-      loginLimiterMap[ip].push(Date.now());
-    }
-    return originalJson.call(this, data);
-  };
-
+  loginLimiterMap[ip].push(now);
   next();
 };
 

@@ -93,7 +93,7 @@ const checkEmail = async (req, res) => {
 
     const trimmedEmail = email.toLowerCase().trim();
     if (!isValidEmail(trimmedEmail)) {
-      return res.status(400).json({ message: "Please enter a valid email address" });
+      return res.status(400).json({ message: "Incorrect email or password" });
     }
 
     const user = await User.findOne({ email: trimmedEmail });
@@ -101,7 +101,7 @@ const checkEmail = async (req, res) => {
     if (!user) {
       return res.status(200).json({
         exists: false,
-        message: "Email is not registered. Please complete registration.",
+        message: "Incorrect email or password",
       });
     }
 
@@ -165,12 +165,7 @@ const registerSendOtp = async (req, res) => {
 
     const trimmedEmail = email.toLowerCase().trim();
     if (!isValidEmail(trimmedEmail)) {
-      return res.status(400).json({ message: "Please enter a valid email address" });
-    }
-
-    const existingUser = await User.findOne({ email: trimmedEmail });
-    if (existingUser) {
-      return res.status(409).json({ message: "This email is already registered. Please login instead." });
+      return res.status(400).json({ message: "Incorrect email or password" });
     }
 
     // Rate Limiting: Max 5 OTP requests per 15 minutes
@@ -292,27 +287,27 @@ const verifyOtp = async (req, res) => {
       // Final sanity check for double submission
       const existingUser = await User.findOne({ email: trimmedEmail });
       if (existingUser) {
-        return res.status(409).json({ message: "This email is already registered. Please login instead." });
+        user = existingUser;
+      } else {
+        // Generate a secure randomly generated password seed for compatibility
+        const randomPasswordSeed = crypto.randomBytes(16).toString("hex");
+        const passwordSalt = await bcrypt.genSalt(12);
+        const hashedPassword = await bcrypt.hash(randomPasswordSeed, passwordSalt);
+
+        user = await User.create({
+          name: name.trim(),
+          email: trimmedEmail,
+          mobileNumber: mobileNumber.trim(),
+          password: hashedPassword,
+          loginMethod: "OTP",
+          verificationStatus: "Verified",
+        });
       }
-
-      // Generate a secure randomly generated password seed for compatibility
-      const randomPasswordSeed = crypto.randomBytes(16).toString("hex");
-      const passwordSalt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(randomPasswordSeed, passwordSalt);
-
-      user = await User.create({
-        name: name.trim(),
-        email: trimmedEmail,
-        mobileNumber: mobileNumber.trim(),
-        password: hashedPassword,
-        loginMethod: "OTP",
-        verificationStatus: "Verified",
-      });
     } else {
       user = await User.findOne({ email: trimmedEmail });
       if (!user) {
         await logUserLoginAttempt("Unknown User", trimmedEmail, "Failed", null, req);
-        return res.status(404).json({ message: "User account not found. Please register." });
+        return res.status(401).json({ message: "Incorrect email or password" });
       }
       
       if (user.status === "Suspended") {
@@ -353,7 +348,7 @@ const googleLogin = async (req, res) => {
     if (!user) {
       // Auto-register new users logging in via Google
       const randomPasswordSeed = crypto.randomBytes(16).toString("hex");
-      const passwordSalt = await bcrypt.genSalt(10);
+      const passwordSalt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(randomPasswordSeed, passwordSalt);
 
       user = await User.create({

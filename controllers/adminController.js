@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const StoreSetting = require("../models/StoreSetting");
@@ -5,6 +6,7 @@ const LoginActivityLog = require("../models/LoginActivityLog");
 const { generateToken } = require("./authController");
 const { getSmtpConfig, isSmtpConfigured, isEmailConfigured, verifyEmailTransporter } = require("../services/emailTransporter");
 const { logActivity } = require("../services/logService");
+const { sendAccountLockoutEmail } = require("../services/emailService");
 
 const parseUserAgent = (userAgentString) => {
   const ua = userAgentString || "";
@@ -120,6 +122,20 @@ const sanitizeOffers = (offers) => {
     .filter((offer) => offer.title && offer.subtitle);
 };
 
+const constantTimeCompare = (str1, str2) => {
+  const hash1 = crypto.createHash("sha256").update(str1).digest();
+  const hash2 = crypto.createHash("sha256").update(str2).digest();
+  return crypto.timingSafeEqual(hash1, hash2);
+};
+
+const needsRehash = (hash) => {
+  if (!hash || !hash.startsWith("$2")) return true;
+  const parts = hash.split("$");
+  if (parts.length < 4) return true;
+  const cost = parseInt(parts[2], 10);
+  return cost < 12;
+};
+
 const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -132,12 +148,12 @@ const adminLogin = async (req, res) => {
       const fallbackEmail = process.env.ADMIN_EMAIL || "niyoragifts@gmail.com";
       const fallbackPassword = process.env.ADMIN_PASSWORD || "harshit@123";
 
-      if (email.toLowerCase() !== fallbackEmail.toLowerCase() || password !== fallbackPassword) {
+      if (email.toLowerCase() !== fallbackEmail.toLowerCase() || !constantTimeCompare(password, fallbackPassword)) {
         await logLoginAttempt("Unknown Admin", email, "Failed", null, req);
-        return res.status(401).json({ message: "Invalid admin credentials" });
+        return res.status(401).json({ message: "Incorrect email or password" });
       }
 
-      const hashedPassword = await bcrypt.hash(fallbackPassword, 10);
+      const hashedPassword = await bcrypt.hash(fallbackPassword, 12);
       admin = await User.create({
         name: "Store Admin",
         email: fallbackEmail.toLowerCase(),
@@ -150,11 +166,8 @@ const adminLogin = async (req, res) => {
 
     // Lockout check
     if (admin.lockUntil && admin.lockUntil > new Date()) {
-      const minutesLeft = Math.ceil((admin.lockUntil - new Date()) / (60 * 1000));
       await logLoginAttempt(admin.name, email, "Failed", admin._id, req);
-      return res.status(403).json({ 
-        message: `Account is temporarily locked due to too many failed attempts. Try again in ${minutesLeft} minutes.` 
-      });
+      return res.status(401).json({ message: "Incorrect email or password" });
     }
 
     // Suspension check
@@ -163,15 +176,37 @@ const adminLogin = async (req, res) => {
       return res.status(403).json({ message: "Your employee account has been suspended or deactivated." });
     }
 
+    // Progressive delay logic (starting after 3 failed attempts)
+    if (admin.loginAttempts >= 3) {
+      const delayMs = Math.pow(2, admin.loginAttempts - 3) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
     const validPassword = await bcrypt.compare(password, admin.password);
     if (!validPassword) {
       admin.loginAttempts = (admin.loginAttempts || 0) + 1;
+      let isNewlyLocked = false;
       if (admin.loginAttempts >= 5) {
         admin.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minute lock
+        isNewlyLocked = true;
       }
       await admin.save();
       await logLoginAttempt(admin.name, email, "Failed", admin._id, req);
-      return res.status(401).json({ message: "Invalid admin credentials" });
+
+      if (isNewlyLocked) {
+        // Send email alert asynchronously
+        sendAccountLockoutEmail(admin.email, 15).catch((err) => {
+          console.error("[lockout] Failed to send account lockout email:", err.message);
+        });
+      }
+
+      return res.status(401).json({ message: "Incorrect email or password" });
+    }
+
+    // Live migration: rehash password if cost factor < 12
+    if (needsRehash(admin.password)) {
+      const salt = await bcrypt.genSalt(12);
+      admin.password = await bcrypt.hash(password, salt);
     }
 
     // Reset login failures

@@ -639,7 +639,7 @@ function App() {
         </>
       ) : null}
 
-      <main className={isAdminRoute ? "min-h-screen w-full bg-[#FAF7F2]" : "mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-10 page-enter"}>
+      <main className={isAdminRoute ? "min-h-screen w-full bg-[#FAF7F2]" : location.pathname === "/" ? "w-full page-enter" : "mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-10 page-enter"}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />

@@ -496,7 +496,7 @@ const UserAuth = () => {
                         type="text"
                         required
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => setName(e.target.value.replace(/[0-9]/g, ""))}
                         placeholder="e.g. John Doe"
                         className="w-full rounded-xl border border-gold-300/40 bg-white pl-10 pr-4 py-3 text-xs tracking-wide transition-all focus:border-gold-500 focus:bg-gold-50/10 focus:ring-4 focus:ring-gold-500/5 outline-none placeholder:text-gray-400/60 shadow-xs"
                       />
@@ -514,7 +514,7 @@ const UserAuth = () => {
                         type="tel"
                         required
                         value={mobileNumber}
-                        onChange={(e) => setMobileNumber(e.target.value)}
+                        onChange={(e) => setMobileNumber(e.target.value.replace(/[a-zA-Z]/g, ""))}
                         placeholder="e.g. 9876543210"
                         className="w-full rounded-xl border border-gold-300/40 bg-white pl-10 pr-4 py-3 text-xs tracking-wide transition-all focus:border-gold-500 focus:bg-gold-50/10 focus:ring-4 focus:ring-gold-500/5 outline-none placeholder:text-gray-400/60 shadow-xs"
                       />
