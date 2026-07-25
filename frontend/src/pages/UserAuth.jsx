@@ -120,6 +120,10 @@ const UserAuth = () => {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     if (!name || !mobileNumber || !email) return;
+    if (!isValidEmailFormat(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     if (!agreeTerms) {
       setError("You must agree to the Terms & Conditions to create an account.");
       return;
@@ -461,30 +465,28 @@ const UserAuth = () => {
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-serif font-medium tracking-wide text-luxury-black font-semibold">Join Niyora Gifts</h3>
                   <p className="text-xs text-text-secondary mt-1.5 font-light">
-                    Email <span className="font-semibold text-luxury-black">{email || "your address"}</span> is new. Please complete registration.
+                    Please complete your registration details below.
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  {/* Email verification input if not set before */}
-                  {!email && (
-                    <div>
-                      <label className="block text-[9px] font-bold text-luxury-black uppercase tracking-[0.15em] mb-1.5">
-                        Email Address
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="customer@example.com"
-                          className="w-full rounded-xl border border-gold-300/40 bg-white pl-10 pr-4 py-3 text-xs tracking-wide transition-all focus:border-gold-500 focus:bg-gold-50/10 focus:ring-4 focus:ring-gold-500/5 outline-none placeholder:text-gray-400/60 shadow-xs"
-                        />
-                        <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
+                  {/* Email Address */}
+                  <div>
+                    <label className="block text-[9px] font-bold text-luxury-black uppercase tracking-[0.15em] mb-1.5">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="customer@example.com"
+                        className="w-full rounded-xl border border-gold-300/40 bg-white pl-10 pr-4 py-3 text-xs tracking-wide transition-all focus:border-gold-500 focus:bg-gold-50/10 focus:ring-4 focus:ring-gold-500/5 outline-none placeholder:text-gray-400/60 shadow-xs"
+                      />
+                      <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                     </div>
-                  )}
+                  </div>
 
                   {/* Name Input */}
                   <div>

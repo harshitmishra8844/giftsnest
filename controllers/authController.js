@@ -165,7 +165,12 @@ const registerSendOtp = async (req, res) => {
 
     const trimmedEmail = email.toLowerCase().trim();
     if (!isValidEmail(trimmedEmail)) {
-      return res.status(400).json({ message: "Incorrect email or password" });
+      return res.status(400).json({ message: "Please enter a valid email address." });
+    }
+
+    const existingUser = await User.findOne({ email: trimmedEmail });
+    if (existingUser) {
+      return res.status(400).json({ message: "An account with this email address already exists. Please sign in instead." });
     }
 
     // Rate Limiting: Max 5 OTP requests per 15 minutes
