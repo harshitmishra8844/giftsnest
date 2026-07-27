@@ -1,23 +1,26 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { NavLink, Route, Routes, Link, useLocation, Navigate, useNavigate } from "react-router-dom";
-import Home from "./pages/Home";
-import About from "./pages/About";
-import Products from "./pages/Products";
-import ProductDetails from "./pages/ProductDetails";
-import Cart from "./pages/Cart";
-import Wishlist from "./pages/Wishlist";
-import Checkout from "./pages/Checkout";
-import UserAuth from "./pages/UserAuth";
-import MyProfile from "./pages/MyProfile";
-import AddProduct from "./pages/AddProduct";
-import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/AdminDashboard";
-import TrackOrder from "./pages/TrackOrder";
-import ShippingPolicy from "./pages/ShippingPolicy";
-import ReturnsRefunds from "./pages/ReturnsRefunds";
-import TermsConditions from "./pages/TermsConditions";
-import PersonalizedMug from "./pages/PersonalizedMug";
-import PaymentSuccess from "./pages/PaymentSuccess";
+import { PremiumRingLoader } from "./components/SkeletonLoaders";
+
+const Home = lazy(() => import("./pages/Home"));
+const About = lazy(() => import("./pages/About"));
+const Products = lazy(() => import("./pages/Products"));
+const ProductDetails = lazy(() => import("./pages/ProductDetails"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Wishlist = lazy(() => import("./pages/Wishlist"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const UserAuth = lazy(() => import("./pages/UserAuth"));
+const MyProfile = lazy(() => import("./pages/MyProfile"));
+const AddProduct = lazy(() => import("./pages/AddProduct"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder"));
+const ShippingPolicy = lazy(() => import("./pages/ShippingPolicy"));
+const ReturnsRefunds = lazy(() => import("./pages/ReturnsRefunds"));
+const TermsConditions = lazy(() => import("./pages/TermsConditions"));
+const PersonalizedMug = lazy(() => import("./pages/PersonalizedMug"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+
 import { useCart } from "./context/CartContext";
 import { useWishlist } from "./context/WishlistContext";
 import { useAuth } from "./context/AuthContext";
@@ -25,6 +28,7 @@ import SearchBar from "./components/search/SearchBar";
 import { mockGiftProducts, trendingSearches } from "./data/mockGiftProducts";
 import api from "./services/api";
 import SEO from "./components/SEO";
+
 
 
 const UserProtectedRoute = ({ children }) => {
@@ -640,49 +644,51 @@ function App() {
       ) : null}
 
       <main className={isAdminRoute ? "min-h-screen w-full bg-[#FAF7F2]" : location.pathname === "/" ? "w-full page-enter" : "mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-10 page-enter"}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/pages/about-us" element={<Navigate to="/about" replace />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/products/:idOrSlug" element={<ProductDetails />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/wishlist" element={<Wishlist />} />
-          <Route
-            path="/checkout"
-            element={
-              <UserProtectedRoute>
-                <Checkout />
-              </UserProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<UserAuth />} />
-          <Route
-            path="/my-profile"
-            element={
-              <UserProtectedRoute>
-                <MyProfile />
-              </UserProtectedRoute>
-            }
-          />
-          <Route path="/add-product" element={<AddProduct />} />
-          <Route path="/admin" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
-          <Route path="/admin/login" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
-          <Route path="/admin/dashboard" element={<Navigate to="/niyora-admin-portal-2026/dashboard" replace />} />
-          <Route path="/admin/*" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
-          <Route path="/niyora-admin-portal-2026/login" element={<AdminLogin />} />
-          <Route path="/niyora-admin-portal-2026/dashboard" element={<AdminDashboard />} />
-          <Route path="/track-order" element={<TrackOrder />} />
-          <Route path="/shipping-policy" element={<ShippingPolicy />} />
-          <Route path="/returns-refunds" element={<ReturnsRefunds />} />
-          <Route path="/terms-conditions" element={<TermsConditions />} />
-          <Route path="/pages/terms-and-conditions" element={<Navigate to="/terms-conditions" replace />} />
-          <Route path="/return-replacement" element={<Navigate to="/returns-refunds" replace />} />
-          <Route path="/returns-replacement" element={<Navigate to="/returns-refunds" replace />} />
-          <Route path="/return-and-replacement" element={<Navigate to="/returns-refunds" replace />} />
-          <Route path="/personalized-mug" element={<PersonalizedMug />} />
-          <Route path="/payment-success" element={<PaymentSuccess />} />
-        </Routes>
+        <Suspense fallback={<PremiumRingLoader text="Loading page..." />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/pages/about-us" element={<Navigate to="/about" replace />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/:idOrSlug" element={<ProductDetails />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/wishlist" element={<Wishlist />} />
+            <Route
+              path="/checkout"
+              element={
+                <UserProtectedRoute>
+                  <Checkout />
+                </UserProtectedRoute>
+              }
+            />
+            <Route path="/login" element={<UserAuth />} />
+            <Route
+              path="/my-profile"
+              element={
+                <UserProtectedRoute>
+                  <MyProfile />
+                </UserProtectedRoute>
+              }
+            />
+            <Route path="/add-product" element={<AddProduct />} />
+            <Route path="/admin" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
+            <Route path="/admin/login" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
+            <Route path="/admin/dashboard" element={<Navigate to="/niyora-admin-portal-2026/dashboard" replace />} />
+            <Route path="/admin/*" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
+            <Route path="/niyora-admin-portal-2026/login" element={<AdminLogin />} />
+            <Route path="/niyora-admin-portal-2026/dashboard" element={<AdminDashboard />} />
+            <Route path="/track-order" element={<TrackOrder />} />
+            <Route path="/shipping-policy" element={<ShippingPolicy />} />
+            <Route path="/returns-refunds" element={<ReturnsRefunds />} />
+            <Route path="/terms-conditions" element={<TermsConditions />} />
+            <Route path="/pages/terms-and-conditions" element={<Navigate to="/terms-conditions" replace />} />
+            <Route path="/return-replacement" element={<Navigate to="/returns-refunds" replace />} />
+            <Route path="/returns-replacement" element={<Navigate to="/returns-refunds" replace />} />
+            <Route path="/return-and-replacement" element={<Navigate to="/returns-refunds" replace />} />
+            <Route path="/personalized-mug" element={<PersonalizedMug />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+          </Routes>
+        </Suspense>
       </main>
 
       {!isAdminRoute && (

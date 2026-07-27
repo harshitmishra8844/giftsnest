@@ -4,11 +4,37 @@ import QuantityStepper from "./QuantityStepper";
 import { resolveMediaUrl } from "../services/api";
 import WishlistButton from "./WishlistButton";
 
+const optimizeUnsplashUrl = (url, width, height) => {
+  if (!url) return "";
+  if (typeof url !== "string") return url;
+  if (url.includes("images.unsplash.com")) {
+    let cleanUrl = url;
+    cleanUrl = cleanUrl.replace(/&fm=[^&]*/g, "").replace(/\?fm=[^&]*/g, "?");
+    cleanUrl = cleanUrl.replace(/&auto=[^&]*/g, "").replace(/\?auto=[^&]*/g, "?");
+    if (cleanUrl.includes("?")) {
+      cleanUrl += `&fm=webp&q=80`;
+    } else {
+      cleanUrl += `?fm=webp&q=80`;
+    }
+    if (width) {
+      cleanUrl = cleanUrl.replace(/&w=[^&]*/g, "").replace(/\?w=[^&]*/g, "?");
+      cleanUrl += `&w=${width}`;
+    }
+    if (height) {
+      cleanUrl = cleanUrl.replace(/&h=[^&]*/g, "").replace(/\?h=[^&]*/g, "?");
+      cleanUrl += `&h=${height}`;
+    }
+    cleanUrl = cleanUrl.replace(/\?&/g, "?").replace(/\?$/g, "");
+    return cleanUrl;
+  }
+  return url;
+};
+
 const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
   const navigate = useNavigate();
   const [recentlyAdded, setRecentlyAdded] = useState(false);
   const productUrl = `/products/${product.slug || product._id}`;
-  const imageUrl = resolveMediaUrl(product.image || product.images?.[0] || "https://via.placeholder.com/600x400?text=Gift");
+  const imageUrl = optimizeUnsplashUrl(resolveMediaUrl(product.image || product.images?.[0] || "https://via.placeholder.com/600x400?text=Gift"), 400, 300);
   const stock = product.stock !== undefined && product.stock !== null ? Number(product.stock) : null;
   const hasStockLimit = stock !== null && Number.isFinite(stock);
   const outOfStock = hasStockLimit && stock <= 0;
@@ -39,6 +65,8 @@ const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             loading="lazy"
+            width="400"
+            height="300"
           />
           <div className="absolute top-3 left-3">
             <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-gold-700 shadow-sm backdrop-blur-sm border border-gold-200/30">

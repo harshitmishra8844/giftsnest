@@ -111,9 +111,19 @@ const normalizeProductPayload = (source = {}, existingProduct = null) => {
   };
 };
 
+let productsCache = null;
+
+const invalidateProductsCache = () => {
+  productsCache = null;
+};
+
 const getProducts = async (req, res) => {
   try {
+    if (productsCache) {
+      return res.status(200).json(productsCache);
+    }
     const products = await Product.find().sort({ createdAt: -1 });
+    productsCache = products;
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch products" });
@@ -191,6 +201,7 @@ const addProductReview = async (req, res) => {
     recalculateReviewStats(product);
 
     await product.save();
+    invalidateProductsCache();
     return res.status(201).json({
       message: "Review added",
       reviews: product.reviews,
@@ -224,6 +235,7 @@ const updateMyProductReview = async (req, res) => {
     review.comment = comment;
     recalculateReviewStats(product);
     await product.save();
+    invalidateProductsCache();
     return res.status(200).json({
       message: "Review updated",
       reviews: product.reviews,
@@ -250,6 +262,7 @@ const deleteMyProductReview = async (req, res) => {
 
     recalculateReviewStats(product);
     await product.save();
+    invalidateProductsCache();
     return res.status(200).json({
       message: "Review deleted",
       reviews: product.reviews,
@@ -414,6 +427,7 @@ const createProduct = async (req, res) => {
       );
     }
 
+    invalidateProductsCache();
     return res.status(201).json({ message: "Product created successfully", product });
   } catch (error) {
     console.error("Create product error:", error.message);
@@ -486,6 +500,7 @@ const updateProduct = async (req, res) => {
       );
     }
 
+    invalidateProductsCache();
     return res.status(200).json({ message: "Product updated successfully", product });
   } catch (error) {
     console.error("Update product error:", error.message);
@@ -511,6 +526,7 @@ const deleteProduct = async (req, res) => {
       );
     }
 
+    invalidateProductsCache();
     return res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Delete product error:", error.message);

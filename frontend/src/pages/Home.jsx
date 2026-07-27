@@ -69,10 +69,48 @@ const aboutHighlights = [
   { title: "Personal Touch", text: "From custom messages to thoughtful packaging, we help you make each gift truly memorable." },
 ];
 
+const optimizeUnsplashUrl = (url, width, height) => {
+  if (!url) return "";
+  if (typeof url !== "string") return url;
+  if (url.includes("images.unsplash.com")) {
+    let cleanUrl = url;
+    cleanUrl = cleanUrl.replace(/&fm=[^&]*/g, "").replace(/\?fm=[^&]*/g, "?");
+    cleanUrl = cleanUrl.replace(/&auto=[^&]*/g, "").replace(/\?auto=[^&]*/g, "?");
+    if (cleanUrl.includes("?")) {
+      cleanUrl += `&fm=webp&q=80`;
+    } else {
+      cleanUrl += `?fm=webp&q=80`;
+    }
+    if (width) {
+      cleanUrl = cleanUrl.replace(/&w=[^&]*/g, "").replace(/\?w=[^&]*/g, "?");
+      cleanUrl += `&w=${width}`;
+    }
+    if (height) {
+      cleanUrl = cleanUrl.replace(/&h=[^&]*/g, "").replace(/\?h=[^&]*/g, "?");
+      cleanUrl += `&h=${height}`;
+    }
+    cleanUrl = cleanUrl.replace(/\?&/g, "?").replace(/\?$/g, "");
+    return cleanUrl;
+  }
+  return url;
+};
+
 const Home = () => {
   const navigate = useNavigate();
   const { cartItems, addToCart, updateQuantity } = useCart();
   const { wishlistCount } = useWishlist();
+
+  // Component states
+  const [isInteractive, setIsInteractive] = useState(false);
+  
+  useEffect(() => {
+    const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
+    const handle = idleCallback(() => setIsInteractive(true));
+    return () => {
+      if (window.cancelIdleCallback) window.cancelIdleCallback(handle);
+      else clearTimeout(handle);
+    };
+  }, []);
 
   // Component states
   const [offers, setOffers] = useState([]);
@@ -349,7 +387,7 @@ const Home = () => {
   const categories = cmsContent?.content?.featuredCategories || quickCategories;
   const reviews = cmsContent?.content?.testimonials || testimonials;
   const highlights = cmsContent?.content?.whyChooseUs || aboutHighlights;
-  const heroBgImage = cmsContent?.content?.heroImages?.[0] || "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=1920&q=80";
+  const heroBgImage = optimizeUnsplashUrl(cmsContent?.content?.heroImages?.[0] || "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=1920&q=80", 1920);
 
   // Slice first 8 products for bestsellers
   const bestsellingProducts = useMemo(() => {
@@ -536,7 +574,7 @@ const Home = () => {
               >
                 <div 
                   className="relative w-full aspect-square overflow-hidden rounded-full shadow-md border-4 border-white group-hover:border-gold-400 group-hover:shadow-lg transition-all duration-500 hover:-translate-y-1 bg-gray-100"
-                  style={{ backgroundImage: `url(${category.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                  style={{ backgroundImage: `url(${optimizeUnsplashUrl(category.image, 300, 300)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                 >
                   <div className="absolute inset-0 bg-luxury-black/30 group-hover:bg-luxury-black/45 transition-colors duration-300" />
                   <div className="absolute inset-0 flex items-center justify-center p-2.5">
@@ -593,10 +631,12 @@ const Home = () => {
                   >
                     <div className="relative overflow-hidden aspect-[4/5] bg-gold-50/20">
                       <img
-                        src={imageUrl}
+                        src={optimizeUnsplashUrl(imageUrl, 400, 500)}
                         alt={product.name}
                         className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                         loading="lazy"
+                        width="400"
+                        height="500"
                       />
                       
                       <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
@@ -709,7 +749,7 @@ const Home = () => {
               >
                 <div 
                   className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-108"
-                  style={{ backgroundImage: `url(${item.image})` }}
+                  style={{ backgroundImage: `url(${optimizeUnsplashUrl(item.image, 600, 600)})` }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent group-hover:via-black/50 transition-colors duration-300" />
                 
@@ -759,98 +799,101 @@ const Home = () => {
             </div>
           </div>
         </section>
-
         {/* Testimonials Section */}
-        <section className="scroll-reveal space-y-12">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-champagne/45 pb-6">
-            <div className="space-y-2">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-gold-600">Client voices</p>
-              <h2 className="text-2xl md:text-3.5xl font-serif font-bold text-luxury-black">What Customers Say</h2>
+        {isInteractive && (
+          <section className="scroll-reveal space-y-12">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-champagne/45 pb-6">
+              <div className="space-y-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-gold-600">Client voices</p>
+                <h2 className="text-2xl md:text-3.5xl font-serif font-bold text-luxury-black">What Customers Say</h2>
+              </div>
+              <span className="rounded-full bg-gold-50 border border-gold-200/35 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-gold-800 shadow-2xs">
+                Trusted by Gifting Lovers
+              </span>
             </div>
-            <span className="rounded-full bg-gold-50 border border-gold-200/35 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-gold-800 shadow-2xs">
-              Trusted by Gifting Lovers
-            </span>
-          </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {reviews.map((review, idx) => (
-              <article 
-                key={`${review.name}-${idx}`} 
-                className="rounded-2xl border border-champagne/40 bg-white p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition duration-300"
-              >
-                <div>
-                  <div className="mb-4 flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current text-gold-500 stroke-gold-500" />
-                    ))}
+            <div className="grid gap-6 md:grid-cols-3">
+              {reviews.map((review, idx) => (
+                <article 
+                  key={`${review.name}-${idx}`} 
+                  className="rounded-2xl border border-champagne/40 bg-white p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition duration-300"
+                >
+                  <div>
+                    <div className="mb-4 flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="h-4 w-4 fill-current text-gold-500 stroke-gold-500" />
+                      ))}
+                    </div>
+                    <p className="text-xs italic leading-relaxed text-text-secondary font-light font-serif">
+                      "{review.text}"
+                    </p>
                   </div>
-                  <p className="text-xs italic leading-relaxed text-text-secondary font-light font-serif">
-                    "{review.text}"
-                  </p>
-                </div>
-                <div className="mt-6 flex items-center justify-between gap-2 border-t border-champagne/20 pt-4">
-                  <p className="text-xs font-extrabold text-gold-700 uppercase tracking-wider">{review.name}</p>
-                  {review.verified && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-gold-100/50 px-2.5 py-0.5 text-[9px] font-bold text-gold-800 uppercase tracking-wider">
-                      <ShieldCheck className="h-3 w-3" /> Verified Buyer
-                    </span>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
+                  <div className="mt-6 flex items-center justify-between gap-2 border-t border-champagne/20 pt-4">
+                    <p className="text-xs font-extrabold text-gold-700 uppercase tracking-wider">{review.name}</p>
+                    {review.verified && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gold-100/50 px-2.5 py-0.5 text-[9px] font-bold text-gold-800 uppercase tracking-wider">
+                        <ShieldCheck className="h-3 w-3" /> Verified Buyer
+                      </span>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Newsletter Signup (Subtle discount card) */}
-        <section className="scroll-reveal rounded-3xl bg-gradient-to-br from-gold-50/70 via-ivory to-gold-100/50 border border-gold-300/25 p-8 md:p-16 shadow-xs flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-gold-200/10 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-gold-300/5 blur-3xl pointer-events-none" />
+        {isInteractive && (
+          <section className="scroll-reveal rounded-3xl bg-gradient-to-br from-gold-50/70 via-ivory to-gold-100/50 border border-gold-300/25 p-8 md:p-16 shadow-xs flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-gold-200/10 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-gold-300/5 blur-3xl pointer-events-none" />
 
-          <div className="p-3 bg-gold-500/10 border border-gold-400/20 rounded-full backdrop-blur-xs">
-            <Mail className="h-6 w-6 text-gold-600" />
-          </div>
-
-          <div className="space-y-2 max-w-xl">
-            <h2 className="text-2xl md:text-4xl font-serif font-bold text-luxury-black">Savor the Art of Giving</h2>
-            <p className="text-xs md:text-sm text-text-secondary font-light leading-relaxed">
-              Subscribe to the Niyora circle for curated seasonal guides, exclusive boutique product releases, and 10% off your first luxury gift.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubscribe} className="w-full max-w-md flex flex-col sm:flex-row gap-2 relative z-10">
-            <input
-              type="email"
-              placeholder="Your luxury email address"
-              value={newsletterEmail}
-              onChange={handleEmailChange}
-              disabled={subStatus === "loading"}
-              required
-              className="flex-1 rounded-full border border-champagne bg-white px-5 py-3 text-xs text-luxury-black placeholder-gray-400 outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-500/10 transition duration-300"
-            />
-            <button
-              type="submit"
-              disabled={subStatus === "loading"}
-              className="rounded-full bg-luxury-black hover:bg-gold-500 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow cursor-pointer disabled:opacity-50 hover:-translate-y-0.5 shrink-0"
-            >
-              {subStatus === "loading" ? "Subscribing..." : "Join Circle"}
-            </button>
-          </form>
-
-          {/* Newsletter Alerts */}
-          {subStatus === "success" && (
-            <div className="flex items-center gap-2 rounded-full border border-gold-800/15 bg-gold-100/50 px-4 py-1.5 text-[11px] text-gold-800 shadow-sm animate-fade-in">
-              <Check className="h-4 w-4 text-gold-600 stroke-[3px]" />
-              <span>{subMessage}</span>
+            <div className="p-3 bg-gold-500/10 border border-gold-400/20 rounded-full backdrop-blur-xs">
+              <Mail className="h-6 w-6 text-gold-600" />
             </div>
-          )}
 
-          {subStatus === "error" && (
-            <div className="flex items-center gap-2 rounded-full border border-red-900/15 bg-red-100/50 px-4 py-1.5 text-[11px] text-red-700 shadow-sm animate-fade-in">
-              <X className="h-4 w-4 text-red-500 stroke-[3px]" />
-              <span>{subMessage}</span>
+            <div className="space-y-2 max-w-xl">
+              <h2 className="text-2xl md:text-4xl font-serif font-bold text-luxury-black">Savor the Art of Giving</h2>
+              <p className="text-xs md:text-sm text-text-secondary font-light leading-relaxed">
+                Subscribe to the Niyora circle for curated seasonal guides, exclusive boutique product releases, and 10% off your first luxury gift.
+              </p>
             </div>
-          )}
-        </section>
+
+            <form onSubmit={handleSubscribe} className="w-full max-w-md flex flex-col sm:flex-row gap-2 relative z-10">
+              <input
+                type="email"
+                placeholder="Your luxury email address"
+                value={newsletterEmail}
+                onChange={handleEmailChange}
+                disabled={subStatus === "loading"}
+                required
+                className="flex-1 rounded-full border border-champagne bg-white px-5 py-3 text-xs text-luxury-black placeholder-gray-400 outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-500/10 transition duration-300"
+              />
+              <button
+                type="submit"
+                disabled={subStatus === "loading"}
+                className="rounded-full bg-luxury-black hover:bg-gold-500 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 shadow cursor-pointer disabled:opacity-50 hover:-translate-y-0.5 shrink-0"
+              >
+                {subStatus === "loading" ? "Subscribing..." : "Join Circle"}
+              </button>
+            </form>
+
+            {/* Newsletter Alerts */}
+            {subStatus === "success" && (
+              <div className="flex items-center gap-2 rounded-full border border-gold-800/15 bg-gold-100/50 px-4 py-1.5 text-[11px] text-gold-800 shadow-sm animate-fade-in">
+                <Check className="h-4 w-4 text-gold-600 stroke-[3px]" />
+                <span>{subMessage}</span>
+              </div>
+            )}
+
+            {subStatus === "error" && (
+              <div className="flex items-center gap-2 rounded-full border border-red-900/15 bg-red-100/50 px-4 py-1.5 text-[11px] text-red-700 shadow-sm animate-fade-in">
+                <X className="h-4 w-4 text-red-500 stroke-[3px]" />
+                <span>{subMessage}</span>
+              </div>
+            )}
+          </section>
+        )}
 
       </div>
 

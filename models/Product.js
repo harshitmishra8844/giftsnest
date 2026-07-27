@@ -280,4 +280,7 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+productSchema.index({ slug: 1 });
+productSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model("Product", productSchema);

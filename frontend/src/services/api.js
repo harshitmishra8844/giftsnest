@@ -13,6 +13,10 @@ const api = axios.create({
   timeout: 60000,
 });
 
+const cache = {};
+const CACHE_TTL = 10000; // 10 seconds
+const CACHEABLE_URLS = ["/products", "/cms/shell", "/store-info", "/cms/content/homepage"];
+
 api.interceptors.request.use((config) => {
   const userAuth = getUserAuth();
 
@@ -21,11 +25,40 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${userAuth.token}`;
   }
 
+  if (config.method === "get" && CACHEABLE_URLS.includes(config.url)) {
+    const cacheKey = config.url + (config.params ? JSON.stringify(config.params) : "");
+    const cached = cache[cacheKey];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      config.adapter = () => {
+        return Promise.resolve({
+          data: cached.data,
+          status: cached.status,
+          statusText: cached.statusText,
+          headers: cached.headers,
+          config,
+          request: {}
+        });
+      };
+    }
+  }
+
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.config.method === "get" && CACHEABLE_URLS.includes(response.config.url)) {
+      const cacheKey = response.config.url + (response.config.params ? JSON.stringify(response.config.params) : "");
+      cache[cacheKey] = {
+        data: response.data,
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+        timestamp: Date.now(),
+      };
+    }
+    return response;
+  },
   async (error) => {
     const canRetryWithFallback =
       Boolean(fallbackBaseURL) &&

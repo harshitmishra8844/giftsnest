@@ -233,6 +233,13 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: couponSummary.message });
     }
 
+    const productIds = products
+      .map((item) => item.productId || item._id)
+      .filter((pid) => pid != null && mongoose.Types.ObjectId.isValid(String(pid)));
+
+    const dbProducts = await Product.find({ _id: { $in: productIds } }).select("name stock codEnabled");
+    const productMap = new Map(dbProducts.map((p) => [String(p._id), p]));
+
     if (paymentMethod === "COD") {
       const StoreSetting = require("../models/StoreSetting");
       const dbStoreInfo = await StoreSetting.findOne({ singletonKey: "store" });
@@ -244,11 +251,9 @@ const createOrder = async (req, res) => {
       for (const item of products) {
         const pid = item.productId || item._id;
         const pidStr = pid != null ? String(pid) : "";
-        if (pidStr && mongoose.Types.ObjectId.isValid(pidStr)) {
-          const prod = await Product.findById(pidStr).select("codEnabled");
-          if (prod && prod.codEnabled === false) {
-            return res.status(400).json({ message: `Cash on Delivery (COD) is not available for product "${item.name}".` });
-          }
+        const prod = productMap.get(pidStr);
+        if (prod && prod.codEnabled === false) {
+          return res.status(400).json({ message: `Cash on Delivery (COD) is not available for product "${item.name}".` });
         }
       }
     }
@@ -259,7 +264,7 @@ const createOrder = async (req, res) => {
       if (!pidStr || !mongoose.Types.ObjectId.isValid(pidStr)) {
         continue;
       }
-      const prod = await Product.findById(pidStr).select("name stock");
+      const prod = productMap.get(pidStr);
       if (!prod) {
         return res.status(400).json({ message: "One or more products in your cart are no longer available." });
       }
