@@ -28,7 +28,9 @@ const Products = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     setSearchText(params.get("q") || "");
-    setSelectedCategory(params.get("category") || "All");
+    const rawCategory = params.get("category") || "All";
+    // Normalize any legacy Personalized Gifts query to the admin-managed Personalized category
+    setSelectedCategory(rawCategory.toLowerCase() === "personalized gifts" ? "Personalized" : rawCategory);
   }, [location.search]);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ const Products = () => {
   }, [refreshSeed]);
 
   const categoryChips = useMemo(() => {
-    const standard = ["Birthday", "Anniversary", "Flowers", "Cakes", "Personalized Gifts", "Plants"];
+    const standard = ["Birthday", "Anniversary", "Flowers", "Cakes", "Personalized", "Plants"];
     const dynamic = [];
     products.forEach((product) => {
       if (product.category) {
@@ -69,10 +71,7 @@ const Products = () => {
       return products.some((product) => {
         const productCat = String(product.category || "").toLowerCase();
         const categoriesList = productCat.split(",").map((c) => c.trim()).filter(Boolean);
-        return (
-          categoriesList.includes(selectedCat) ||
-          categoriesList.some((c) => c.includes(selectedCat) || selectedCat.includes(c))
-        );
+        return categoriesList.includes(selectedCat);
       });
     });
     return ["All", ...activeCategories.sort((a, b) => a.localeCompare(b))];
@@ -88,8 +87,7 @@ const Products = () => {
       const categoriesList = productCat.split(",").map(c => c.trim()).filter(Boolean);
       const matchesCategory =
         selectedCategory === "All" ||
-        categoriesList.includes(selectedCat) ||
-        categoriesList.some(c => c.includes(selectedCat) || selectedCat.includes(c));
+        categoriesList.includes(selectedCat);
       const tags = Array.isArray(product.tags) ? product.tags.join(" ") : "";
       const haystack = `${product.name || ""} ${product.category || ""} ${product.description || ""} ${product.slug || ""} ${tags}`.toLowerCase();
       const matchesSearch =

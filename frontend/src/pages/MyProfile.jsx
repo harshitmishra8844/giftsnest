@@ -162,6 +162,8 @@ const MyProfile = () => {
   const [ticketFormOpen, setTicketFormOpen] = useState(false);
   const [newTicketSubject, setNewTicketSubject] = useState("");
   const [newTicketOrderId, setNewTicketOrderId] = useState("");
+  const [newTicketCategory, setNewTicketCategory] = useState("General Query");
+  const [newTicketPriority, setNewTicketPriority] = useState("Medium");
   const [newTicketMessage, setNewTicketMessage] = useState("");
   const [submittingTicket, setSubmittingTicket] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
@@ -182,12 +184,15 @@ const MyProfile = () => {
   const [returnItemQuantities, setReturnItemQuantities] = useState({}); // { productId: qty }
   const [returnReason, setReturnReason] = useState("");
   const [returnDescription, setReturnDescription] = useState("");
-  const [returnResolution, setReturnResolution] = useState("Refund");
+  const [returnResolution, setReturnResolution] = useState("Refund"); // "Refund" or "Replacement"
   const [returnImages, setReturnImages] = useState([]); // [ { url, publicId } ]
   const [returnVideo, setReturnVideo] = useState(null); // { url, publicId }
   const [returnPolicyChecked, setReturnPolicyChecked] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [orderProductsDetails, setOrderProductsDetails] = useState({});
+  const [returnSettings, setReturnSettings] = useState({ returnWindowDays: 7, replacementWindowDays: 7 });
+  const [requestSubmittedModal, setRequestSubmittedModal] = useState(null); // { requestId, type, orderCode }
+  const [previewImage, setPreviewImage] = useState(null);
 
   // COD refund fields
   const [codRefundMethod, setCodRefundMethod] = useState("UPI");
@@ -201,30 +206,47 @@ const MyProfile = () => {
   const [chatAttachment, setChatAttachment] = useState(null); // { name, url, fileType }
   const [uploadingChatAttachment, setUploadingChatAttachment] = useState(false);
 
+  const selectReturnClaim = async (ret) => {
+    setSelectedReturn(ret);
+    try {
+      const { data } = await api.get(`/returns/my-requests/${ret._id}`);
+      if (data?.returnRequest) {
+        setSelectedReturn({
+          ...data.returnRequest,
+          type: data.returnRequest.requestType || ret.type,
+          code: data.returnRequest.requestId || data.returnRequest.returnCode,
+          order: data.returnRequest.orderId,
+          timeline: data.timeline || [],
+          refundRecord: data.refundRecord || null,
+          replacementOrder: data.replacementOrder || null,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load full claim details:", e);
+    }
+  };
+
   const fetchReturns = async () => {
     try {
       setLoadingReturns(true);
       setError("");
-      const [returnsRes, replacementsRes] = await Promise.all([
+      const [returnsRes, settingsRes] = await Promise.all([
         api.get("/returns/my-requests"),
-        api.get("/returns/my-replacements"),
+        api.get("/returns/settings").catch(() => ({ data: { returnWindowDays: 7, replacementWindowDays: 7 } })),
       ]);
-      const formattedReturns = returnsRes.data.map(item => ({
+      if (settingsRes?.data) {
+        setReturnSettings(settingsRes.data);
+      }
+      const formatted = (returnsRes.data || []).map(item => ({
         ...item,
-        type: "Return",
-        code: item.returnCode,
+        type: item.requestType || (item.returnCode?.startsWith("REP") ? "Replacement" : "Return"),
+        code: item.requestId || item.returnCode,
         order: item.orderId
       }));
-      const formattedReplacements = replacementsRes.data.map(item => ({
-        ...item,
-        type: "Replacement",
-        code: item.replacementCode,
-        order: item.orderId
-      }));
-      const combined = [...formattedReturns, ...formattedReplacements].sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
-      setReturnsList(combined);
+      setReturnsList(formatted);
+      if (formatted.length > 0) {
+        selectReturnClaim(formatted[0]);
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load returns.");
     } finally {
@@ -370,10 +392,14 @@ const MyProfile = () => {
         subject: newTicketSubject,
         message: newTicketMessage,
         orderId: newTicketOrderId || undefined,
+        category: newTicketCategory,
+        priority: newTicketPriority,
       });
       setTickets((prev) => [data, ...prev]);
       setNewTicketSubject("");
       setNewTicketOrderId("");
+      setNewTicketCategory("General Query");
+      setNewTicketPriority("Medium");
       setNewTicketMessage("");
       setTicketFormOpen(false);
       setSuccessMessage("Support ticket created successfully!");
@@ -587,19 +613,33 @@ const MyProfile = () => {
         } : undefined,
       };
 
-      let endpoint = "/returns/requests";
-      if (returnResolution === "Replacement") {
-        endpoint = "/returns/replacements";
-      } else {
-        payload.video = returnVideo || undefined;
-      }
+      const requestType = returnResolution === "Replacement" ? "Replacement" : "Return";
+      payload.requestType = requestType;
+      payload.returnReason = returnReason;
+      payload.customerMessage = returnDescription.trim();
+      payload.evidenceImages = returnImages;
+      payload.evidenceVideo = returnVideo || undefined;
+      payload.video = returnVideo || undefined;
 
-      const { data } = await api.post(endpoint, payload);
-      setSuccessMessage(data.message || "Request submitted successfully!");
+      const { data } = await api.post("/returns/submit", payload);
+      const reqId = data.requestId || data.returnCode || `RET-${Date.now()}`;
+      setSuccessMessage(data.message || `${requestType} request submitted successfully!`);
       setReturnModalOpen(false);
+
+      // Open success tracking modal with request ID
+      setRequestSubmittedModal({
+        requestId: reqId,
+        type: requestType,
+        orderCode: returnOrder.orderCode,
+      });
+
       setReturnOrder(null);
 
-      await Promise.all([fetchReturns(), fetchTickets(), api.get("/orders/my").then(res => setOrders(res.data))]);
+      await Promise.all([
+        fetchReturns(),
+        fetchTickets(),
+        api.get("/orders/my").then((res) => setOrders(res.data)),
+      ]);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit request.");
     } finally {
@@ -650,25 +690,39 @@ const MyProfile = () => {
 
   const canRequestCancellation = (order) => {
     if (!order) return false;
-    if (["Shipped", "Delivered", "Cancelled"].includes(order.status)) return false;
-    if (order.cancellationRequest?.status === "Pending") return false;
-    return true;
+    const allowed = [
+      "Pending",
+      "Payment Pending",
+      "Payment Verification Pending",
+      "Confirmed",
+      "Order Confirmed",
+    ];
+    return (
+      allowed.includes(order.status) &&
+      order.status !== "Processing" &&
+      order.status !== "Shipped" &&
+      order.status !== "Delivered" &&
+      order.status !== "Cancelled" &&
+      order.status !== "CUSTOMER_CANCELLED" &&
+      order.status !== "FAILED_PAYMENT"
+    );
   };
 
   const canRequestReturn = (order) => {
     if (!order) return false;
     if (order.status !== "Delivered") return false;
 
-    const hasExisting = returnsList.some((ret) => {
+    const hasActiveReturn = returnsList.some((ret) => {
       const orderId = ret.order?._id || ret.order;
-      return orderId === order._id;
+      return orderId === order._id && !["Rejected", "Cancelled"].includes(ret.status);
     });
-    if (hasExisting) return false;
+    if (hasActiveReturn) return false;
 
     const deliveryDate = new Date(order.updatedAt);
     const diffTime = Math.abs(new Date() - deliveryDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 30;
+    const allowedWindow = Math.max(returnSettings?.returnWindowDays || 7, returnSettings?.replacementWindowDays || 7);
+    return diffDays <= allowedWindow;
   };
 
   const getOrderReturn = (orderId) => {
@@ -693,7 +747,7 @@ const MyProfile = () => {
       return;
     }
     if (!cancelConfirmed) {
-      setError("Please confirm you want to request cancellation.");
+      setError("Please confirm you want to cancel this order.");
       return;
     }
 
@@ -701,7 +755,7 @@ const MyProfile = () => {
       setError("");
       setSuccessMessage("");
       setSubmittingCancel(true);
-      const { data } = await api.post(`/orders/${cancelTargetOrder._id}/cancellation-request`, {
+      const { data } = await api.post(`/orders/${cancelTargetOrder._id}/cancel`, {
         reason: cancelReason.trim(),
         details: cancelDetails.trim(),
       });
@@ -710,9 +764,9 @@ const MyProfile = () => {
       }
       setCancelModalOpen(false);
       setCancelTargetOrder(null);
-      setSuccessMessage("Cancellation request submitted. Waiting for approval.");
+      setSuccessMessage(data?.message || "Order Cancelled Successfully");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit cancellation request");
+      setError(err.response?.data?.message || "Failed to cancel order");
     } finally {
       setSubmittingCancel(false);
     }
@@ -1056,23 +1110,35 @@ const MyProfile = () => {
 
   const getReturnStatusColor = (status) => {
     switch (status) {
+      case "Submitted":
       case "Return Requested":
-        return "bg-indigo-50 text-indigo-800 border border-indigo-200/50";
+        return "bg-blue-50 text-blue-800 border border-blue-200/60";
       case "Under Review":
-        return "bg-blue-50 text-blue-800 border border-blue-200/50";
+      case "Investigation In Progress":
+        return "bg-amber-50 text-amber-900 border border-amber-300/60";
       case "Approved":
+        return "bg-emerald-50 text-emerald-800 border border-emerald-300/60";
+      case "Pickup Scheduled":
+      case "Item Picked Up":
+        return "bg-indigo-50 text-indigo-800 border border-indigo-200/60";
+      case "Item Received":
+      case "Product Received":
+      case "Item Received & Verified":
+        return "bg-purple-50 text-purple-800 border border-purple-200/60";
+      case "Replacement Processing":
+      case "Refund Processing":
+        return "bg-cyan-50 text-cyan-800 border border-cyan-200/60";
+      case "Replacement Shipped":
+      case "Delivered":
+        return "bg-teal-50 text-teal-800 border border-teal-300/60";
+      case "Refund Completed":
       case "Refunded":
       case "Completed":
-        return "bg-amber-50 text-amber-800 border border-gold-300/30";
-      case "Pickup Scheduled":
-      case "Product Received":
-      case "Refund Processing":
-      case "Replacement Shipped":
-        return "bg-purple-50 text-purple-800 border border-purple-200/50";
+        return "bg-emerald-100 text-emerald-900 border border-emerald-400/60";
       case "Rejected":
-        return "bg-red-50 text-red-800 border border-red-200/50";
+        return "bg-rose-50 text-rose-800 border border-rose-300/60";
       default:
-        return "bg-gray-50 text-gray-800 border border-gray-200/50";
+        return "bg-gray-50 text-gray-800 border border-gray-200/60";
     }
   };
 
@@ -1117,9 +1183,10 @@ const MyProfile = () => {
     const selectedCount = returnOrder.products.filter(p => selectedReturnItems[p.productId || p._id]).length;
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/60 p-4 backdrop-blur-md overflow-y-auto">
-        <div className="w-full max-w-2xl rounded-3xl bg-white border border-gold-300/20 p-6 md:p-8 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto no-scrollbar">
-          <div className="flex items-start justify-between gap-3 border-b border-champagne/35 pb-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/60 p-4 backdrop-blur-md">
+        <div className="w-full max-w-2xl rounded-3xl bg-white border border-gold-300/20 shadow-2xl my-4 max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+          {/* Pinned Modal Header */}
+          <div className="flex items-start justify-between gap-3 border-b border-champagne/35 p-6 md:p-8 pb-4 shrink-0 bg-white">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gold-600">Return Request Portal</p>
               <h3 className="mt-1.5 text-xl font-serif font-light text-luxury-black">
@@ -1132,14 +1199,56 @@ const MyProfile = () => {
                 setReturnModalOpen(false);
                 setReturnOrder(null);
               }}
-              className="text-text-secondary hover:text-luxury-black text-2xl font-light cursor-pointer"
+              className="text-text-secondary hover:text-luxury-black text-2xl font-light cursor-pointer transition leading-none p-1"
               aria-label="Close Return Modal"
             >
               &times;
             </button>
           </div>
 
-          <form onSubmit={handleReturnSubmit} className="space-y-5">
+          <form onSubmit={handleReturnSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            {/* Scrollable Form Body with clean visible scrollbar */}
+            <div className="space-y-5 overflow-y-auto px-6 md:px-8 py-5 flex-1 pr-3">
+              {error && (
+                <div className="rounded-2xl border border-red-200 bg-red-50/90 p-3.5 text-xs text-red-700 flex items-center gap-2.5 shadow-xs">
+                  <span className="text-base shrink-0">⚠️</span>
+                  <span className="font-medium">{error}</span>
+                </div>
+              )}
+
+              {/* Request Type Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block">
+                  Select Request Type *
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setReturnResolution("Refund")}
+                    className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-wider transition duration-200 cursor-pointer ${
+                      returnResolution !== "Replacement"
+                        ? "border-gold-500 bg-gold-50 text-gold-900 shadow-sm ring-1 ring-gold-500/30"
+                        : "border-champagne/40 bg-white hover:border-gold-300 text-text-secondary"
+                    }`}
+                  >
+                    <span className="text-base">↩</span>
+                    <span>Return (Refund)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReturnResolution("Replacement")}
+                    className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-wider transition duration-200 cursor-pointer ${
+                      returnResolution === "Replacement"
+                        ? "border-gold-500 bg-gold-50 text-gold-900 shadow-sm ring-1 ring-gold-500/30"
+                        : "border-champagne/40 bg-white hover:border-gold-300 text-text-secondary"
+                    }`}
+                  >
+                    <span className="text-base">🔁</span>
+                    <span>Replacement Item</span>
+                  </button>
+                </div>
+              </div>
+
             {/* Products Selection */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block">
@@ -1220,11 +1329,32 @@ const MyProfile = () => {
               </div>
             </div>
 
+            {/* Personalized item notice if applicable */}
+            {(() => {
+              const selectedKeys = Object.keys(selectedReturnItems).filter((k) => selectedReturnItems[k]);
+              const hasPersonalized = selectedKeys.some((k) => {
+                const p = orderProductsDetails[k];
+                return p?.isPersonalized || p?.customisable || p?.isNonReturnable;
+              });
+              if (!hasPersonalized) return null;
+              return (
+                <div className="rounded-2xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs text-amber-900 flex items-start gap-2.5 shadow-xs">
+                  <span className="text-base shrink-0">⚠️</span>
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-[11px] uppercase tracking-wider">Customized / Personalized Gift Policy</p>
+                    <p className="text-[10px] leading-relaxed">
+                      Customized items are non-returnable by default. Return or replacement will only be approved if the product was received Damaged, Defective, or Wrong Item.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Return Details */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">
-                  Reason for Return *
+                  Reason for Claim *
                 </label>
                 <select
                   value={returnReason}
@@ -1235,9 +1365,8 @@ const MyProfile = () => {
                   <option value="">Select a reason</option>
                   <option value="Damaged Product">Damaged Product</option>
                   <option value="Wrong Product Received">Wrong Product Received</option>
-                  <option value="Product Not As Expected">Product Not As Expected</option>
+                  <option value="Defective Product">Defective Product</option>
                   <option value="Missing Item">Missing Item</option>
-                  <option value="Quality Issue">Quality Issue</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
@@ -1252,18 +1381,14 @@ const MyProfile = () => {
                   required
                   className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 focus:bg-gold-50/20 focus:ring-1 focus:ring-gold-500/20 outline-none cursor-pointer"
                 >
-                  {(() => {
-                    const res = getEligibleResolutions();
-                    const options = [];
-                    if (res.canReturn) {
-                      options.push(<option key="Refund" value="Refund">Refund (Original Source)</option>);
-                      options.push(<option key="Store Credit" value="Store Credit">Store Credit (Gift Wallet)</option>);
-                    }
-                    if (res.canReplace) {
-                      options.push(<option key="Replacement" value="Replacement">Product Replacement</option>);
-                    }
-                    return options.length > 0 ? options : <option value="">No options available</option>;
-                  })()}
+                  {returnResolution === "Replacement" ? (
+                    <option value="Replacement">Product Replacement</option>
+                  ) : (
+                    <>
+                      <option value="Refund">Refund (Original Payment Source)</option>
+                      <option value="Store Credit">Store Credit (Gift Wallet)</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -1457,13 +1582,23 @@ const MyProfile = () => {
               <span>I confirm that the products selected are returnable, in their received status, and that my unboxing evidence is genuine. I agree to the Niyora Gifts Return Policy.</span>
             </label>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-3">
+            </div>
+
+            {/* Pinned Sticky Action Footer - ALWAYS VISIBLE */}
+            <div className="p-4 md:px-8 border-t border-champagne/35 bg-white shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row gap-3 z-10">
               <button
                 type="submit"
                 disabled={loading || uploadingFiles || selectedCount === 0}
-                className="flex-1 rounded-full bg-gold-500 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-gold-600 disabled:cursor-not-allowed disabled:opacity-60 transition cursor-pointer shadow-xs"
+                className="flex-1 rounded-full bg-gold-500 px-6 py-3.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-gold-600 disabled:cursor-not-allowed disabled:opacity-60 transition cursor-pointer shadow-xs flex items-center justify-center gap-2"
               >
-                {loading ? "Submitting Request..." : "Submit Return Claim"}
+                {loading ? (
+                  <>
+                    <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Submitting Request...</span>
+                  </>
+                ) : (
+                  <span>Submit Return Claim {selectedCount > 0 ? `(${selectedCount} ${selectedCount === 1 ? 'item' : 'items'})` : ''}</span>
+                )}
               </button>
               <button
                 type="button"
@@ -1576,6 +1711,7 @@ const MyProfile = () => {
         {[
           { id: "overview", label: "Overview", icon: <Activity className="w-3.5 h-3.5" /> },
           { id: "orders", label: "My Orders", icon: <ShoppingBag className="w-3.5 h-3.5" /> },
+          { id: "returns", label: "Returns & Claims", icon: <RefreshCw className="w-3.5 h-3.5" />, count: returnsList.filter(r => !["Refund Completed", "Refunded", "Replacement Shipped", "Delivered", "Completed", "Rejected"].includes(r.status)).length },
           { id: "wishlist", label: "Wishlist", icon: <Heart className="w-3.5 h-3.5" /> },
           { id: "addresses", label: "Addresses", icon: <MapPin className="w-3.5 h-3.5" /> },
           { id: "coupons", label: "Coupons", icon: <Gift className="w-3.5 h-3.5" /> },
@@ -1895,11 +2031,47 @@ const MyProfile = () => {
                         </div>
                       </div>
 
+                      {/* Order Status Banners */}
+                      {order.status === "Processing" && (
+                        <div className="rounded-2xl border border-amber-300 bg-amber-50/70 p-3.5 mt-3 text-xs text-amber-950 font-light flex items-start gap-2.5">
+                          <span className="text-base leading-none">ℹ️</span>
+                          <p>
+                            <strong>Order In Processing:</strong> This order is already being processed and can no longer be cancelled from your account. Please contact customer support for assistance.
+                          </p>
+                        </div>
+                      )}
+
+                      {order.status === "CUSTOMER_CANCELLED" && (
+                        <div className="rounded-2xl border border-rose-300 bg-rose-50/60 p-3.5 mt-3 text-xs text-rose-950 space-y-1">
+                          <p className="font-semibold text-rose-900 flex items-center gap-1.5">
+                            <span>✕</span>
+                            <span>Order Cancelled</span>
+                          </p>
+                          <p className="text-[11px] text-rose-800 font-light">
+                            Cancelled by you on {new Date(order.cancelledAt || order.updatedAt).toLocaleString("en-IN")}.
+                            {order.cancellationReason && ` Reason: "${order.cancellationReason}"`}
+                          </p>
+                        </div>
+                      )}
+
+                      {order.status === "FAILED_PAYMENT" && (
+                        <div className="rounded-2xl border border-red-300 bg-red-50/70 p-3.5 mt-3 text-xs text-red-950 space-y-1">
+                          <p className="font-semibold text-red-900 flex items-center gap-1.5">
+                            <span>⚠️</span>
+                            <span>Payment Unsuccessful</span>
+                          </p>
+                          <p className="text-[11px] text-red-800 font-light">
+                            Your payment was unsuccessful. No order has been placed. Please try again.
+                            {order.failureReason && ` (${order.failureReason})`}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Cancellation Status details if exists */}
-                      {order.cancellationRequest?.status && order.cancellationRequest.status !== "None" && (
+                      {order.cancellationRequest?.status && order.cancellationRequest.status !== "None" && order.status !== "CUSTOMER_CANCELLED" && (
                         <div className="rounded-2xl border border-amber-200 bg-amber-50/20 px-4 py-3 mt-3 text-xs">
                           <p className="font-semibold text-amber-900">
-                            Cancellation request status: <span className="uppercase font-bold">{order.cancellationRequest.status}</span>
+                            Cancellation status: <span className="uppercase font-bold">{order.cancellationRequest.status}</span>
                           </p>
                           {order.cancellationRequest.reason && (
                             <p className="text-amber-800 mt-1 font-light">Reason: {order.cancellationRequest.reason}</p>
@@ -1999,9 +2171,10 @@ const MyProfile = () => {
                           <button
                             type="button"
                             onClick={() => openCancelModal(order)}
-                            className="rounded-full border border-rose-200 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:bg-rose-50 transition cursor-pointer"
+                            className="rounded-full border border-rose-300 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:bg-rose-50 transition cursor-pointer flex items-center gap-1.5"
                           >
-                            Request Cancellation
+                            <span>✕</span>
+                            <span>Cancel Order</span>
                           </button>
                         )}
 
@@ -2009,9 +2182,25 @@ const MyProfile = () => {
                           <button
                             type="button"
                             onClick={() => openReturnModal(order)}
-                            className="rounded-full border border-gold-500 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-gold-700 hover:bg-gold-50 transition cursor-pointer"
+                            className="rounded-full border border-gold-500 bg-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-gold-700 hover:bg-gold-50 transition cursor-pointer flex items-center gap-1.5"
                           >
-                            Return Order
+                            <span>🔄</span>
+                            <span>Return / Replace</span>
+                          </button>
+                        )}
+
+                        {getOrderReturn(order._id) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab("returns");
+                              const claim = getOrderReturn(order._id);
+                              if (claim) selectReturnClaim(claim);
+                            }}
+                            className="rounded-full border border-gold-400 bg-gold-50/60 px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-gold-800 hover:bg-gold-100 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                          >
+                            <span>📦</span>
+                            <span>Track {getOrderReturn(order._id).type || "Claim"}: {getOrderReturn(order._id).status || "Submitted"}</span>
                           </button>
                         )}
 
@@ -2812,6 +3001,38 @@ const MyProfile = () => {
                         />
                       </div>
 
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Inquiry Category *</label>
+                          <select
+                            value={newTicketCategory}
+                            onChange={(e) => setNewTicketCategory(e.target.value)}
+                            className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 outline-none cursor-pointer"
+                          >
+                            <option value="General Query">General Query</option>
+                            <option value="Order Issue">Order Related Issue</option>
+                            <option value="Complaint">Customer Complaint</option>
+                            <option value="Product Inquiry">Product Inquiry</option>
+                            <option value="Return / Replacement">Return / Replacement</option>
+                            <option value="Account">Account Support</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Priority Level</label>
+                          <select
+                            value={newTicketPriority}
+                            onChange={(e) => setNewTicketPriority(e.target.value)}
+                            className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs focus:border-gold-500 outline-none cursor-pointer"
+                          >
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Urgent">Urgent</option>
+                          </select>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Associated Order (Optional)</label>
                         <select
@@ -2879,11 +3100,23 @@ const MyProfile = () => {
                         {tickets.map((t) => (
                           <div key={t._id} className="py-4 flex flex-wrap items-center justify-between gap-4">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-mono text-xs font-bold text-luxury-black">{t.ticketCode}</span>
                                 <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${getStatusColor(t.status)}`}>
                                   {t.status}
                                 </span>
+                                {t.category && (
+                                  <span className="px-2 py-0.5 rounded-full text-[8px] font-semibold bg-gray-100 text-gray-700">
+                                    {t.category}
+                                  </span>
+                                )}
+                                {t.priority && (
+                                  <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                                    t.priority === "Urgent" ? "bg-red-100 text-red-700" : t.priority === "High" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-700"
+                                  }`}>
+                                    {t.priority}
+                                  </span>
+                                )}
                               </div>
                               <h4 className="text-sm font-semibold text-luxury-black">{t.subject}</h4>
                               <p className="text-[9px] text-text-secondary font-light">Last update {new Date(t.updatedAt).toLocaleDateString("en-IN")}</p>
@@ -3067,13 +3300,10 @@ const MyProfile = () => {
           <div className="w-full max-w-lg rounded-3xl bg-white border border-gold-300/20 p-6 shadow-2xl space-y-4">
             <div className="flex items-start justify-between gap-3 border-b border-champagne/30 pb-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Cancellation Request form</p>
-                <h3 className="mt-1.5 text-lg font-serif font-light text-luxury-black">
-                  Order #{getOrderDisplayId(cancelTargetOrder)}
+                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600">Order Cancellation</p>
+                <h3 className="mt-1 text-lg font-serif font-semibold text-luxury-black">
+                  Cancel Order #{getOrderDisplayId(cancelTargetOrder)}
                 </h3>
-                <p className="mt-1 text-xs text-text-secondary font-light leading-relaxed">
-                  Cancellations requests will undergo concierge verification audit. Funds will route back to source.
-                </p>
               </div>
               <button
                 type="button"
@@ -3084,9 +3314,22 @@ const MyProfile = () => {
               </button>
             </div>
 
+            {/* Exact Confirmation Warning Box */}
+            <div className="rounded-2xl border border-rose-300 bg-rose-50/80 p-4 text-xs text-rose-950 flex items-start gap-3">
+              <span className="text-xl leading-none">⚠️</span>
+              <div className="space-y-1">
+                <p className="font-semibold text-rose-950 text-sm">
+                  Are you sure you want to cancel this order? This action cannot be undone.
+                </p>
+                <p className="text-rose-800 text-[11px] font-light leading-relaxed">
+                  Your order will be cancelled immediately, items will be restocked, and any eligible refund will be routed to your original payment method.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">Reason *</label>
+                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">Reason for cancellation *</label>
                 <select
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
@@ -3101,23 +3344,25 @@ const MyProfile = () => {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">Details (optional)</label>
+                <label className="text-xs font-bold text-luxury-black uppercase tracking-wider block mb-1.5">Additional remarks (optional)</label>
                 <textarea
                   value={cancelDetails}
                   onChange={(e) => setCancelDetails(e.target.value)}
-                  rows={3}
+                  rows={2}
                   className="w-full rounded-2xl border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500 resize-none"
-                  placeholder="Detail context if necessary..."
+                  placeholder="Provide any additional notes..."
                 />
               </div>
-              <label className="flex items-start gap-2.5 rounded-2xl border border-champagne bg-white/60 px-4 py-3.5 text-xs text-text-secondary cursor-pointer leading-normal select-none">
+              <label className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50/40 px-4 py-3 text-xs text-rose-950 cursor-pointer leading-normal select-none">
                 <input
                   type="checkbox"
                   checked={cancelConfirmed}
                   onChange={(e) => setCancelConfirmed(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer"
+                  className="mt-0.5 h-4 w-4 rounded border-rose-300 text-rose-600 accent-rose-600 focus:ring-rose-500/20 cursor-pointer"
                 />
-                <span>I confirm that I request complete cancellation review of this order parcel.</span>
+                <span className="font-medium">
+                  I understand that this action cannot be undone and confirm cancellation.
+                </span>
               </label>
             </div>
 
@@ -3126,16 +3371,16 @@ const MyProfile = () => {
                 type="button"
                 onClick={submitCancellationRequest}
                 disabled={submittingCancel || !cancelConfirmed || !cancelReason}
-                className="flex-1 rounded-full bg-rose-650 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-rose-750 disabled:opacity-60 disabled:cursor-not-allowed transition cursor-pointer"
+                className="flex-1 rounded-full bg-rose-650 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-rose-750 disabled:opacity-60 disabled:cursor-not-allowed transition cursor-pointer shadow-sm"
               >
-                {submittingCancel ? "Submitting..." : "Submit request"}
+                {submittingCancel ? "Cancelling Order..." : "Confirm Cancellation"}
               </button>
               <button
                 type="button"
                 onClick={() => setCancelModalOpen(false)}
                 className="rounded-full border border-champagne bg-white px-5 py-3 text-xs font-bold uppercase tracking-widest text-luxury-black hover:bg-gold-50 transition cursor-pointer"
               >
-                Cancel
+                Keep Order
               </button>
             </div>
           </div>
@@ -3144,58 +3389,172 @@ const MyProfile = () => {
 
       {/* RENDER RETURN MODAL */}
       {renderReturnModal()}
+
+      {/* REQUEST SUBMITTED CELEBRATION MODAL */}
+      {requestSubmittedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-luxury-black/70 p-4 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl bg-white border border-gold-300/40 p-6 md:p-8 text-center shadow-2xl space-y-5 animate-scale-up">
+            <div className="w-16 h-16 mx-auto rounded-full bg-gold-100/70 flex items-center justify-center text-3xl border border-gold-300/50 shadow-inner">
+              ✨
+            </div>
+            <div>
+              <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gold-50 text-gold-900 border border-gold-200/70 mb-2">
+                {requestSubmittedModal.type} Request Registered
+              </span>
+              <h3 className="text-xl font-serif font-semibold text-luxury-black">
+                Claim Submitted Successfully
+              </h3>
+              <p className="text-xs text-text-secondary mt-1 font-light leading-relaxed">
+                Your request has been logged under reference code:
+              </p>
+              <div className="my-3 p-3.5 rounded-2xl bg-gold-50/60 border border-gold-300/60 font-mono text-base font-bold text-luxury-black tracking-wider flex items-center justify-center gap-2">
+                <span>{requestSubmittedModal.requestId}</span>
+              </div>
+              <p className="text-[11px] text-text-secondary font-light leading-relaxed">
+                Our luxury concierge team will examine your submission and unboxing evidence within 24-48 hours. Reverse pickup will be coordinated upon verification.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestSubmittedModal(null);
+                  setActiveTab("returns");
+                }}
+                className="w-full rounded-full bg-gold-500 hover:bg-gold-600 text-white py-3.5 text-xs font-bold uppercase tracking-widest transition shadow-md cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>📦</span>
+                <span>Track Request Status</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequestSubmittedModal(null)}
+                className="w-full rounded-full border border-champagne bg-white hover:bg-gold-50 py-3 text-xs font-bold uppercase tracking-widest text-luxury-black transition cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EVIDENCE IMAGE LIGHTBOX MODAL */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md cursor-pointer"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] p-2 bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center text-lg hover:bg-black transition cursor-pointer"
+            >
+              &times;
+            </button>
+            <img src={previewImage} alt="Evidence Large Preview" className="max-h-[80vh] w-auto object-contain rounded-xl" />
+          </div>
+        </div>
+      )}
     </section>
   );
 
-  // Return request page tab details section
+  // Return & Replacement tab detailed component
   function renderReturnsTab() {
+    const returnStages = [
+      { key: "Submitted", label: "Submitted", statuses: ["Submitted", "Return Requested"] },
+      { key: "Under Review", label: "Under Review", statuses: ["Under Review", "Investigation In Progress"] },
+      { key: "Approved", label: "Approved", statuses: ["Approved"] },
+      { key: "Pickup Scheduled", label: "Pickup Scheduled", statuses: ["Pickup Scheduled", "Item Picked Up"] },
+      { key: "Item Received", label: "Item Received", statuses: ["Item Received", "Product Received", "Item Received & Verified"] },
+      { key: "Refund Completed", label: "Refund Completed", statuses: ["Refund Processing", "Refund Completed", "Refunded", "Completed"] },
+    ];
+
+    const replacementStages = [
+      { key: "Submitted", label: "Submitted", statuses: ["Submitted", "Return Requested"] },
+      { key: "Under Review", label: "Under Review", statuses: ["Under Review", "Investigation In Progress"] },
+      { key: "Approved", label: "Approved", statuses: ["Approved"] },
+      { key: "Pickup Scheduled", label: "Pickup Scheduled", statuses: ["Pickup Scheduled", "Item Picked Up"] },
+      { key: "Item Received", label: "Item Received", statuses: ["Item Received", "Product Received", "Item Received & Verified"] },
+      { key: "Replacement Shipped", label: "Replacement Shipped", statuses: ["Replacement Processing", "Replacement Shipped", "Delivered", "Completed"] },
+    ];
+
+    const isReplacement = selectedReturn?.type === "Replacement" || selectedReturn?.requestType === "Replacement";
+    const activeStages = isReplacement ? replacementStages : returnStages;
+
+    const getStageIndex = (stages, currentStatus) => {
+      if (currentStatus === "Rejected") return 2;
+      for (let i = stages.length - 1; i >= 0; i--) {
+        if (stages[i].statuses.includes(currentStatus)) {
+          return i;
+        }
+      }
+      return 0;
+    };
+
+    const currentStageIdx = selectedReturn ? getStageIndex(activeStages, selectedReturn.status) : 0;
+    const isRejected = selectedReturn?.status === "Rejected";
+
     return (
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column: Claims list */}
         <div className="lg:col-span-1 space-y-4">
-          <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-5 rounded-3xl shadow-xs">
-            <h2 className="text-base font-serif font-semibold text-luxury-black">Returns History logs</h2>
-            <p className="text-[10px] text-text-secondary mt-0.5 font-light">Pipeline tracking records of return/replacement claims.</p>
+          <div className="bg-white/70 backdrop-blur-md border border-champagne/45 p-5 rounded-3xl shadow-xs flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-serif font-semibold text-luxury-black">Returns & Replacements</h2>
+              <p className="text-[10px] text-text-secondary mt-0.5 font-light">Track status of returns, pickups, and refunds.</p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gold-100 text-gold-900 border border-gold-200">
+              {returnsList.length}
+            </span>
           </div>
 
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 no-scrollbar">
+          <div className="space-y-3 max-h-[680px] overflow-y-auto pr-1 no-scrollbar">
             {loadingReturns ? (
-              <div className="py-8 text-center text-xs text-text-secondary animate-pulse">Syncing return history records...</div>
+              <div className="py-12 text-center text-xs text-text-secondary animate-pulse">Syncing claims pipeline...</div>
             ) : returnsList.length > 0 ? (
               returnsList.map((ret) => {
                 const isSelected = selectedReturn?._id === ret._id;
-                const orderCode = ret.order?.orderCode || "N/A";
+                const reqCode = ret.requestId || ret.code || ret.returnCode || "N/A";
+                const isRep = ret.type === "Replacement" || ret.requestType === "Replacement";
+                const orderCode = ret.order?.orderCode || ret.orderId?.orderCode || "Order";
+
                 return (
                   <div
                     key={ret._id}
-                    onClick={() => {
-                      setSelectedReturn(ret);
-                      if (ret.ticket) {
-                        fetchTicketDetails(ret.ticket._id || ret.ticket);
-                      }
-                    }}
-                    className={`rounded-3xl border p-4.5 cursor-pointer transition-all duration-300 ${isSelected
-                        ? "border-gold-500 bg-gold-100/10 shadow-xs scale-[1.01]"
-                        : "border-champagne/45 bg-white hover:border-gold-300/40"
-                      }`}
+                    onClick={() => selectReturnClaim(ret)}
+                    className={`rounded-3xl border p-4.5 cursor-pointer transition-all duration-300 ${
+                      isSelected
+                        ? "border-gold-500 bg-gold-100/15 shadow-sm scale-[1.01]"
+                        : "border-champagne/45 bg-white hover:border-gold-300 hover:shadow-xs"
+                    }`}
                   >
-                    <div className="flex items-center justify-between gap-2 border-b border-champagne/10 pb-2">
-                      <span className="font-mono text-xs font-bold text-luxury-black">{ret.returnCode}</span>
+                    <div className="flex items-center justify-between gap-2 border-b border-champagne/15 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-bold text-luxury-black">{reqCode}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider ${isRep ? 'bg-purple-100 text-purple-900 border border-purple-200' : 'bg-amber-100 text-amber-900 border border-amber-200'}`}>
+                          {isRep ? "Replacement" : "Return"}
+                        </span>
+                      </div>
                       <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border ${getReturnStatusColor(ret.status)}`}>
                         {ret.status}
                       </span>
                     </div>
+
                     <div className="mt-2.5 text-[11px] text-text-secondary font-light space-y-1">
-                      <p>Order Code: <span className="font-semibold text-luxury-black">{orderCode}</span></p>
-                      <p>Refund Resolution: <span className="font-semibold text-luxury-black">{ret.preferredResolution}</span></p>
-                      <p>Date: {new Date(ret.createdAt).toLocaleDateString("en-IN")}</p>
+                      <p>Order Reference: <strong className="font-semibold text-luxury-black">#{orderCode}</strong></p>
+                      <p>Reason: <span className="font-medium text-luxury-black">{ret.returnReason || ret.reason || "General claim"}</span></p>
+                      <p className="text-[10px] text-gray-400">Submitted: {new Date(ret.createdAt).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                     </div>
                   </div>
                 );
               })
             ) : (
-              <div className="bg-white/50 border border-champagne/40 text-center py-10 rounded-3xl">
-                <p className="text-xs text-text-secondary font-light">No return claims submitted yet.</p>
+              <div className="bg-white/50 border border-champagne/40 text-center py-12 rounded-3xl p-6">
+                <span className="text-3xl block mb-2">📦</span>
+                <p className="text-xs text-text-secondary font-light">No return or replacement claims submitted yet.</p>
+                <p className="text-[10px] text-gray-400 mt-1">Eligible orders under the {returnSettings?.returnWindowDays || 7}-day window can be returned from "My Orders".</p>
               </div>
             )}
           </div>
@@ -3204,168 +3563,289 @@ const MyProfile = () => {
         {/* Right Column: Claim details */}
         <div className="lg:col-span-2 space-y-6">
           {selectedReturn ? (
-            <div className="bg-white/70 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 shadow-xs flex flex-col space-y-6 animate-slide-up">
+            <div className="bg-white/80 backdrop-blur-md border border-champagne/45 rounded-3xl p-6 md:p-8 shadow-sm space-y-6 animate-slide-up">
+              {/* Header */}
               <div className="border-b border-champagne/30 pb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-serif font-semibold text-luxury-black">Claim #{selectedReturn.returnCode}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-serif font-semibold text-luxury-black">
+                      Claim #{selectedReturn.requestId || selectedReturn.returnCode || selectedReturn.code}
+                    </h3>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${isReplacement ? 'bg-purple-100 text-purple-900 border border-purple-200' : 'bg-amber-100 text-amber-900 border border-amber-200'}`}>
+                      {isReplacement ? "Replacement Claim" : "Return Claim"}
+                    </span>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-text-secondary font-light">
-                    <span>Order #{selectedReturn.order?.orderCode || "N/A"}</span>
+                    <span>Order #{selectedReturn.order?.orderCode || selectedReturn.orderId?.orderCode || "N/A"}</span>
                     <span>&bull;</span>
-                    <span>Created: {new Date(selectedReturn.createdAt).toLocaleDateString("en-IN")}</span>
+                    <span>Submitted: {new Date(selectedReturn.createdAt).toLocaleString("en-IN")}</span>
                   </div>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase border tracking-wider ${getReturnStatusColor(selectedReturn.status)}`}>
+
+                <span className={`rounded-full px-3.5 py-1 text-[10px] font-bold uppercase border tracking-wider shadow-xs ${getReturnStatusColor(selectedReturn.status)}`}>
                   {selectedReturn.status}
                 </span>
               </div>
 
-              {/* Steps vertical tracking */}
-              <div className="rounded-2xl border border-gold-200/20 bg-gold-50/5 p-4 space-y-3.5">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-luxury-black">{selectedReturn.type} Process Tracker</h4>
-                <div className={`grid ${selectedReturn.type === "Replacement" ? 'grid-cols-6' : 'grid-cols-4'} gap-1.5`}>
-                  {(selectedReturn.type === "Replacement" ? [
-                    { label: "Submitted", test: ["Pending", "Under Review", "Investigation In Progress", "Evidence Verified", "Approved", "Pickup Scheduled", "Item Picked Up", "Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
-                    { label: "Approved", test: ["Approved", "Pickup Scheduled", "Item Picked Up", "Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
-                    { label: "Pickup Scheduled", test: ["Pickup Scheduled", "Item Picked Up", "Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
-                    { label: "Returned & Verified", test: ["Item Received & Verified", "Replacement Packed", "Shipped", "Delivered"] },
-                    { label: "Shipped", test: ["Shipped", "Delivered"] },
-                    { label: "Delivered", test: ["Delivered"] }
-                  ] : [
-                    { label: "Request Submitted", test: ["Pending", "Under Review", "Approved", "Pickup Scheduled", "Item Received", "Refund Processed"] },
-                    { label: "Under Review", test: ["Under Review", "Approved", "Pickup Scheduled", "Item Received", "Refund Processed"] },
-                    { label: "Pickup Scheduled", test: ["Pickup Scheduled", "Item Received", "Refund Processed"] },
-                    { label: "Refund Processed", test: ["Refund Processed"] }
-                  ]).map((step, idx) => {
-                    const reached = step.test.includes(selectedReturn.status) && selectedReturn.status !== "Rejected";
-                    const isRejected = selectedReturn.status === "Rejected";
+              {/* 10-Status Linear Visual Stepper */}
+              <div className="rounded-3xl border border-gold-300/30 bg-gold-50/15 p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-luxury-black flex items-center gap-1.5">
+                    <span>✨</span>
+                    <span>{isReplacement ? "Replacement Pipeline" : "Return & Refund Pipeline"}</span>
+                  </h4>
+                  {isRejected && (
+                    <span className="text-[10px] font-bold uppercase text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                      Claim Rejected
+                    </span>
+                  )}
+                </div>
+
+                {/* Stepper bar */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 pt-2">
+                  {activeStages.map((step, idx) => {
+                    const isPassed = !isRejected && idx <= currentStageIdx;
+                    const isCurrent = !isRejected && idx === currentStageIdx;
+                    const isFailedStage = isRejected && idx === 2;
+
                     return (
-                      <div key={idx} className="flex flex-col items-center text-center">
-                        <div className={`mb-1.5 h-6.5 w-6.5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${reached ? 'border-gold-500 bg-gold-500 text-white' :
-                            isRejected && idx === 1 ? 'border-rose-500 bg-rose-500 text-white' :
-                              'border-champagne bg-white text-gray-400'
-                          }`}>
-                          {isRejected && idx === 1 ? "×" : idx + 1}
+                      <div key={step.key} className="flex flex-col items-center text-center space-y-1.5 relative">
+                        <div
+                          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
+                            isFailedStage
+                              ? "border-rose-500 bg-rose-500 text-white"
+                              : isPassed
+                              ? "border-gold-500 bg-gold-500 text-white"
+                              : isCurrent
+                              ? "border-gold-500 bg-gold-100 text-gold-900 ring-4 ring-gold-200/50"
+                              : "border-champagne bg-white text-gray-300"
+                          }`}
+                        >
+                          {isFailedStage ? "✕" : isPassed ? "✓" : idx + 1}
                         </div>
-                        <p className={`text-[8px] font-bold leading-tight ${reached ? 'text-gold-800' : 'text-text-secondary'}`}>{step.label}</p>
+                        <p className={`text-[9px] uppercase font-bold tracking-wider leading-tight ${
+                          isFailedStage ? "text-rose-600" : isPassed ? "text-gold-900" : "text-gray-400 font-normal"
+                        }`}>
+                          {isFailedStage ? "Rejected" : step.label}
+                        </p>
                       </div>
                     );
                   })}
                 </div>
+
+                {/* Rejection Remarks Note if rejected */}
+                {isRejected && selectedReturn.adminRemarks && (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-3.5 text-xs text-rose-800">
+                    <p className="font-bold text-[10px] uppercase tracking-wider mb-1">Reason for Rejection:</p>
+                    <p className="font-light leading-relaxed">{selectedReturn.adminRemarks}</p>
+                  </div>
+                )}
               </div>
 
-              {/* Items in Return */}
-              <div>
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-luxury-black mb-2">Claim Items details</h4>
-                <div className="divide-y divide-champagne/15 border border-champagne/30 rounded-2xl p-2 bg-white">
+              {/* Reverse Pickup Logistics Card */}
+              {selectedReturn.pickupDetails?.trackingId && (
+                <div className="rounded-2xl border border-indigo-200/60 bg-indigo-50/20 p-4 space-y-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-indigo-200/30 pb-2">
+                    <h5 className="font-bold text-indigo-950 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Reverse Pickup Scheduled</span>
+                    </h5>
+                    <span className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase bg-indigo-100 text-indigo-900 border border-indigo-200">
+                      {selectedReturn.pickupDetails.pickupStatus || "Scheduled"}
+                    </span>
+                  </div>
+                  <div className="grid sm:grid-cols-3 gap-2 text-indigo-900 font-light pt-1">
+                    <p>Courier: <strong className="font-semibold text-luxury-black capitalize">{selectedReturn.pickupDetails.courier || "Delhivery"}</strong></p>
+                    <p>AWB Tracking ID: <strong className="font-mono font-semibold text-luxury-black">{selectedReturn.pickupDetails.trackingId}</strong></p>
+                    <p>Pickup Date: <strong className="font-semibold text-luxury-black">{selectedReturn.pickupDetails.pickupDate ? new Date(selectedReturn.pickupDetails.pickupDate).toLocaleDateString("en-IN") : "Pending"}</strong></p>
+                  </div>
+                </div>
+              )}
+
+              {/* Replacement Tracking Details */}
+              {isReplacement && selectedReturn.replacementOrder && (
+                <div className="rounded-2xl border border-purple-200/60 bg-purple-50/20 p-4 space-y-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-purple-200/30 pb-2">
+                    <h5 className="font-bold text-purple-950 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                      <span>🔁</span>
+                      <span>Replacement Parcel Order</span>
+                    </h5>
+                    <span className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase bg-purple-100 text-purple-900 border border-purple-200">
+                      {selectedReturn.replacementOrder.status || "Processing"}
+                    </span>
+                  </div>
+                  <div className="grid sm:grid-cols-3 gap-2 text-purple-900 font-light pt-1">
+                    <p>Replacement ID: <strong className="font-mono font-semibold text-luxury-black">{selectedReturn.replacementOrder.replacementId}</strong></p>
+                    <p>Courier: <strong className="font-semibold text-luxury-black capitalize">{selectedReturn.replacementOrder.courier || "Pending Dispatch"}</strong></p>
+                    <p>Tracking AWB: <strong className="font-mono font-semibold text-luxury-black">{selectedReturn.replacementOrder.trackingId || "Pending Dispatch"}</strong></p>
+                  </div>
+                </div>
+              )}
+
+              {/* Refund Record Details Card */}
+              {!isReplacement && (selectedReturn.refundRecord || (selectedReturn.refundDetails?.refundStatus && selectedReturn.refundDetails.refundStatus !== "None")) && (
+                <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/20 p-4 space-y-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-emerald-200/30 pb-2">
+                    <h5 className="font-bold text-emerald-950 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Refund Status & Details</span>
+                    </h5>
+                    <span className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase bg-emerald-100 text-emerald-900 border border-emerald-200">
+                      {selectedReturn.refundRecord?.status || selectedReturn.refundDetails?.refundStatus || "Completed"}
+                    </span>
+                  </div>
+                  <div className="grid sm:grid-cols-3 gap-2 text-emerald-900 font-light pt-1">
+                    <p>Refund ID: <strong className="font-mono font-semibold text-luxury-black">{selectedReturn.refundRecord?.refundId || "REF-COMPLETED"}</strong></p>
+                    <p>Amount: <strong className="font-serif font-bold text-emerald-800">INR {selectedReturn.refundRecord?.refundAmount || selectedReturn.refundDetails?.refundAmount || "0.00"}</strong></p>
+                    <p>Method: <strong className="font-semibold text-luxury-black">{selectedReturn.refundRecord?.refundMethod || selectedReturn.refundDetails?.refundMethod || "Original Payment Source"}</strong></p>
+                    {(selectedReturn.refundRecord?.transactionReference || selectedReturn.refundDetails?.transactionReference) && (
+                      <p className="sm:col-span-3">UTR / Txn Ref: <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-mono text-[10px]">{selectedReturn.refundRecord?.transactionReference || selectedReturn.refundDetails?.transactionReference}</code></p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Items in Claim */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-luxury-black">
+                  Claim Items ({selectedReturn.items?.length || 0})
+                </h4>
+                <div className="divide-y divide-champagne/20 border border-champagne/30 rounded-2xl p-2 bg-white shadow-xs">
                   {selectedReturn.items?.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-3 py-2">
+                    <div key={idx} className="flex items-center gap-3.5 py-2.5 px-2">
                       {item.image && (
-                        <img src={resolveMediaUrl(item.image)} alt={item.name} className="w-10 h-10 object-cover rounded-lg border border-champagne/20" />
+                        <img
+                          src={resolveMediaUrl(item.image)}
+                          alt={item.name}
+                          className="w-12 h-12 object-cover rounded-xl border border-champagne/30"
+                        />
                       )}
                       <div className="flex-1 min-w-0 text-xs">
-                        <p className="font-semibold text-luxury-black truncate">{item.name}</p>
-                        <p className="text-[10px] text-text-secondary mt-0.5">Quantity: <strong>{item.quantity}</strong> &bull; Value: INR {item.price}</p>
+                        <p className="font-serif font-semibold text-luxury-black truncate">{item.name}</p>
+                        <p className="text-[10px] text-text-secondary mt-0.5">
+                          Quantity: <strong className="text-luxury-black">{item.quantity}</strong> &bull; Value: INR {item.price}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-serif font-bold text-gold-800">
+                          INR {(Number(item.price || 0) * Number(item.quantity || 1)).toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Financial Refund details */}
-              <div className="grid gap-4 sm:grid-cols-2 text-xs text-text-secondary font-light">
-                <div className="rounded-2xl border border-champagne/30 p-3.5 bg-white space-y-1.5">
-                  <h5 className="font-bold text-luxury-black uppercase tracking-widest text-[9px] border-b border-champagne/15 pb-1">Claim Resolution</h5>
-                  <p>Preference: <strong className="text-gold-850">{selectedReturn.preferredResolution}</strong></p>
-
-                  {selectedReturn.refundDetails?.refundStatus && selectedReturn.refundDetails.refundStatus !== "None" && (
-                    <div className="mt-2 text-[10px] space-y-0.5">
-                      <p>Refund Status: <strong className="text-emerald-700">{selectedReturn.refundDetails.refundStatus}</strong></p>
-                      <p>Refund Method: <strong>{selectedReturn.refundDetails.refundMethod}</strong></p>
-                      <p>Amount: <strong className="font-serif">INR {selectedReturn.refundDetails.refundAmount}</strong></p>
-                      {selectedReturn.refundDetails.transactionReference && (
-                        <p className="truncate">Txn ID: <code className="bg-gray-50 px-1 py-0.5 rounded">{selectedReturn.refundDetails.transactionReference}</code></p>
-                      )}
-                    </div>
-                  )}
-
-                  {selectedReturn.codRefundMethod && (
-                    <div className="mt-2 text-[10px] bg-gold-50/15 border border-gold-200/20 p-2 rounded-xl space-y-0.5">
-                      <p className="font-bold text-gold-800 uppercase tracking-wider text-[8px]">COD Refund Account Details</p>
-                      <p>Method: <strong>{selectedReturn.codRefundMethod}</strong></p>
-                      {selectedReturn.codRefundMethod === "UPI" ? (
-                        <p>UPI ID: <strong>{selectedReturn.codRefundDetails?.upiId}</strong></p>
-                      ) : (
-                        <>
-                          <p>Holder: <strong>{selectedReturn.codRefundDetails?.accountHolderName}</strong></p>
-                          <p>Bank: <strong>{selectedReturn.codRefundDetails?.bankName}</strong></p>
-                          <p>Account: <strong>{selectedReturn.codRefundDetails?.accountNumber}</strong></p>
-                          <p>IFSC: <strong>{selectedReturn.codRefundDetails?.ifscCode}</strong></p>
-                        </>
-                      )}
-                    </div>
+              {/* Reason & Evidence Gallery */}
+              <div className="rounded-2xl border border-champagne/35 bg-gold-50/10 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-champagne/20 pb-2">
+                  <div className="text-xs">
+                    <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mr-2">Reason:</span>
+                    <strong className="text-luxury-black">{selectedReturn.returnReason || selectedReturn.reason || "Product Return"}</strong>
+                  </div>
+                  {selectedReturn.itemVerified && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      ✓ Physically Verified & Restocked
+                    </span>
                   )}
                 </div>
 
-                {/* Pickup details */}
-                {selectedReturn.pickupDetails?.trackingId && (
-                  <div className="rounded-2xl border border-champagne/30 p-3.5 bg-white space-y-1">
-                    <h5 className="font-bold text-luxury-black uppercase tracking-widest text-[9px] border-b border-champagne/15 pb-1">Pickup Logistics</h5>
-                    <p>Courier: <strong>{selectedReturn.pickupDetails.courier || "Registered Courier"}</strong></p>
-                    <p>AWB Tracking: <strong>{selectedReturn.pickupDetails.trackingId}</strong></p>
-                    {selectedReturn.pickupDetails.pickupDate && (
-                      <p>Date: <strong>{new Date(selectedReturn.pickupDetails.pickupDate).toLocaleDateString("en-IN")}</strong></p>
-                    )}
+                {selectedReturn.customerMessage && (
+                  <div className="text-xs text-text-secondary font-light">
+                    <p className="text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Customer Note:</p>
+                    <p className="italic bg-white p-3 rounded-xl border border-champagne/25">"{selectedReturn.customerMessage}"</p>
+                  </div>
+                )}
+
+                {/* Evidence Photos */}
+                {selectedReturn.evidenceImages && selectedReturn.evidenceImages.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1.5">Submitted Evidence Photos ({selectedReturn.evidenceImages.length})</p>
+                    <div className="flex flex-wrap gap-2.5">
+                      {selectedReturn.evidenceImages.map((imgObj, idx) => {
+                        const imgUrl = resolveMediaUrl(imgObj?.url || imgObj);
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => setPreviewImage(imgUrl)}
+                            className="w-16 h-16 rounded-xl border border-champagne overflow-hidden cursor-pointer hover:opacity-80 transition hover:scale-105 shadow-xs"
+                          >
+                            <img src={imgUrl} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Evidence Video */}
+                {(selectedReturn.evidenceVideo?.url || selectedReturn.video?.url) && (
+                  <div className="pt-2">
+                    <p className="text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1.5">Unboxing Video Evidence</p>
+                    <video
+                      controls
+                      src={resolveMediaUrl(selectedReturn.evidenceVideo?.url || selectedReturn.video?.url)}
+                      className="max-h-48 rounded-xl border border-champagne bg-black"
+                    />
                   </div>
                 )}
               </div>
 
-              {/* Chat timeline thread details */}
-              {selectedTicket && (
-                <div className="border-t border-champagne/20 pt-5 space-y-4">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black">Chat Thread Concierge</h4>
-                  <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
-                    {selectedTicket.messages?.map((msg, index) => {
-                      const isSystem = msg.senderName === "System Note";
-                      if (isSystem) {
-                        return (
-                          <div key={index} className="rounded-lg bg-gray-50 border py-1.5 px-3 text-[10px] text-center max-w-sm mx-auto text-text-secondary">
-                            {msg.message}
-                          </div>
-                        );
-                      }
-                      return (
-                        <div key={index} className={`flex flex-col ${msg.isAdmin ? 'items-start' : 'items-end'}`}>
-                          <span className="text-[9px] font-bold text-luxury-black mb-0.5">{msg.senderName}</span>
-                          <div className={`rounded-2xl p-2.5 text-xs max-w-sm ${msg.isAdmin ? 'bg-amber-50/60 border border-gold-200/50 text-luxury-black rounded-tl-none' : 'bg-gold-500 text-white rounded-tr-none'}`}>
-                            {msg.message}
+              {/* Audit & Activity Timeline Logs */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-luxury-black flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-gold-600" />
+                  <span>Chronological Activity & Concierge Log</span>
+                </h4>
+                {selectedReturn.timeline && selectedReturn.timeline.length > 0 ? (
+                  <div className="divide-y divide-champagne/20 border border-champagne/35 rounded-2xl bg-white overflow-hidden shadow-xs">
+                    {selectedReturn.timeline.map((log, idx) => (
+                      <div key={log._id || idx} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gold-50/20 transition">
+                        <div className="flex items-start gap-3">
+                          <div className="w-2.5 h-2.5 rounded-full bg-gold-500 mt-1.5 shrink-0" />
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-luxury-black">{log.action || log.status}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border ${getReturnStatusColor(log.status)}`}>
+                                {log.status}
+                              </span>
+                            </div>
+                            {log.remarks && (
+                              <p className="text-[11px] text-text-secondary mt-1 font-light leading-relaxed">
+                                {log.remarks}
+                              </p>
+                            )}
+                            <span className="text-[9px] text-gray-400 mt-0.5 block">
+                              Recorded by {log.performedByName || "Concierge System"}
+                            </span>
                           </div>
                         </div>
-                      );
-                    })}
+                        <span className="text-[10px] text-text-secondary sm:text-right shrink-0 font-light">
+                          {new Date(log.timestamp || log.createdAt).toLocaleString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-
-                  {selectedTicket.status !== "Resolved" && (
-                    <form onSubmit={handleSendReply} className="border-t border-champagne/20 pt-3 flex gap-2">
-                      <input
-                        value={replyMessage}
-                        onChange={(e) => setReplyMessage(e.target.value)}
-                        placeholder="Reply support..."
-                        className="flex-1 rounded-full border border-champagne px-4 py-2 text-xs focus:border-gold-500 outline-none"
-                        required
-                      />
-                      <button type="submit" disabled={sendingReply || !replyMessage.trim()} className="rounded-full bg-gold-500 text-white px-5 py-2 text-xs font-bold uppercase tracking-wider hover:bg-gold-600 transition cursor-pointer select-none">
-                        Send
-                      </button>
-                    </form>
-                  )}
-                </div>
-              )}
+                ) : (
+                  <div className="p-4 rounded-2xl bg-white border border-champagne/25 text-center text-xs text-text-secondary font-light">
+                    Initial request registered. Further lifecycle events will be recorded here in real-time.
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="rounded-3xl border border-champagne bg-white/50 p-12 text-center flex flex-col justify-center items-center h-64">
               <span className="text-3xl mb-2">🔄</span>
               <h4 className="text-sm font-serif font-semibold text-luxury-black">Select Return Claim</h4>
-              <p className="text-[11px] text-text-secondary mt-1 max-w-xs font-light">Select a claim from the history pane to check logistics updates.</p>
+              <p className="text-[11px] text-text-secondary mt-1 max-w-xs font-light">
+                Select a claim from the history pane to inspect real-time progress, pickup details, and resolution records.
+              </p>
             </div>
           )}
         </div>

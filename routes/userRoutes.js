@@ -204,6 +204,9 @@ router.put("/profile", protect, async (req, res) => {
 
     await user.save();
 
+    const { notifyProfileUpdated } = require("../services/notificationService");
+    notifyProfileUpdated(user).catch((err) => console.error("[notif] Profile update error:", err));
+
     const { generateToken } = require("../controllers/authController");
 
     return res.status(200).json({
@@ -364,6 +367,59 @@ router.get("/coupons", protect, async (req, res) => {
   } catch (error) {
     console.error("Get user coupons error:", error.message);
     return res.status(500).json({ message: "Failed to fetch user coupons" });
+  }
+});
+
+// Request account suspension / deactivation
+router.post("/request-suspension", protect, async (req, res) => {
+  try {
+    const { reason = "Customer requested account suspension" } = req.body;
+    const user = req.user;
+    const { createAndDispatchNotification } = require("../services/notificationService");
+    const Ticket = require("../models/Ticket");
+    const crypto = require("crypto");
+
+    const ticketCode = "TKT-SUSP-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+    const ticket = await Ticket.create({
+      ticketCode,
+      user: user._id,
+      customerName: user.name,
+      customerEmail: user.email,
+      customerPhone: user.mobileNumber || "",
+      subject: `Account Suspension Request: ${user.name}`,
+      category: "Account Support",
+      priority: "Urgent",
+      status: "Open",
+      messages: [
+        {
+          sender: user._id,
+          senderName: user.name,
+          isAdmin: false,
+          message: `Account suspension requested by customer. Reason: ${reason}`,
+          createdAt: new Date(),
+        },
+      ],
+    });
+
+    await createAndDispatchNotification({
+      recipient: null,
+      role: "ADMIN",
+      category: "CUSTOMER",
+      event: "CUSTOMER_ALERT",
+      priority: "Urgent",
+      title: `Account Suspension Request: ${user.name}`,
+      message: `Customer ${user.name} (${user.email}) requested account suspension/deactivation. Reason: ${reason}`,
+      link: `/niyora-admin-portal-2026/dashboard`,
+      metadata: { userId: user._id, ticketId: ticket._id, reason },
+    });
+
+    return res.status(200).json({
+      message: "Your account suspension request has been submitted to support.",
+      ticketCode,
+    });
+  } catch (error) {
+    console.error("Account suspension request error:", error.message);
+    return res.status(500).json({ message: "Failed to submit suspension request." });
   }
 });
 

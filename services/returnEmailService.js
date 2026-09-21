@@ -110,9 +110,86 @@ const buildGoldEmail = (title, headline, messageBody, actionButtonHtml = "", sto
 };
 
 /**
+ * Centrally and robustly resolves customer email and name
+ */
+const resolveCustomerDetails = async (target, fallbackDoc = null) => {
+  let email = "";
+  let name = "";
+
+  const extract = async (obj) => {
+    if (!obj) return;
+    if (typeof obj === "string" && obj.includes("@")) {
+      email = obj.trim().toLowerCase();
+      return;
+    }
+    if (typeof obj !== "object") return;
+    if (typeof obj.email === "string" && obj.email.includes("@")) {
+      email = obj.email.trim().toLowerCase();
+      name = obj.name || obj.address?.fullName || name;
+    }
+    if (!email && obj.userId && typeof obj.userId === "object" && obj.userId.email) {
+      email = obj.userId.email.trim().toLowerCase();
+      name = obj.userId.name || obj.address?.fullName || name;
+    }
+    if (!email && obj.customerId && typeof obj.customerId === "object" && obj.customerId.email) {
+      email = obj.customerId.email.trim().toLowerCase();
+      name = obj.customerId.name || name;
+    }
+    if (!email && obj.user && typeof obj.user === "object" && obj.user.email) {
+      email = obj.user.email.trim().toLowerCase();
+      name = obj.user.name || name;
+    }
+    const isObjectId = obj._bsontype === "ObjectID" || (typeof obj.toString === "function" && /^[a-f\d]{24}$/i.test(obj.toString()));
+    if (!email && isObjectId) {
+      try {
+        const u = await User.findById(obj).select("name email").lean();
+        if (u?.email) {
+          email = u.email.trim().toLowerCase();
+          name = u.name || name;
+        }
+      } catch (err) {}
+    }
+    if (!email && obj.customerId) {
+      try {
+        const u = await User.findById(obj.customerId).select("name email").lean();
+        if (u?.email) {
+          email = u.email.trim().toLowerCase();
+          name = u.name || name;
+        }
+      } catch (err) {}
+    }
+    if (!email && obj.user) {
+      try {
+        const u = await User.findById(obj.user).select("name email").lean();
+        if (u?.email) {
+          email = u.email.trim().toLowerCase();
+          name = u.name || name;
+        }
+      } catch (err) {}
+    }
+    if (!name && obj.address?.fullName) {
+      name = obj.address.fullName;
+    }
+  };
+
+  if (target) await extract(target);
+  if (!email && fallbackDoc) await extract(fallbackDoc);
+
+  return {
+    email: (email || "").trim().toLowerCase(),
+    name: (name || "Valued Customer").trim(),
+  };
+};
+
+/**
  * Common mail sending helper
  */
 const sendMail = async (to, subject, html, text) => {
+  if (!to || typeof to !== "string" || !to.includes("@")) {
+    console.warn(`[returnEmailService] ⚠️ Skipped sending email: Invalid recipient address "${to}" for "${subject}"`);
+    return null;
+  }
+
   const config = getSmtpConfig();
   if (!config.provider) {
     console.warn("[email] Email is not configured. Skipping return dispatch.");
@@ -139,14 +216,18 @@ const sendMail = async (to, subject, html, text) => {
    ========================================================================== */
 
 const sendReturnSubmittedEmail = async (user, order, returnRequest) => {
-  const code = returnRequest.returnCode;
-  const resolution = returnRequest.preferredResolution;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, order || returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
+  const resolution = returnRequest.preferredResolution || returnRequest.requestType || "Return";
+  const orderCode = order?.orderCode || "ORDER";
   const subject = `Return Request Submitted: ${code} - Niyora Gifts`;
   const url = `${shopUrl()}/my-profile`;
   
   const headline = "We have received your Return Request";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Thank you for contacting Niyora Gifts. Your return request has been submitted successfully and is currently <strong>Under Review</strong> by our customer care team.</p>
     <table width="100%" style="background-color: #FAF4E5; border-radius: 12px; padding: 16px; border: 1px solid #F1E5C5; margin: 20px 0;">
       <tr>
@@ -155,11 +236,11 @@ const sendReturnSubmittedEmail = async (user, order, returnRequest) => {
       </tr>
       <tr>
         <td style="font-size: 13px; color: #1C1C1C; padding-bottom: 8px;"><strong>Order ID:</strong></td>
-        <td style="font-size: 13px; color: #1C1C1C; text-align: right;">${escapeHtml(order.orderCode)}</td>
+        <td style="font-size: 13px; color: #1C1C1C; text-align: right;">${escapeHtml(orderCode)}</td>
       </tr>
       <tr>
         <td style="font-size: 13px; color: #1C1C1C; padding-bottom: 8px;"><strong>Reason:</strong></td>
-        <td style="font-size: 13px; color: #1C1C1C; text-align: right;">${escapeHtml(returnRequest.reason)}</td>
+        <td style="font-size: 13px; color: #1C1C1C; text-align: right;">${escapeHtml(returnRequest.reason || returnRequest.returnReason || "Return")}</td>
       </tr>
       <tr>
         <td style="font-size: 13px; color: #1C1C1C;"><strong>Preferred Resolution:</strong></td>
@@ -172,19 +253,22 @@ const sendReturnSubmittedEmail = async (user, order, returnRequest) => {
   const actionBtn = `<a href="${url}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; padding: 12px 28px; font-size: 13px; font-weight: 700; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C;">Track Request Status</a>`;
   
   const html = buildGoldEmail(subject, headline, body, actionBtn);
-  const text = `Hi ${user.name},\nYour return request ${code} for order ${order.orderCode} has been submitted successfully.\nPreferred Resolution: ${resolution}\nReason: ${returnRequest.reason}\n\nTrack status: ${url}`;
+  const text = `Hi ${customerName},\nYour return request ${code} for order ${orderCode} has been submitted successfully.\nPreferred Resolution: ${resolution}\nReason: ${returnRequest.reason || returnRequest.returnReason || "Return"}\n\nTrack status: ${url}`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 const sendReturnApprovedEmail = async (user, returnRequest) => {
-  const code = returnRequest.returnCode;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
   const subject = `Return Request Approved: ${code} - Niyora Gifts`;
   const url = `${shopUrl()}/my-profile`;
   
   const headline = "Your Return Request has been Approved!";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Good news! Our quality assurance support agents have reviewed your claim, and your return request <strong>${code}</strong> has been <strong>Approved</strong>.</p>
     <p><strong>Next Steps:</strong></p>
     <ol style="padding-left: 20px; line-height: 1.8;">
@@ -198,19 +282,22 @@ const sendReturnApprovedEmail = async (user, returnRequest) => {
   const actionBtn = `<a href="${url}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; padding: 12px 28px; font-size: 13px; font-weight: 700; text-decoration: none; border-radius: 99px; text-align: center;">View Return Timeline</a>`;
   
   const html = buildGoldEmail(subject, headline, body, actionBtn);
-  const text = `Hi ${user.name},\nYour return request ${code} has been approved. Logistics reverse pickup is being arranged. View details here: ${url}`;
+  const text = `Hi ${customerName},\nYour return request ${code} has been approved. Logistics reverse pickup is being arranged. View details here: ${url}`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 const sendReturnRejectedEmail = async (user, returnRequest, note) => {
-  const code = returnRequest.returnCode;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
   const subject = `Return Request Update: ${code} - Niyora Gifts`;
   const url = `${shopUrl()}/my-profile`;
   
   const headline = "Return Request Update";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We are writing to update you regarding your return request <strong>${code}</strong>.</p>
     <p>Following review by our customer support specialists, your request has been <strong>Declined</strong> at this time due to the following reason:</p>
     <div style="background-color: #FCF9F2; border-left: 3px solid #D4AF37; padding: 12px 18px; margin: 15px 0; font-style: italic; color: #1C1C1C; font-size: 13.5px;">
@@ -222,13 +309,16 @@ const sendReturnRejectedEmail = async (user, returnRequest, note) => {
   const actionBtn = `<a href="${url}" style="display: inline-block; background-color: #1C1C1C; color: #E7D29E; padding: 12px 28px; font-size: 13px; font-weight: 700; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #E7D29E;">Open Support Ticket</a>`;
   
   const html = buildGoldEmail(subject, headline, body, actionBtn);
-  const text = `Hi ${user.name},\nYour return request ${code} was declined. Reason/Note: ${note}\nSupport link: ${url}`;
+  const text = `Hi ${customerName},\nYour return request ${code} was declined. Reason/Note: ${note}\nSupport link: ${url}`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 const sendPickupScheduledEmail = async (user, returnRequest) => {
-  const code = returnRequest.returnCode;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
   const p = returnRequest.pickupDetails || {};
   const dateStr = p.pickupDate ? new Date(p.pickupDate).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "Soon";
   const subject = `Reverse Pickup Scheduled: ${code} - Niyora Gifts`;
@@ -236,7 +326,7 @@ const sendPickupScheduledEmail = async (user, returnRequest) => {
   
   const headline = "Reverse Pickup Scheduled";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Your reverse pickup has been scheduled for return request <strong>${code}</strong>.</p>
     <table width="100%" style="background-color: #FAF4E5; border-radius: 12px; padding: 16px; border: 1px solid #F1E5C5; margin: 20px 0;">
       <tr>
@@ -256,54 +346,63 @@ const sendPickupScheduledEmail = async (user, returnRequest) => {
   `;
   
   const html = buildGoldEmail(subject, headline, body, null);
-  const text = `Hi ${user.name},\nReverse pickup has been scheduled for request ${code} via ${p.courier}. Tracking ID: ${p.trackingId}. Pickup Date: ${dateStr}`;
+  const text = `Hi ${customerName},\nReverse pickup has been scheduled for request ${code} via ${p.courier}. Tracking ID: ${p.trackingId}. Pickup Date: ${dateStr}`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 const sendProductReceivedEmail = async (user, returnRequest) => {
-  const code = returnRequest.returnCode;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
   const subject = `Product Received: ${code} - Niyora Gifts`;
   const url = `${shopUrl()}/my-profile`;
   
   const headline = "Returned Product Received";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We are writing to confirm that the package containing your returned items for request <strong>${code}</strong> has been received at our fulfillment center.</p>
-    <p>Our verification team will now perform a quick inspection. Upon verification, we will proceed with your selected resolution: <strong>${escapeHtml(returnRequest.preferredResolution)}</strong>.</p>
+    <p>Our verification team will now perform a quick inspection. Upon verification, we will proceed with your selected resolution: <strong>${escapeHtml(returnRequest.preferredResolution || returnRequest.requestType || "Return")}</strong>.</p>
   `;
   
   const html = buildGoldEmail(subject, headline, body, null);
-  const text = `Hi ${user.name},\nWe have received your returned product for request ${code}. Processing resolution ${returnRequest.preferredResolution} now.`;
+  const text = `Hi ${customerName},\nWe have received your returned product for request ${code}. Processing resolution now.`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 const sendRefundInitiatedEmail = async (user, returnRequest, amount) => {
-  const code = returnRequest.returnCode;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
   const subject = `Refund Initiated: ${code} - Niyora Gifts`;
   
   const headline = "Your Refund is being Processed";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We have initiated the refund process for your return request <strong>${code}</strong>.</p>
     <p>An amount of <strong>INR ${amount}</strong> is being processed back to your original payment source or store credit account as requested.</p>
     <p>This process usually takes 5-7 business days to reflect in your banking statement depending on bank processing cycles.</p>
   `;
   
   const html = buildGoldEmail(subject, headline, body, null);
-  const text = `Hi ${user.name},\nRefund of INR ${amount} has been initiated for return request ${code}. Funds will reflect in 5-7 business days.`;
+  const text = `Hi ${customerName},\nRefund of INR ${amount} has been initiated for return request ${code}. Funds will reflect in 5-7 business days.`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 const sendRefundCompletedEmail = async (user, returnRequest, amount, reference) => {
-  const code = returnRequest.returnCode;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
   const subject = `Refund Completed: ${code} - Niyora Gifts`;
   
   const headline = "Refund Successfully Processed";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We are pleased to inform you that your refund has been successfully completed for return request <strong>${code}</strong>.</p>
     <table width="100%" style="background-color: #FAF4E5; border-radius: 12px; padding: 16px; border: 1px solid #F1E5C5; margin: 20px 0;">
       <tr>
@@ -319,19 +418,22 @@ const sendRefundCompletedEmail = async (user, returnRequest, amount, reference) 
   `;
   
   const html = buildGoldEmail(subject, headline, body, null);
-  const text = `Hi ${user.name},\nRefund of INR ${amount} for return request ${code} is completed. Reference: ${reference}`;
+  const text = `Hi ${customerName},\nRefund of INR ${amount} for return request ${code} is completed. Reference: ${reference}`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 const sendReplacementShippedEmail = async (user, returnRequest, replacementOrderCode) => {
-  const code = returnRequest.returnCode;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
   const subject = `Replacement Order Shipped: ${code} - Niyora Gifts`;
   const url = `${shopUrl()}/my-profile`;
   
   const headline = "Replacement Package is on the Way!";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We have shipped your replacement package matching return request <strong>${code}</strong>.</p>
     <p>Your new order code is: <strong>${escapeHtml(replacementOrderCode)}</strong>.</p>
     <p>You can track the shipment live via the Order Tracking module in your profile dashboard.</p>
@@ -340,26 +442,29 @@ const sendReplacementShippedEmail = async (user, returnRequest, replacementOrder
   const actionBtn = `<a href="${url}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; padding: 12px 28px; font-size: 13px; font-weight: 700; text-decoration: none; border-radius: 99px; text-align: center;">Track Replacement Order</a>`;
   
   const html = buildGoldEmail(subject, headline, body, actionBtn);
-  const text = `Hi ${user.name},\nYour replacement order ${replacementOrderCode} for return request ${code} has been shipped. Track here: ${url}`;
+  const text = `Hi ${customerName},\nYour replacement order ${replacementOrderCode} for return request ${code} has been shipped. Track here: ${url}`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 const sendReturnClosedEmail = async (user, returnRequest) => {
-  const code = returnRequest.returnCode;
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) return null;
+
+  const code = returnRequest.returnCode || returnRequest.requestId || "CLAIM";
   const subject = `Return Case Closed: ${code} - Niyora Gifts`;
   
   const headline = "Return Case Resolved and Closed";
   const body = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>This is to notify you that return request case <strong>${code}</strong> has been resolved and is now marked as <strong>Closed</strong>.</p>
     <p>We hope we resolved this issue to your complete satisfaction. Thank you for choosing Niyora Gifts!</p>
   `;
   
   const html = buildGoldEmail(subject, headline, body, null);
-  const text = `Hi ${user.name},\nYour return case ${code} is resolved and closed. Thank you for choosing Niyora Gifts.`;
+  const text = `Hi ${customerName},\nYour return case ${code} is resolved and closed. Thank you for choosing Niyora Gifts.`;
   
-  return sendMail(user.email, subject, html, text);
+  return sendMail(customerEmail, subject, html, text);
 };
 
 

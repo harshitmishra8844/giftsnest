@@ -26,6 +26,12 @@ const emailRoutes = require("./routes/emailRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const cmsRoutes = require("./routes/cmsRoutes");
 const crmRoutes = require("./routes/crmRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const callbackRoutes = require("./routes/callbackRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const agentAssistRoutes = require("./routes/agentAssistRoutes");
+const refundRoutes = require("./routes/refundRoutes");
 const { getStoreInfo } = require("./controllers/adminController");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { verifyEmailTransporter, getSmtpConfig } = require("./services/emailTransporter");
@@ -82,6 +88,12 @@ app.use("/api/returns", returnRoutes);
 app.use("/api/admin/emails", emailRoutes);
 app.use("/api/cms", cmsRoutes);
 app.use("/api/admin/crm", crmRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/callbacks", callbackRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/agent-assist", agentAssistRoutes);
+app.use("/api/refunds", refundRoutes);
 
 
 app.use(notFound);
@@ -116,6 +128,10 @@ const startServer = async () => {
     startEmailWorker();
     const { startCrmCampaignWorker } = require("./services/crmCampaignWorker");
     startCrmCampaignWorker();
+    const { startCallbackReminderWorker } = require("./services/callbackReminderService");
+    startCallbackReminderWorker();
+    const { startSlaWorker } = require("./services/slaWorker");
+    startSlaWorker();
     const { runGlobalAlertCheck } = require("./services/alertService");
     // Run diagnostics check at startup and daily
     runGlobalAlertCheck();

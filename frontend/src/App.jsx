@@ -20,14 +20,16 @@ const ReturnsRefunds = lazy(() => import("./pages/ReturnsRefunds"));
 const TermsConditions = lazy(() => import("./pages/TermsConditions"));
 const PersonalizedMug = lazy(() => import("./pages/PersonalizedMug"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const Contact = lazy(() => import("./pages/Contact"));
 
 import { useCart } from "./context/CartContext";
 import { useWishlist } from "./context/WishlistContext";
 import { useAuth } from "./context/AuthContext";
 import SearchBar from "./components/search/SearchBar";
 import { mockGiftProducts, trendingSearches } from "./data/mockGiftProducts";
-import api from "./services/api";
+import api, { resolveMediaUrl } from "./services/api";
 import SEO from "./components/SEO";
+import { Sparkles, X, Copy, Check, Phone } from "lucide-react";
 
 
 
@@ -59,6 +61,52 @@ function App() {
 
   const [cmsShell, setCmsShell] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  // Quick Callback Floating Modal State
+  const [showCallbackModal, setShowCallbackModal] = useState(false);
+  const [quickCallbackForm, setQuickCallbackForm] = useState({
+    customerName: "",
+    customerPhone: "",
+    preferredTime: "Immediately / Urgent",
+    notes: "",
+  });
+  const [quickCallbackLoading, setQuickCallbackLoading] = useState(false);
+  const [quickCallbackSuccess, setQuickCallbackSuccess] = useState(null);
+  const [quickCallbackError, setQuickCallbackError] = useState("");
+
+  const handleQuickCallbackSubmit = async (e) => {
+    e.preventDefault();
+    setQuickCallbackError("");
+    if (!quickCallbackForm.customerName.trim()) {
+      setQuickCallbackError("Please enter your name.");
+      return;
+    }
+    if (!quickCallbackForm.customerPhone.trim()) {
+      setQuickCallbackError("Please enter your phone number.");
+      return;
+    }
+
+    try {
+      setQuickCallbackLoading(true);
+      const res = await api.post("/callbacks/request", {
+        customerName: quickCallbackForm.customerName.trim(),
+        customerPhone: quickCallbackForm.customerPhone.trim(),
+        preferredTime: quickCallbackForm.preferredTime,
+        notes: quickCallbackForm.notes.trim(),
+        subject: `Storefront Quick Callback: ${quickCallbackForm.customerName}`,
+        priority: quickCallbackForm.preferredTime === "Immediately / Urgent" ? "Urgent" : "Medium",
+      });
+
+      if (res.data?.success) {
+        setQuickCallbackSuccess(res.data);
+      }
+    } catch (err) {
+      setQuickCallbackError(err.response?.data?.message || "Failed to schedule callback. Please try again.");
+    } finally {
+      setQuickCallbackLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchShell = async () => {
@@ -72,15 +120,34 @@ function App() {
     fetchShell();
   }, []);
 
+  const isAdminPath = location.pathname.startsWith("/niyora-admin-portal-2026");
+
   useEffect(() => {
+    // Completely disable promotional popup banner inside Admin Dashboard
+    if (isAdminPath) {
+      setShowPopup(false);
+      return;
+    }
+
     if (cmsShell?.popups?.active) {
       const closed = sessionStorage.getItem("gift-popup-closed");
       if (!closed) {
-        const timer = setTimeout(() => setShowPopup(true), 2500);
+        const rawDelay = cmsShell.popups.delay;
+        const delaySec = (rawDelay !== undefined && rawDelay !== null && rawDelay !== "") 
+          ? Number(rawDelay) 
+          : 2.5;
+        const delayMs = Math.max(0, isNaN(delaySec) ? 2500 : delaySec * 1000);
+
+        if (delayMs === 0) {
+          setShowPopup(true);
+          return;
+        }
+
+        const timer = setTimeout(() => setShowPopup(true), delayMs);
         return () => clearTimeout(timer);
       }
     }
-  }, [cmsShell]);
+  }, [cmsShell, isAdminPath]);
 
   const handleClosePopup = () => {
     sessionStorage.setItem("gift-popup-closed", "true");
@@ -687,6 +754,10 @@ function App() {
             <Route path="/return-and-replacement" element={<Navigate to="/returns-refunds" replace />} />
             <Route path="/personalized-mug" element={<PersonalizedMug />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/contact-us" element={<Navigate to="/contact" replace />} />
+            <Route path="/support" element={<Navigate to="/contact" replace />} />
+            <Route path="/pages/contact" element={<Navigate to="/contact" replace />} />
           </Routes>
         </Suspense>
       </main>
@@ -752,6 +823,7 @@ function App() {
               <ul className="space-y-3 text-sm text-gray-400">
                 {(cmsShell?.footer?.customerServiceLinks || [
                   { label: "Track Order", link: "/track-order" },
+                  { label: "Customer Support & Inquiries", link: "/contact" },
                   { label: "Shipping Policy", link: "/shipping-policy" },
                   { label: "Returns, Refunds & Replacement", link: "/returns-refunds" },
                   { label: "Terms & Conditions", link: "/terms-conditions" }
@@ -825,34 +897,270 @@ function App() {
         </div>
       </footer>
       )}
-      {/* Dynamic Popup promo dialog */}
-      {showPopup && cmsShell?.popups && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in-backdrop">
-          <div className="relative w-full max-w-xl rounded-3xl border border-gold-500/20 bg-white overflow-hidden shadow-2xl animate-page-enter flex flex-col md:flex-row">
+      {/* Dynamic Luxury Promotional Popup Dialog (Disabled in Admin Dashboard) */}
+      {!isAdminPath && showPopup && cmsShell?.popups && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Solid dark backdrop with blur - prevents background bleeding */}
+          <div
+            className="fixed inset-0 bg-luxury-black/75 backdrop-blur-md transition-opacity duration-300"
+            onClick={handleClosePopup}
+          />
+
+          {/* Luxury Modal Card (100% solid, fully opaque) */}
+          <div className="relative z-10 w-full max-w-lg md:max-w-xl rounded-3xl border border-gold-400/30 bg-[#FFFDF9] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col md:flex-row animate-page-enter">
+            {/* Ambient gold glow */}
+            <div className="absolute -top-16 -right-16 w-36 h-36 bg-gold-400/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Close Button */}
             <button
               onClick={handleClosePopup}
-              className="absolute top-3 right-3 z-10 bg-white/80 hover:bg-white text-luxury-black rounded-full p-1.5 shadow-md text-xs font-bold transition cursor-pointer"
+              className="absolute top-3.5 right-3.5 z-20 h-8 w-8 rounded-full bg-white/90 hover:bg-white text-luxury-black shadow-sm flex items-center justify-center text-xs font-bold transition cursor-pointer border border-champagne/40"
+              aria-label="Close promotion dialog"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
+
+            {/* Left Image Section (if imageUrl present) */}
             {cmsShell.popups.imageUrl && (
-              <div className="md:w-1/2 h-48 md:h-auto bg-gray-150 relative overflow-hidden">
-                <img src={cmsShell.popups.imageUrl} alt="Promo" className="w-full h-full object-cover" />
+              <div className="md:w-5/12 h-48 md:h-auto min-h-[220px] bg-gold-50/20 relative overflow-hidden shrink-0">
+                <img
+                  src={resolveMediaUrl(cmsShell.popups.imageUrl)}
+                  alt="Special Offer"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent md:hidden" />
               </div>
             )}
-            <div className={`p-8 flex flex-col justify-center ${cmsShell.popups.imageUrl ? "md:w-1/2" : "w-full text-center items-center"}`}>
-              <h3 className="text-2xl font-serif text-luxury-black font-bold mb-2">{cmsShell.popups.title}</h3>
-              <p className="text-xs text-text-secondary font-light leading-relaxed mb-6">{cmsShell.popups.text}</p>
+
+            {/* Content Section */}
+            <div className={`p-6 sm:p-8 flex flex-col justify-center relative z-10 ${
+              cmsShell.popups.imageUrl ? "md:w-7/12 text-left" : "w-full text-center items-center py-10 px-8"
+            }`}>
+              {/* Luxury Badge */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/30 text-[10px] font-bold uppercase tracking-widest text-gold-700 mb-3 w-fit">
+                <Sparkles className="w-3 h-3 text-gold-600" />
+                <span>Special Privilege</span>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-2xl sm:text-3xl font-serif text-luxury-black font-normal tracking-tight mb-2.5 leading-snug">
+                {cmsShell.popups.title || "Exclusive Offer"}
+              </h3>
+
+              {/* Body Text */}
+              <p className="text-xs text-text-secondary font-light leading-relaxed mb-4">
+                {cmsShell.popups.text || "Enjoy a curated discount on your celebration gifts."}
+              </p>
+
+              {/* Coupon Box (if promo code detected in text) */}
+              {(() => {
+                const match = cmsShell.popups.text?.match(/\b(?:code|coupon)\s*:?\s*([A-Z0-9_-]+)/i);
+                const code = match ? match[1] : null;
+                if (!code) return null;
+
+                return (
+                  <div
+                    onClick={() => {
+                      navigator.clipboard?.writeText(code);
+                      setCopiedCode(true);
+                      setTimeout(() => setCopiedCode(false), 2000);
+                    }}
+                    className="mb-5 flex items-center justify-between gap-3 p-2.5 px-3.5 rounded-xl border border-dashed border-gold-500/50 bg-gold-50/40 cursor-pointer hover:bg-gold-50 transition group w-full max-w-xs"
+                    title="Click to copy coupon code"
+                  >
+                    <div className="text-left">
+                      <span className="block text-[8px] font-bold uppercase tracking-wider text-gold-700">Coupon Code</span>
+                      <span className="font-mono text-xs font-bold text-luxury-black tracking-wider">{code}</span>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gold-800 flex items-center gap-1">
+                      {copiedCode ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span className="text-emerald-700">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                );
+              })()}
+
+              {/* CTA Action Button */}
               <Link
                 to={cmsShell.popups.buttonLink || "/products"}
                 onClick={handleClosePopup}
-                className="inline-block rounded-full bg-gold-500 hover:bg-gold-600 text-white font-bold tracking-widest text-xs uppercase px-6 py-3 transition text-center shadow-sm w-full font-semibold"
+                className="inline-block rounded-full bg-gradient-to-r from-gold-600 via-gold-500 to-gold-600 hover:from-gold-700 hover:via-gold-600 hover:to-gold-700 text-white font-bold tracking-widest text-xs uppercase px-8 py-3.5 transition text-center shadow-md hover:shadow-lg w-full max-w-xs cursor-pointer active:scale-[0.99]"
               >
-                {cmsShell.popups.buttonText || "Learn More"}
+                {cmsShell.popups.buttonText || "Explore Gifts"}
               </Link>
+
+              {/* Guarantee / Subtext */}
+              <p className="mt-3 text-[10px] text-gray-400 font-light tracking-wide">
+                Handcrafted with love • Express delivery available
+              </p>
             </div>
           </div>
         </div>
+      )}
+      {/* Floating Concierge & Callback Trigger Button (Customer Storefront Only) */}
+      {!isAdminPath && (
+        <>
+          <aside aria-label="Customer concierge callback" className="fixed bottom-6 right-6 z-40">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCallbackModal(true);
+                setQuickCallbackError("");
+              }}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-[#1C1C1C] hover:bg-black text-gold-400 border border-gold-500/40 shadow-2xl hover:shadow-gold-500/20 transition-all duration-300 group cursor-pointer hover:scale-105 active:scale-95"
+              title="Request a Callback from Niyora Concierge"
+            >
+              <span className="w-8 h-8 rounded-full bg-gold-500/20 flex items-center justify-center text-gold-400 group-hover:bg-gold-500 group-hover:text-black transition-colors">
+                <Phone className="w-4 h-4" />
+              </span>
+              <div className="text-left pr-1">
+                <span className="block text-[9px] font-bold uppercase tracking-widest text-gold-400/80">Concierge Desk</span>
+                <span className="block text-xs font-bold text-white tracking-wide">Request Callback</span>
+              </div>
+            </button>
+          </aside>
+
+          {/* Quick Callback Modal */}
+          {showCallbackModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in">
+              <div className="w-full max-w-md bg-white dark:bg-[#1A1A1A] rounded-3xl border border-gold-300/40 p-6 shadow-2xl text-luxury-black dark:text-white space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-xl bg-gold-500/15 text-gold-600 dark:text-gold-400">
+                      <Phone className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-serif font-bold">Niyora Concierge Callback</h3>
+                      <p className="text-[10px] text-gray-400">15-Minute Guaranteed SLA Response</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowCallbackModal(false);
+                      setQuickCallbackSuccess(null);
+                    }}
+                    className="text-gray-400 hover:text-black dark:hover:text-white text-lg p-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {quickCallbackSuccess ? (
+                  <div className="text-center py-4 space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto text-xl font-bold">
+                      ✓
+                    </div>
+                    <h4 className="text-base font-serif font-bold text-emerald-600 dark:text-emerald-400">
+                      Callback Scheduled!
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
+                      Our concierge executive has been assigned. You will receive an outbound call shortly.
+                    </p>
+                    <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#222] border border-gray-100 dark:border-white/5 text-xs space-y-1 text-left">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Callback ID:</span>
+                        <span className="font-mono font-bold text-luxury-black dark:text-white">{quickCallbackSuccess.callbackCode}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Ticket Ref:</span>
+                        <span className="font-mono font-bold text-gold-600 dark:text-gold-400">{quickCallbackSuccess.ticketCode}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Target SLA:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">Within 15 Minutes</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCallbackModal(false);
+                        setQuickCallbackSuccess(null);
+                      }}
+                      className="w-full py-2.5 rounded-full bg-gold-500 hover:bg-gold-600 text-white font-bold text-xs uppercase tracking-wider transition cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleQuickCallbackSubmit} className="space-y-3 text-xs">
+                    {quickCallbackError && (
+                      <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 text-[11px]">
+                        {quickCallbackError}
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Your Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={quickCallbackForm.customerName}
+                        onChange={(e) => setQuickCallbackForm({ ...quickCallbackForm, customerName: e.target.value })}
+                        placeholder="e.g. Priya Sharma"
+                        className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-2 text-xs outline-none focus:border-gold-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Phone Number *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={quickCallbackForm.customerPhone}
+                        onChange={(e) => setQuickCallbackForm({ ...quickCallbackForm, customerPhone: e.target.value })}
+                        placeholder="e.g. +91 98765 43210"
+                        className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-2 text-xs outline-none focus:border-gold-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Preferred Time</label>
+                      <select
+                        value={quickCallbackForm.preferredTime}
+                        onChange={(e) => setQuickCallbackForm({ ...quickCallbackForm, preferredTime: e.target.value })}
+                        className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-2 text-xs outline-none focus:border-gold-500"
+                      >
+                        <option value="Immediately / Urgent">⚡ Urgent / Immediately (Within 15 Mins)</option>
+                        <option value="Morning (9 AM - 12 PM)">Morning (9:00 AM - 12:00 PM)</option>
+                        <option value="Afternoon (12 PM - 4 PM)">Afternoon (12:00 PM - 4:00 PM)</option>
+                        <option value="Evening (4 PM - 7 PM)">Evening (4:00 PM - 7:00 PM)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Assistance Required</label>
+                      <textarea
+                        rows={2}
+                        value={quickCallbackForm.notes}
+                        onChange={(e) => setQuickCallbackForm({ ...quickCallbackForm, notes: e.target.value })}
+                        placeholder="Order inquiries, customization, corporate gifts, etc."
+                        className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-2 text-xs outline-none focus:border-gold-500 resize-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={quickCallbackLoading}
+                      className="w-full py-3 rounded-full bg-gold-500 hover:bg-gold-600 text-white font-bold text-xs uppercase tracking-widest transition cursor-pointer shadow-md shadow-gold-500/20 disabled:opacity-50"
+                    >
+                      {quickCallbackLoading ? "Scheduling..." : "Call Me Back"}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -22,14 +22,25 @@ const {
   addInternalNote,
   getReturnSettings,
   updateReturnSettings,
+  submitReturnRequest,
   createReturnRequest,
   createReplacementRequest,
   getMyReturnRequests,
   getMyReplacementRequests,
+  getReturnRequestDetails,
+  adminGetReturnMetrics,
+  adminGetUnifiedRequests,
   adminGetReturnRequests,
   adminGetReplacementRequests,
+  adminUpdateRequestStatus,
   adminUpdateReturnRequest,
   adminUpdateReplacementRequest,
+  adminSchedulePickup,
+  adminVerifyAndRestock,
+  adminProcessRefund,
+  adminCreateReplacementOrder,
+  adminDispatchReplacement,
+  adminExportRequests,
 } = require("../controllers/returnController");
 
 const router = express.Router();
@@ -290,13 +301,49 @@ router.get("/my", protect, getMyReturns);
 router.get("/my/:id", protect, getReturnDetails);
 router.get("/settings", getReturnSettings);
 
-// New Return & Replacement endpoints
+// Unified Return & Replacement endpoints
+router.post("/submit", protect, rateLimiter(10, 5 * 60 * 1000), submitReturnRequest);
 router.post("/requests", protect, rateLimiter(10, 5 * 60 * 1000), createReturnRequest);
 router.post("/replacements", protect, rateLimiter(10, 5 * 60 * 1000), createReplacementRequest);
 router.get("/my-requests", protect, getMyReturnRequests);
 router.get("/my-replacements", protect, getMyReplacementRequests);
+router.get("/my-requests/:id", protect, getReturnRequestDetails);
 
 // Admin returns endpoints (superadmin and employee support roles check)
+router.get("/admin/metrics", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminGetReturnMetrics);
+router.get("/admin/unified-requests", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminGetUnifiedRequests);
+router.get("/admin/request-details/:id", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), getReturnRequestDetails);
+router.get("/admin/requests/:id", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), getReturnRequestDetails);
+
+// Status updates
+router.put("/admin/request-status/:id", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminUpdateRequestStatus);
+router.post("/admin/status", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminUpdateRequestStatus);
+router.put("/admin/status", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminUpdateRequestStatus);
+
+// Reverse pickup
+router.post("/admin/schedule-pickup/:id", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminSchedulePickup);
+router.post("/admin/schedule-pickup", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminSchedulePickup);
+
+// Quality verification and restock
+router.post("/admin/verify-restock/:id", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminVerifyAndRestock);
+router.post("/admin/verify-and-restock", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminVerifyAndRestock);
+
+// Financial refund
+router.post("/admin/process-refund/:id", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW", "FINANCE_MANAGE"]), adminProcessRefund);
+router.post("/admin/process-refund", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW", "FINANCE_MANAGE"]), adminProcessRefund);
+
+// Replacement creation
+router.post("/admin/create-replacement/:id", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminCreateReplacementOrder);
+router.post("/admin/create-replacement-order", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminCreateReplacementOrder);
+
+// Replacement dispatch
+router.post("/admin/dispatch-replacement/:id", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminDispatchReplacement);
+router.post("/admin/dispatch-replacement", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminDispatchReplacement);
+
+// Export
+router.get("/admin/export", protect, checkPermission(["ORDERS_RETURNS", "ORDERS_VIEW"]), adminExportRequests);
+
+// Legacy and helper routes
 router.get("/admin", protect, checkPermission(["ORDERS_RETURNS", "TICKETS_MANAGE"]), adminGetReturns);
 router.get("/admin-requests", protect, checkPermission(["ORDERS_RETURNS"]), adminGetReturnRequests);
 router.get("/admin-replacements", protect, checkPermission(["ORDERS_RETURNS"]), adminGetReplacementRequests);

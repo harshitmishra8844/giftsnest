@@ -14,6 +14,13 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    email: {
+      type: String,
+      default: "",
+      trim: true,
+      lowercase: true,
+      index: true,
+    },
     products: [
       {
         productId: {
@@ -78,8 +85,21 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: [
+        "Pending",
+        "Order Confirmed",
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+        "FAILED_PAYMENT",
+        "CUSTOMER_CANCELLED",
+      ],
       default: "Pending",
+    },
+    deliveredAt: {
+      type: Date,
+      default: null,
     },
     paymentStatus: {
       type: String,
@@ -115,6 +135,34 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    refundStatus: {
+      type: String,
+      enum: [
+        "NONE",
+        "PENDING_REFUND_REVIEW",
+        "REFUND_APPROVED",
+        "REFUND_PROCESSING",
+        "REFUNDED",
+        "REJECTED",
+        "None",
+        "Pending",
+        "Processing",
+        "Completed",
+        "Failed",
+      ],
+      default: "NONE",
+      index: true,
+    },
+    refundDetails: {
+      refundId: { type: String, default: "" },
+      paymentId: { type: String, default: "" },
+      gatewayRefundId: { type: String, default: "" },
+      refundAmount: { type: Number, default: 0 },
+      refundDate: { type: Date, default: null },
+      processedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      processedByName: { type: String, default: "" },
+      processingTimeMs: { type: Number, default: 0 },
+    },
     cancellationRequest: {
       status: {
         type: String,
@@ -147,6 +195,45 @@ const orderSchema = new mongoose.Schema(
         trim: true,
         maxlength: 800,
       },
+    },
+    orderStatus: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    cancelledBy: {
+      type: String,
+      enum: ["CUSTOMER", "ADMIN", "STAFF", null],
+      default: null,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    cancellationReason: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    cancellationIpAddress: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    paymentAttemptId: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
+    failureReason: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    failureTimestamp: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

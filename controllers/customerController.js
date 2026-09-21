@@ -6,6 +6,10 @@ const Notification = require("../models/Notification");
 const LoginActivityLog = require("../models/LoginActivityLog");
 const ActivityLog = require("../models/ActivityLog");
 const Newsletter = require("../models/Newsletter");
+const Ticket = require("../models/Ticket");
+const CallbackRequest = require("../models/CallbackRequest");
+const Return = require("../models/Return");
+const RefundRecord = require("../models/RefundRecord");
 const { logActivity } = require("../services/logService");
 
 // Helper to check if current admin is Master Admin
@@ -322,6 +326,30 @@ const getCustomerProfile = async (req, res) => {
     // Newsletter subscription status check
     const isNewsletterSubscribed = await Newsletter.exists({ email: customer.email.toLowerCase() });
 
+    // 11. 360° CRM: Fetch Returns & Replacements
+    const customerReturns = await Return.find({ user: customerId }).sort({ createdAt: -1 }).lean();
+
+    // 12. 360° CRM: Fetch Refunds
+    const orderIds = orders.map((o) => o._id);
+    const customerRefunds = await RefundRecord.find({ orderId: { $in: orderIds } }).sort({ createdAt: -1 }).lean();
+
+    // 13. 360° CRM: Fetch Callback Requests
+    const customerCallbacks = await CallbackRequest.find({
+      $or: [
+        { customer: customerId },
+        { customerEmail: customer.email.toLowerCase() },
+        { customerPhone: customer.mobileNumber || "NONE" },
+      ],
+    }).sort({ createdAt: -1 }).lean();
+
+    // 14. 360° CRM: Fetch Support Tickets
+    const customerTickets = await Ticket.find({
+      $or: [
+        { user: customerId },
+        { customerEmail: customer.email.toLowerCase() },
+      ],
+    }).sort({ createdAt: -1 }).lean();
+
     return res.status(200).json({
       profile: {
         ...customer,
@@ -347,6 +375,13 @@ const getCustomerProfile = async (req, res) => {
       notifications,
       loginHistory,
       activityTimeline,
+      // 360° CRM Fields
+      returns: customerReturns,
+      refunds: customerRefunds,
+      callbacks: customerCallbacks,
+      tickets: customerTickets,
+      customerNotes: customer.notes || [],
+      lifetimeValue: totalSpent,
     });
   } catch (error) {
     console.error("Get customer profile error:", error.message);

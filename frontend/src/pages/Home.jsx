@@ -17,7 +17,7 @@ const quickCategories = [
   { name: "Anniversary", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center" },
   { name: "Flowers", image: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center" },
   { name: "Cakes", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center" },
-  { name: "Personalized Gifts", image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center" },
+  { name: "Personalized", image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center" },
   { name: "Plants", image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center" },
 ];
 
@@ -44,7 +44,7 @@ const occasionCollections = [
     title: "Executive Corporate Gifts",
     subtitle: "Distinguished leather goods, desktop essentials, and corporate packages tailored for branding.",
     image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&fit=crop&q=80",
-    link: "/products?category=Personalized%20Gifts"
+    link: "/products?category=Personalized"
   }
 ];
 

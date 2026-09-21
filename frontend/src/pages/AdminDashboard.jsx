@@ -14,6 +14,13 @@ import CrmDashboardTab from "../components/CrmDashboardTab";
 import CampaignsTab from "../components/CampaignsTab";
 import SegmentsTab from "../components/SegmentsTab";
 import AlertsTab from "../components/AlertsTab";
+import AdminNotificationBell from "../components/AdminNotificationBell";
+import CustomerSupportTab from "../components/CustomerSupportTab";
+import CallbackManagementTab from "../components/CallbackManagementTab";
+import EmployeeWorkDeskTab from "../components/EmployeeWorkDeskTab";
+import EnterpriseReportsTab from "../components/EnterpriseReportsTab";
+import CustomerServiceDeskTab from "../components/CustomerServiceDeskTab";
+import RefundManagementTab from "../components/RefundManagementTab";
 import {
   PremiumRingLoader,
   LoadingOverlay,
@@ -25,7 +32,16 @@ import {
   ChatSkeleton
 } from "../components/SkeletonLoaders";
 
-const orderStatuses = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered", "Cancelled"];
+const orderStatuses = [
+  "Pending",
+  "Order Confirmed",
+  "Processing",
+  "Shipped",
+  "Delivered",
+  "Cancelled",
+  "FAILED_PAYMENT",
+  "CUSTOMER_CANCELLED",
+];
 
 const emptyForm = {
   name: "",
@@ -509,7 +525,7 @@ const AdminDashboard = () => {
   );
 
   const productCategories = useMemo(() => {
-    const standard = ["Birthday", "Anniversary", "Flowers", "Cakes", "Personalized Gifts", "Plants"];
+    const standard = ["Birthday", "Anniversary", "Flowers", "Cakes", "Personalized", "Plants"];
     const dynamic = [];
     products.forEach((product) => {
       if (product.category) {
@@ -586,16 +602,43 @@ const AdminDashboard = () => {
   }, [products]);
 
   const ordersForView = useMemo(() => {
+    const allList = [
+      ...orders.map((order) => ({ ...order, __isArchived: false })),
+      ...archivedOrders.map((order) => ({ ...order, __isArchived: true })),
+    ];
+
     if (orderViewFilter === "all") {
-      return [
-        ...orders.map((order) => ({ ...order, __isArchived: false })),
-        ...archivedOrders.map((order) => ({ ...order, __isArchived: true })),
-      ];
+      return allList;
     }
     if (orderViewFilter === "active") {
-      return orders.map((order) => ({ ...order, __isArchived: false }));
+      return orders
+        .filter((o) => !["Cancelled", "CUSTOMER_CANCELLED", "FAILED_PAYMENT"].includes(o.status))
+        .map((order) => ({ ...order, __isArchived: false }));
     }
-    return archivedOrders.map((order) => ({ ...order, __isArchived: true }));
+    if (orderViewFilter === "processing") {
+      return orders
+        .filter((o) => String(o.status).toLowerCase() === "processing")
+        .map((order) => ({ ...order, __isArchived: false }));
+    }
+    if (orderViewFilter === "completed") {
+      return orders
+        .filter((o) => String(o.status).toLowerCase() === "delivered")
+        .map((order) => ({ ...order, __isArchived: false }));
+    }
+    if (orderViewFilter === "failed_payment") {
+      return orders
+        .filter((o) => o.status === "FAILED_PAYMENT")
+        .map((order) => ({ ...order, __isArchived: false }));
+    }
+    if (orderViewFilter === "customer_cancelled") {
+      return orders
+        .filter((o) => o.status === "CUSTOMER_CANCELLED" || o.cancelledBy === "CUSTOMER")
+        .map((order) => ({ ...order, __isArchived: false }));
+    }
+    if (orderViewFilter === "archived") {
+      return archivedOrders.map((order) => ({ ...order, __isArchived: true }));
+    }
+    return orders.map((order) => ({ ...order, __isArchived: false }));
   }, [orderViewFilter, orders, archivedOrders]);
 
   const ordersForViewFiltered = useMemo(() => {
@@ -4464,15 +4507,20 @@ const AdminDashboard = () => {
 
   const sidebarItems = [
     { id: "overview", label: "Overview", icon: "📊", permission: null },
+    { id: "work-desk", label: "My Work Desk", icon: "💼", permission: null },
+    { id: "agent-desk", label: "Customer Service Desk", icon: "🤝", permission: ["AGENT_ASSIST_VIEW", "CUSTOMERS_VIEW", "TICKETS_MANAGE"] },
     { id: "products", label: "Products & Stock", icon: "🛍️", permission: ["PRODUCTS_VIEW", "INVENTORY_VIEW"] },
     { id: "orders", label: "Orders", icon: "📦", permission: "ORDERS_VIEW" },
-    { id: "returns-replacements", label: "Returns & Replacements", icon: "🔄", permission: "ORDERS_RETURNS" },
+    { id: "returns-replacements", label: "Returns & Replacements", icon: "🔄", permission: ["ORDERS_RETURNS", "ORDERS_VIEW"] },
+    { id: "refunds", label: "Refund Management", icon: "💳", permission: ["FINANCE_MANAGE", "ORDERS_RETURNS", "ORDERS_VIEW"] },
     { id: "customers", label: "Customers", icon: "👤", permission: "CUSTOMERS_VIEW" },
     { id: "crm-dashboard", label: "CRM Console", icon: "🎯", permission: "CUSTOMERS_VIEW" },
     { id: "crm-campaigns", label: "CRM Campaigns", icon: "📣", permission: "MARKETING_CAMPAIGNS" },
     { id: "crm-segments", label: "CRM Segments", icon: "🧬", permission: "CUSTOMERS_VIEW" },
     { id: "crm-alerts", label: "CRM Alerts", icon: "🚨", permission: "CUSTOMERS_EDIT" },
-    { id: "tickets", label: "Support Tickets", icon: "💬", permission: ["TICKETS_MANAGE", "SUPPORT_CHAT"] },
+    { id: "support", label: "Customer Support", icon: "🎧", permission: ["TICKETS_MANAGE", "SUPPORT_CHAT"] },
+    { id: "callbacks", label: "Callback Management", icon: "📞", permission: ["TICKETS_MANAGE", "CUSTOMERS_VIEW"] },
+    { id: "reports-center", label: "Enterprise Reports", icon: "📈", permission: ["REPORTS_EXPORT", "BUSINESS_ANALYTICS_VIEW", "CUSTOMERS_VIEW"] },
     { id: "coupons", label: "Coupons & Settings", icon: "🎟️", permission: ["COUPONS_MANAGE", "COUPONS_VIEW", "COUPONS_RETENTION", "COUPONS_PUSH", "COUPONS_STORE_SETTINGS", "BUSINESS_ANALYTICS_VIEW", "CONTENT_HOMEPAGE"] },
     { id: "newsletter", label: "Newsletter", icon: "✉️", permission: "MARKETING_CAMPAIGNS" },
     { id: "employees", label: "Employees & Roles", icon: "👥", permission: ["EMPLOYEES_MANAGE", "ROLES_MANAGE", "DEPARTMENTS_MANAGE"] },
@@ -4641,10 +4689,14 @@ const AdminDashboard = () => {
               />
             </div>
 
-            <button className="p-2 rounded-full hover:bg-gold-100/50 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 transition cursor-pointer relative text-sm">
-              <span>🔔</span>
-              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-danger-lux animate-pulse" />
-            </button>
+            {/* Real-time Admin Notification Center Bell */}
+            <AdminNotificationBell
+              authHeader={authHeader}
+              onNavigateTab={(tab, search) => {
+                setActiveTab(tab === "tickets" ? "support" : tab);
+                if (search) setGlobalSearchQuery(search);
+              }}
+            />
 
             <div className="hidden sm:flex items-center gap-2 border-l border-gold-200/20 dark:border-gold-900/20 pl-4">
               <span className="h-1.5 w-1.5 rounded-full bg-gold-500 animate-pulse" />
@@ -4698,13 +4750,49 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === "overview" && renderOverviewTab()}
+          {activeTab === "work-desk" && (
+            <EmployeeWorkDeskTab
+              authHeader={authHeader}
+              adminAuth={adminAuth}
+              employees={employees}
+            />
+          )}
+          {activeTab === "agent-desk" && (
+            <CustomerServiceDeskTab
+              authHeader={authHeader}
+            />
+          )}
+          {activeTab === "refunds" && (
+            <RefundManagementTab
+              authHeader={authHeader}
+            />
+          )}
           {activeTab === "newsletter" && renderNewsletterTab()}
           {activeTab === "logs" && renderLogsTab()}
           {activeTab === "employees" && renderEmployeesTab()}
           {activeTab === "products" && renderProductsTab()}
           {activeTab === "coupons" && renderCouponsTab()}
           {activeTab === "orders" && renderOrdersTab()}
-          {activeTab === "tickets" && renderTicketsTab()}
+          {(activeTab === "support" || activeTab === "tickets") && (
+            <CustomerSupportTab
+              authHeader={authHeader}
+              adminAuth={adminAuth}
+              employees={employees}
+            />
+          )}
+          {activeTab === "callbacks" && (
+            <CallbackManagementTab
+              authHeader={authHeader}
+              adminAuth={adminAuth}
+              employees={employees}
+            />
+          )}
+          {activeTab === "reports-center" && (
+            <EnterpriseReportsTab
+              authHeader={authHeader}
+              adminAuth={adminAuth}
+            />
+          )}
           {activeTab === "returns-replacements" && <ReturnsReplacementsTab />}
           {activeTab === "customers" && <CustomersSection authHeader={authHeader} adminAuth={adminAuth} globalSearchQuery={globalSearchQuery} />}
           {activeTab === "crm-dashboard" && <CrmDashboardTab authHeader={authHeader} adminAuth={adminAuth} />}
@@ -5564,21 +5652,25 @@ const AdminDashboard = () => {
               ) : (
                 <>
                   <div className="mt-3 flex overflow-x-auto items-center gap-2.5 no-scrollbar whitespace-nowrap scroll-smooth w-full pb-1">
-                    {["all", "active", "archived"].map((view) => (
+                    {[
+                      { id: "all", label: "All", count: orders.length + archivedOrders.length },
+                      { id: "active", label: "Active Orders", count: orders.filter((o) => !["Cancelled", "CUSTOMER_CANCELLED", "FAILED_PAYMENT"].includes(o.status)).length },
+                      { id: "processing", label: "Processing Orders", count: orders.filter((o) => String(o.status).toLowerCase() === "processing").length },
+                      { id: "completed", label: "Completed Orders", count: orders.filter((o) => String(o.status).toLowerCase() === "delivered").length },
+                      { id: "failed_payment", label: "Failed Payment Orders", count: orders.filter((o) => o.status === "FAILED_PAYMENT").length },
+                      { id: "customer_cancelled", label: "Customer Cancelled Orders", count: orders.filter((o) => o.status === "CUSTOMER_CANCELLED" || o.cancelledBy === "CUSTOMER").length },
+                      { id: "archived", label: "Archived", count: archivedOrders.length },
+                    ].map((f) => (
                       <button
-                        key={view}
+                        key={f.id}
                         type="button"
-                        onClick={() => setOrderViewFilter(view)}
-                        className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${orderViewFilter === view
+                        onClick={() => setOrderViewFilter(f.id)}
+                        className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${orderViewFilter === f.id
                           ? "bg-gold-500 text-white shadow-sm"
                           : "bg-cream dark:bg-white/5 border border-gold-200/10 dark:border-gold-900/10 text-gold-700 dark:text-gray-300 hover:bg-gold-500/10"
                           }`}
                       >
-                        {view === "all"
-                          ? `All (${orders.length + archivedOrders.length})`
-                          : view === "active"
-                            ? `Active (${orders.length})`
-                            : `Archived (${archivedOrders.length})`}
+                        {`${f.label} (${f.count})`}
                       </button>
                     ))}
                     <select
@@ -5725,15 +5817,39 @@ const AdminDashboard = () => {
                             ))}
                           </div>
                         ) : null}
+                        {order.status === "CUSTOMER_CANCELLED" || order.cancelledBy === "CUSTOMER" ? (
+                          <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-2.5 text-xs text-rose-900 space-y-0.5">
+                            <span className="font-bold uppercase tracking-wider text-[9px] text-rose-700">Cancelled by Customer</span>
+                            {order.cancellationReason && <p className="font-medium">Reason: {order.cancellationReason}</p>}
+                            {order.cancelledAt && <p className="text-[10px] text-gray-500">At: {new Date(order.cancelledAt).toLocaleString("en-IN")}</p>}
+                          </div>
+                        ) : order.status === "FAILED_PAYMENT" ? (
+                          <div className="rounded-xl border border-red-200 bg-red-50/50 p-2.5 text-xs text-red-900 space-y-0.5">
+                            <span className="font-bold uppercase tracking-wider text-[9px] text-red-700">Payment Unsuccessful</span>
+                            {order.failureReason && <p className="font-medium">Reason: {order.failureReason}</p>}
+                          </div>
+                        ) : null}
                         <div className="mt-2 grid grid-cols-2 gap-2">
-                          <button onClick={() => handlePrintShippingLabel(order)} className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600">Label</button>
-                          <button onClick={() => handlePrintInvoice(order)} className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600">Invoice</button>
+                          <button
+                            onClick={() => handlePrintShippingLabel(order)}
+                            disabled={order.status === "FAILED_PAYMENT" || order.status === "CUSTOMER_CANCELLED" || order.status === "Cancelled"}
+                            className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            Label
+                          </button>
+                          <button
+                            onClick={() => handlePrintInvoice(order)}
+                            disabled={order.status === "FAILED_PAYMENT" || order.status === "CUSTOMER_CANCELLED" || order.status === "Cancelled"}
+                            className="rounded-lg border border-gold-200/50 dark:border-gold-900/30 px-3 py-1.5 text-xs text-gold-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            Invoice
+                          </button>
                           {order.__isArchived ? (
                             <button onClick={() => handleRestoreOrder(order)} className="rounded-lg border border-success-lux/50 bg-success-lux/10 px-3 py-1.5 text-xs text-success-lux">Restore</button>
                           ) : (
                             <button
                               onClick={() => handleArchiveOrder(order)}
-                              disabled={order.status === "Cancelled"}
+                              disabled={order.status === "Cancelled" || order.status === "CUSTOMER_CANCELLED" || order.status === "FAILED_PAYMENT"}
                               className="rounded-lg border border-warning-lux/50 bg-warning-lux/10 px-3 py-1.5 text-xs text-warning-lux disabled:opacity-50"
                             >
                               Archive
@@ -5741,7 +5857,7 @@ const AdminDashboard = () => {
                           )}
                           <button
                             onClick={() => handleDeleteOrder(order)}
-                            disabled={order.status !== "Cancelled" || order.__isArchived}
+                            disabled={(order.status !== "Cancelled" && order.status !== "CUSTOMER_CANCELLED") || order.__isArchived}
                             className="rounded-lg bg-danger-lux px-3 py-1.5 text-xs text-white disabled:opacity-50"
                           >
                             Delete
@@ -5906,7 +6022,34 @@ const AdminDashboard = () => {
                               </div>
                             </td>
                             <td className="py-3">
-                              {order.cancellationRequest?.status === "Pending" ? (
+                              {order.status === "CUSTOMER_CANCELLED" || order.cancelledBy === "CUSTOMER" ? (
+                                <div className="space-y-1">
+                                  <span className="inline-flex rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[9px] font-bold uppercase text-rose-700">
+                                    Customer Cancelled
+                                  </span>
+                                  {order.cancellationReason && (
+                                    <p className="max-w-[220px] text-xs text-rose-900 font-medium">Reason: {order.cancellationReason}</p>
+                                  )}
+                                  {order.cancelledAt && (
+                                    <p className="text-[10px] text-gray-500 font-light">At: {new Date(order.cancelledAt).toLocaleString("en-IN")}</p>
+                                  )}
+                                  {order.cancellationIpAddress && (
+                                    <p className="text-[10px] text-gray-400 font-mono">IP: {order.cancellationIpAddress}</p>
+                                  )}
+                                </div>
+                              ) : order.status === "FAILED_PAYMENT" ? (
+                                <div className="space-y-1">
+                                  <span className="inline-flex rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[9px] font-bold uppercase text-red-700">
+                                    Failed Payment
+                                  </span>
+                                  {order.failureReason && (
+                                    <p className="max-w-[220px] text-xs text-red-900 font-medium">Reason: {order.failureReason}</p>
+                                  )}
+                                  {order.paymentAttemptId && (
+                                    <p className="text-[10px] text-gray-400 font-mono">Attempt: {order.paymentAttemptId}</p>
+                                  )}
+                                </div>
+                              ) : order.cancellationRequest?.status === "Pending" ? (
                                 <div className="space-y-1">
                                   <p className="text-xs font-semibold text-warning-lux">Pending</p>
                                   <p className="max-w-[220px] text-xs text-gray-lux">{order.cancellationRequest.reason}</p>
@@ -5941,7 +6084,8 @@ const AdminDashboard = () => {
                             <td className="py-3">
                               <button
                                 onClick={() => handlePrintShippingLabel(order)}
-                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
+                                disabled={order.status === "FAILED_PAYMENT" || order.status === "CUSTOMER_CANCELLED" || order.status === "Cancelled"}
+                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 Print Label
                               </button>
@@ -5949,7 +6093,8 @@ const AdminDashboard = () => {
                             <td className="py-3">
                               <button
                                 onClick={() => handlePrintInvoice(order)}
-                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
+                                disabled={order.status === "FAILED_PAYMENT" || order.status === "CUSTOMER_CANCELLED" || order.status === "Cancelled"}
+                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 Print Invoice
                               </button>
@@ -5957,7 +6102,8 @@ const AdminDashboard = () => {
                             <td className="py-3">
                               <button
                                 onClick={() => handlePrintCombinedA4(order)}
-                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer"
+                                disabled={order.status === "FAILED_PAYMENT" || order.status === "CUSTOMER_CANCELLED" || order.status === "Cancelled"}
+                                className="w-full rounded-lg border border-gold-200/50 hover:border-gold-500 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-gold-600 hover:text-gold-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                               >
                                 Print A4 Both
                               </button>

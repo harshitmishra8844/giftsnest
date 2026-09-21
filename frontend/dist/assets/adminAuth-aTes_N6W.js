@@ -1,0 +1,1 @@
+var e=`giftnest_admin_auth`,t=t=>{localStorage.setItem(e,JSON.stringify(t))},n=()=>{try{let t=localStorage.getItem(e);return t?JSON.parse(t):null}catch{return null}},r=()=>{localStorage.removeItem(e)};export{n,t as r,r as t};

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import api from "../../services/api";
+import api, { resolveMediaUrl } from "../../services/api";
 import RichTextEditor from "./RichTextEditor";
 import ImageCropper from "./ImageCropper";
 
@@ -238,17 +238,18 @@ export default function CmsManager({ authHeader, adminAuth }) {
   // --- RENDER FORMS ---
 
   const renderImageField = (label, valuePath, currentValue) => {
+    const resolvedUrl = resolveMediaUrl(currentValue);
     return (
       <div className="space-y-2 border-b border-gray-100 pb-4">
         <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">{label}</label>
         <div className="flex flex-wrap items-center gap-4">
           {currentValue ? (
-            <div className="relative w-28 h-28 rounded-xl border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
-              <img src={currentValue} alt="Preview" className="w-full h-full object-cover" />
+            <div className="relative w-28 h-28 rounded-xl border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center shadow-xs">
+              <img src={resolvedUrl} alt="Preview" className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={() => setNestedField(valuePath, "")}
-                className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-[8px] font-bold shadow hover:bg-red-700"
+                className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-[8px] font-bold shadow hover:bg-red-700 cursor-pointer"
                 title="Remove image"
               >
                 ✕
@@ -866,60 +867,267 @@ export default function CmsManager({ authHeader, adminAuth }) {
       case "banners":
         return (
           <div className="space-y-6">
-            <h3 className="text-xl font-serif text-luxury-black font-bold">Marketing Offer Banners</h3>
-            {content.items?.map((item, idx) => (
-              <div key={idx} className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-gray-500 uppercase">Banner Card {idx + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = [...content.items];
-                      updated.splice(idx, 1);
-                      setNestedField("draftContent.items", updated);
-                    }}
-                    className="text-xs text-red-500 hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {renderInput("Badge tag (e.g. Best Seller)", `draftContent.items.${idx}.tag`, item.tag)}
-                  {renderInput("Main Title", `draftContent.items.${idx}.title`, item.title)}
-                  {renderInput("Subtext description", `draftContent.items.${idx}.subtitle`, item.subtitle)}
-                  {renderInput("Redirect Link / Path", `draftContent.items.${idx}.link`, item.link)}
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-3 gap-3">
+              <div>
+                <h3 className="text-xl font-serif text-luxury-black font-bold">Marketing Offer Banners</h3>
+                <p className="text-xs text-text-secondary font-light mt-0.5">
+                  Promotional banners displayed on storefront discovery pages and offer cards.
+                </p>
               </div>
-            ))}
+              <button
+                type="button"
+                onClick={() => setNestedField("draftContent.items", [...(content.items || []), { tag: "Featured", title: "Luxury Gift Hamper", subtitle: "Curated perfection for loved ones", link: "/products" }])}
+                className="rounded-full bg-gold-500 hover:bg-gold-600 text-white px-5 py-2 text-xs font-bold uppercase tracking-wider transition shadow-sm cursor-pointer shrink-0"
+              >
+                + Add Offer Banner
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {content.items?.map((item, idx) => (
+                <div key={idx} className="rounded-2xl border border-champagne/40 bg-white p-5 shadow-xs space-y-4 hover:border-gold-300 transition">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                    <span className="text-xs font-bold text-gold-700 uppercase tracking-wider">
+                      Banner Card #{idx + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = [...content.items];
+                        updated.splice(idx, 1);
+                        setNestedField("draftContent.items", updated);
+                      }}
+                      className="text-xs font-semibold text-red-500 hover:text-red-700 hover:underline cursor-pointer"
+                    >
+                      Delete Banner
+                    </button>
+                  </div>
+
+                  {/* Live Visual Card Preview */}
+                  <div className="rounded-xl border border-gold-300/30 bg-gradient-to-r from-[#1C1C1C] via-[#2A2A2A] to-[#1C1C1C] text-white p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                    <div className="space-y-1">
+                      {item.tag && (
+                        <span className="inline-block rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-400 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                          {item.tag}
+                        </span>
+                      )}
+                      <h4 className="text-sm font-serif font-bold text-white tracking-wide">
+                        {item.title || "Banner Title"}
+                      </h4>
+                      <p className="text-xs text-gray-300 font-light">
+                        {item.subtitle || "Banner description subtext"}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gold-400 flex items-center gap-1 border border-gold-400/30 px-3 py-1.5 rounded-full bg-black/30 shrink-0">
+                      Explore →
+                    </span>
+                  </div>
+
+                  {/* Form Inputs */}
+                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 pt-1">
+                    {renderInput("Badge Tag", `draftContent.items.${idx}.tag`, item.tag)}
+                    {renderInput("Main Title", `draftContent.items.${idx}.title`, item.title)}
+                    {renderInput("Subtext Description", `draftContent.items.${idx}.subtitle`, item.subtitle)}
+                    {renderInput("Redirect Link", `draftContent.items.${idx}.link`, item.link)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <button
               type="button"
-              onClick={() => setNestedField("draftContent.items", [...(content.items || []), { tag: "", title: "", subtitle: "", link: "" }])}
-              className="rounded-xl border border-dashed border-gray-300 hover:border-gold-400 p-3 w-full text-center text-xs text-gray-500 font-bold uppercase tracking-wider"
+              onClick={() => setNestedField("draftContent.items", [...(content.items || []), { tag: "Special", title: "Celebration Combo", subtitle: "Flowers, chocolates & cakes", link: "/products" }])}
+              className="rounded-2xl border-2 border-dashed border-gray-300 hover:border-gold-500 hover:bg-gold-50/20 p-4 w-full text-center text-xs text-gray-600 font-bold uppercase tracking-wider transition cursor-pointer"
             >
-              + Add Offer Banner
+              + Add Another Offer Banner
             </button>
           </div>
         );
 
       case "popups":
+        const popupActive = Boolean(content.active);
+        const popupImgUrl = resolveMediaUrl(content.imageUrl);
+
         return (
-          <div className="space-y-6 font-bold">
-            <h3 className="text-xl font-serif text-luxury-black">Promotional Action Popup Modal</h3>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <input
-                type="checkbox"
-                checked={content.active || false}
-                onChange={(e) => setNestedField("draftContent.active", e.target.checked)}
-              />
-              Enable newsletter signup overlay popup when visitors browse the site
-            </label>
-            <div className="grid gap-4 md:grid-cols-2">
-              {renderInput("Popup Headline Title", "draftContent.title", content.title)}
-              {renderInput("Redirect CTA Button label", "draftContent.buttonText", content.buttonText)}
-              {renderInput("Redirect CTA Button link override", "draftContent.buttonLink", content.buttonLink)}
+          <div className="space-y-8">
+            {/* Header & Status Card */}
+            <div className="rounded-2xl border border-champagne/40 bg-gradient-to-r from-gold-50/40 via-white to-gold-50/20 p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">💬</span>
+                  <h3 className="text-lg font-serif font-bold text-luxury-black">Promotional Popup Banner</h3>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    popupActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-gray-100 text-gray-600 border border-gray-200"
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${popupActive ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
+                    {popupActive ? "Live on Storefront" : "Disabled (Hidden)"}
+                  </span>
+                </div>
+                <p className="text-xs text-text-secondary font-light mt-1">
+                  Configure the promotional banner modal that appears to visitors browsing the storefront.
+                </p>
+              </div>
+
+              {/* Status Toggle Switch */}
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={popupActive}
+                  onChange={(e) => setNestedField("draftContent.active", e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-500"></div>
+                <span className="ml-2.5 text-xs font-bold uppercase tracking-wider text-luxury-black">
+                  {popupActive ? "Enabled" : "Disabled"}
+                </span>
+              </label>
             </div>
-            {renderTextarea("Popup Message Body", "draftContent.text", content.text)}
-            {renderImageField("Side cover Image graphic", "draftContent.imageUrl", content.imageUrl)}
+
+            {/* Editor Grid: Controls on Left, Live Customer Simulation on Right */}
+            <div className="grid gap-8 lg:grid-cols-12 items-start">
+              {/* Left Column: Form Controls (7 cols) */}
+              <div className="lg:col-span-7 space-y-5">
+                <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-xs space-y-5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gold-700 border-b border-gray-100 pb-2">
+                    Banner Content & CTA
+                  </h4>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      {renderInput("Popup Headline Title *", "draftContent.title", content.title)}
+                    </div>
+
+                    <div>
+                      {renderInput("CTA Button Label", "draftContent.buttonText", content.buttonText)}
+                    </div>
+
+                    <div>
+                      {renderInput("CTA Destination URL", "draftContent.buttonLink", content.buttonLink)}
+                    </div>
+                  </div>
+
+                  {/* Display Delay Timing Configuration */}
+                  <div className="rounded-xl border border-gold-250/30 bg-gold-50/20 p-4 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-luxury-black flex items-center gap-1.5">
+                        <span>⏱️</span> Display Delay Timing
+                      </label>
+                      <span className="text-[10px] font-bold text-gold-700 bg-gold-500/10 border border-gold-500/20 px-2.5 py-0.5 rounded-full">
+                        {Number(content.delay ?? 2.5) === 0 ? "Immediate (0s)" : `${content.delay ?? 2.5} Seconds`}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-text-secondary font-light">
+                      Choose how long to wait before showing the popup banner to visitors:
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {[
+                        { label: "Immediate (0s)", value: 0 },
+                        { label: "1.5s", value: 1.5 },
+                        { label: "2.5s (Standard)", value: 2.5 },
+                        { label: "5s", value: 5 },
+                        { label: "10s", value: 10 },
+                      ].map((preset) => {
+                        const isSelected = Number(content.delay ?? 2.5) === preset.value;
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setNestedField("draftContent.delay", preset.value)}
+                            className={`px-2 py-2 rounded-xl text-xs font-bold transition border cursor-pointer text-center ${
+                              isSelected
+                                ? "bg-gold-500 text-white border-gold-600 shadow-xs"
+                                : "bg-white text-luxury-black border-gray-200 hover:border-gold-300 hover:bg-gold-50/40"
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    {renderTextarea("Popup Message Body (Offer description, promo code)", "draftContent.text", content.text)}
+                  </div>
+
+                  <div>
+                    {renderImageField("Side Cover Banner Image", "draftContent.imageUrl", content.imageUrl)}
+                    <p className="text-[11px] text-text-secondary mt-1 font-light">
+                      Recommended: Portrait or square image (~600x800). If no image is provided, a centered luxury text layout is displayed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Live Interactive Customer Preview (5 cols) */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="sticky top-6 rounded-3xl border border-gold-300/30 bg-stone-900 text-white p-5 shadow-xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs">✨</span>
+                      <span className="text-xs font-bold uppercase tracking-widest text-gold-400">Live Customer Preview</span>
+                    </div>
+                    <span className="text-[9px] uppercase tracking-wider text-gray-400 bg-white/10 px-2.5 py-0.5 rounded-full">
+                      Exact Storefront Simulation
+                    </span>
+                  </div>
+
+                  {/* Simulated Modal Overlay & Dialog */}
+                  <div className="relative rounded-2xl bg-white text-luxury-black overflow-hidden shadow-2xl border border-gold-400/20 flex flex-col sm:flex-row min-h-[220px]">
+                    {/* Simulated Close Button */}
+                    <div className="absolute top-2.5 right-2.5 z-10 bg-black/5 hover:bg-black/10 text-gray-500 rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold">
+                      ✕
+                    </div>
+
+                    {/* Image Column if present */}
+                    {popupImgUrl ? (
+                      <div className="sm:w-5/12 h-40 sm:h-auto min-h-[180px] bg-gray-100 relative shrink-0">
+                        <img
+                          src={popupImgUrl}
+                          alt="Banner Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : null}
+
+                    {/* Content Column */}
+                    <div className={`p-5 flex flex-col justify-center ${popupImgUrl ? "sm:w-7/12 text-left" : "w-full text-center items-center py-8"}`}>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-gold-600 mb-1">
+                        Special Promotion
+                      </span>
+                      <h4 className="text-base sm:text-lg font-serif font-bold text-luxury-black leading-tight line-clamp-2 mb-1.5">
+                        {content.title || "Special Discount!"}
+                      </h4>
+                      <p className="text-[11px] text-text-secondary font-light leading-relaxed mb-4 line-clamp-3">
+                        {content.text || "Get 10% off your first purchase. Use code NIYORA10 at checkout."}
+                      </p>
+                      <button
+                        type="button"
+                        className="inline-block rounded-full bg-gold-500 hover:bg-gold-600 text-white font-bold tracking-widest text-[10px] uppercase px-4 py-2 transition shadow-xs w-full text-center cursor-default"
+                      >
+                        {content.buttonText || "Shop Now"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Preview Status Alert */}
+                  {!popupActive ? (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-200 flex items-center gap-2">
+                      <span>⚠️</span>
+                      <span>Popup is currently <strong>disabled</strong> and will not appear to visitors.</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-[11px] text-emerald-200 flex items-center gap-2">
+                      <span>✓</span>
+                      <span>
+                        Popup is <strong>live</strong> and appears{" "}
+                        <strong>{Number(content.delay ?? 2.5) === 0 ? "immediately upon arrival" : `after ${content.delay ?? 2.5}s`}</strong> on site.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         );
 

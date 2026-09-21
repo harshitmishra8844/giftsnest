@@ -5,6 +5,7 @@ const User = require("../models/User");
 const Otp = require("../models/Otp");
 const LoginActivityLog = require("../models/LoginActivityLog");
 const { sendOtpEmail } = require("../services/emailService");
+const { notifyNewCustomerRegistered } = require("../services/notificationService");
 
 const parseUserAgent = (userAgentString) => {
   const ua = userAgentString || "";
@@ -307,6 +308,8 @@ const verifyOtp = async (req, res) => {
           loginMethod: "OTP",
           verificationStatus: "Verified",
         });
+
+        notifyNewCustomerRegistered(user).catch((err) => console.error("[notif] New customer register error:", err));
       }
     } else {
       user = await User.findOne({ email: trimmedEmail });
@@ -364,6 +367,8 @@ const googleLogin = async (req, res) => {
         loginMethod: "Email", // Using Email since Google Login is email-based and avoids validation enum constraints
         verificationStatus: "Verified",
       });
+
+      notifyNewCustomerRegistered(user).catch((err) => console.error("[notif] Google new customer error:", err));
     } else {
       if (user.status === "Suspended") {
         await logUserLoginAttempt(user.name, user.email, "Failed", user._id, req);

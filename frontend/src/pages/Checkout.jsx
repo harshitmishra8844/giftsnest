@@ -348,10 +348,16 @@ const Checkout = () => {
               },
             });
           } catch (verifyError) {
-            setError(
-              verifyError.response?.data?.message ||
-                "Payment was made but verification failed. Please contact support."
-            );
+            await api
+              .post("/payments/record-failure", {
+                appOrderId: appOrder._id,
+                paymentAttemptId: response.razorpay_payment_id || response.razorpay_order_id,
+                failureReason: verifyError.response?.data?.message || "Payment verification failed",
+                failureType: "PAYMENT_VERIFICATION_FAILED",
+              })
+              .catch(() => {});
+
+            setError("Your payment was unsuccessful. No order has been placed. Please try again.");
           } finally {
             setPlacingOrder(false);
           }
@@ -367,16 +373,35 @@ const Checkout = () => {
           color: "#D4AF37",
         },
         modal: {
-          ondismiss: () => {
-            setError("Payment popup closed. You can retry checkout.");
+          ondismiss: async () => {
+            await api
+              .post("/payments/record-failure", {
+                appOrderId: appOrder._id,
+                paymentAttemptId: paymentConfig.razorpayOrderId,
+                failureReason: "User closed payment window",
+                failureType: "USER_CLOSED_WINDOW",
+              })
+              .catch(() => {});
+
+            setError("Your payment was unsuccessful. No order has been placed. Please try again.");
             setInfo("");
             setPlacingOrder(false);
           },
         },
       });
 
-      razorpay.on("payment.failed", () => {
-        setError("Payment failed or cancelled. Please try again.");
+      razorpay.on("payment.failed", async (response) => {
+        await api
+          .post("/payments/record-failure", {
+            appOrderId: appOrder._id,
+            paymentAttemptId: response?.error?.metadata?.payment_id || paymentConfig.razorpayOrderId,
+            failureReason: response?.error?.description || "Payment failed or was declined by gateway",
+            failureType: "GATEWAY_ERROR",
+            errorDetails: response?.error || {},
+          })
+          .catch(() => {});
+
+        setError("Your payment was unsuccessful. No order has been placed. Please try again.");
         setInfo("");
         setPlacingOrder(false);
       });
@@ -384,7 +409,11 @@ const Checkout = () => {
       razorpay.open();
       return;
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Unable to place order. Please try again.");
+      setError(
+        selectedMethod === "Online"
+          ? "Your payment was unsuccessful. No order has been placed. Please try again."
+          : err.response?.data?.message || err.message || "Unable to place order. Please try again."
+      );
       setInfo("");
       setPlacingOrder(false);
     }

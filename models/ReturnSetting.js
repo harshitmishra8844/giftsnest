@@ -13,6 +13,15 @@ const returnSettingSchema = new mongoose.Schema(
       default: 7,
       required: true,
     },
+    replacementWindowDays: {
+      type: Number,
+      default: 7,
+      required: true,
+    },
+    allowPersonalizedExceptions: {
+      type: Boolean,
+      default: true, // Allows returns on personalized products if Damaged, Wrong Product, or Manufacturing Defect
+    },
     returnPolicyText: {
       type: String,
       default: "Returns must be requested within 7 days of delivery with original packaging and product photos.",

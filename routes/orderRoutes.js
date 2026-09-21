@@ -5,6 +5,7 @@ const {
   getMyOrders,
   trackOrder,
   listActiveCouponsPublic,
+  customerCancelOrder,
   requestOrderCancellation,
 } = require("../controllers/orderController");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
@@ -17,7 +18,9 @@ router.post("/", protect, createOrder);
 router.post("/apply-coupon", protect, applyCoupon);
 router.post("/track", trackOrder);
 router.get("/my", protect, getMyOrders);
-router.post("/:id/cancellation-request", protect, requestOrderCancellation);
+router.post("/:id/cancel", protect, customerCancelOrder);
+router.post("/:id/customer-cancel", protect, customerCancelOrder);
+router.post("/:id/cancellation-request", protect, customerCancelOrder);
 router.get("/", protect, adminOnly, getOrders);
 router.put("/:id/status", protect, adminOnly, updateOrderStatus);
 

@@ -5,6 +5,7 @@ const Department = require("../models/Department");
 const EmailSetting = require("../models/EmailSetting");
 const CmsContent = require("../models/CmsContent");
 const CustomerSegment = require("../models/CustomerSegment");
+const SlaPolicy = require("../models/SlaPolicy");
 
 const predefinedPermissions = [
   // Products
@@ -34,6 +35,11 @@ const predefinedPermissions = [
   { code: "TICKETS_MANAGE", name: "Manage Support Tickets", group: "Customers" },
   { code: "SUPPORT_CHAT", name: "Handle Live Chat Support", group: "Customers" },
   { code: "SUPPORT_EMAIL", name: "Handle Email Support", group: "Customers" },
+  { code: "AGENT_ASSIST_VIEW", name: "Access Customer Service Desk & 360 Profile", group: "Customers" },
+  { code: "AGENT_ASSIST_ACTION", name: "Create Return/Replacement/Ticket on Customer Behalf", group: "Customers" },
+  { code: "AGENT_REMARKS_ADD", name: "Record Call Outcome & Interaction Remarks", group: "Customers" },
+  { code: "AGENT_REFUND_CREATE", name: "Initiate Customer Refund on Call", group: "Finance" },
+  { code: "AGENT_REFUND_APPROVE", name: "Approve Exception & Agent-Initiated Refunds", group: "Finance" },
 
   // Marketing
   { code: "COUPONS_MANAGE", name: "Manage Coupons (Super Admin)", group: "Marketing" },
@@ -62,6 +68,11 @@ const predefinedPermissions = [
   { code: "DEPARTMENTS_MANAGE", name: "Manage Departments", group: "Administration" },
   { code: "ACTIVITY_LOGS_VIEW", name: "View System Activity Logs", group: "Administration" },
   { code: "BUSINESS_ANALYTICS_VIEW", name: "View Complete Business Analytics", group: "Administration" },
+  { code: "CALLBACK_MANAGE", name: "Manage Callbacks & Telephony", group: "Customers" },
+  { code: "TASK_TRANSFER", name: "Transfer Tasks Across Departments", group: "Administration" },
+  { code: "SLA_MANAGE", name: "Manage SLAs and Escalations", group: "Administration" },
+  { code: "OPERATIONS_MANAGE", name: "Manage Operations & Workflows", group: "Administration" },
+  { code: "REPORTS_EXPORT", name: "Export Enterprise Reports", group: "Administration" },
 ];
 
 const seedDB = async () => {
@@ -139,6 +150,91 @@ const seedDB = async () => {
         isCustom: false,
         permissions: [
           "CONTENT_HOMEPAGE", "CONTENT_BLOGS", "BANNER_MANAGE", "CONTENT_SEO"
+        ]
+      },
+      // --- 11 ENTERPRISE PLATFORM ROLES ---
+      {
+        name: "Operations Manager",
+        description: "Oversees cross-department fulfillment, escalations, inventory, returns, and task routing.",
+        isCustom: false,
+        permissions: [
+          "OPERATIONS_MANAGE", "ORDERS_VIEW", "ORDERS_STATUS", "ORDERS_SHIPPING", "ORDERS_RETURNS",
+          "INVENTORY_VIEW", "INVENTORY_MANAGE", "CUSTOMERS_VIEW", "TICKETS_MANAGE", "TASK_TRANSFER",
+          "SLA_MANAGE", "BUSINESS_ANALYTICS_VIEW", "REPORTS_EXPORT"
+        ]
+      },
+      {
+        name: "Customer Support Manager",
+        description: "Manages support desk, live chat, complaint resolutions, ticket transfers, and support SLAs.",
+        isCustom: false,
+        permissions: [
+          "CUSTOMERS_VIEW", "CUSTOMERS_EDIT", "CUSTOMERS_NOTIFY", "TICKETS_MANAGE", "SUPPORT_CHAT",
+          "SUPPORT_EMAIL", "CALLBACK_MANAGE", "TASK_TRANSFER", "SLA_MANAGE", "BUSINESS_ANALYTICS_VIEW", "REPORTS_EXPORT"
+        ]
+      },
+      {
+        name: "Sales Manager",
+        description: "Drives customer conversions, monitors callbacks, campaigns, and inquiry pipelines.",
+        isCustom: false,
+        permissions: [
+          "CUSTOMERS_VIEW", "CUSTOMERS_NOTIFY", "ORDERS_VIEW", "COUPONS_VIEW", "COUPONS_MANAGE",
+          "CALLBACK_MANAGE", "MARKETING_CAMPAIGNS", "BUSINESS_ANALYTICS_VIEW", "REPORTS_EXPORT"
+        ]
+      },
+      {
+        name: "Callback Executive",
+        description: "Dedicated callback center agent. Places customer calls, logs remarks, schedules follow-ups, and routes tasks.",
+        isCustom: false,
+        permissions: [
+          "CALLBACK_MANAGE", "CUSTOMERS_VIEW", "TICKETS_MANAGE", "TASK_TRANSFER"
+        ]
+      },
+      {
+        name: "Support Executive",
+        description: "Frontline customer query resolution, complaint handling, live chat assistance, and task escalation.",
+        isCustom: false,
+        permissions: [
+          "TICKETS_MANAGE", "SUPPORT_CHAT", "SUPPORT_EMAIL", "CUSTOMERS_VIEW", "TASK_TRANSFER"
+        ]
+      },
+      {
+        name: "Return Executive",
+        description: "Verifies evidence photos/videos, approves/rejects return requests, and coordinates pickups.",
+        isCustom: false,
+        permissions: [
+          "ORDERS_RETURNS", "ORDERS_VIEW", "TICKETS_MANAGE", "CUSTOMERS_VIEW", "TASK_TRANSFER"
+        ]
+      },
+      {
+        name: "Refund Executive",
+        description: "Validates payment records, initiates payment gateway refunds, and audits financial transactions.",
+        isCustom: false,
+        permissions: [
+          "FINANCE_VIEW", "FINANCE_MANAGE", "ORDERS_RETURNS", "ORDERS_VIEW", "TICKETS_MANAGE", "CUSTOMERS_VIEW", "TASK_TRANSFER"
+        ]
+      },
+      {
+        name: "Order Executive",
+        description: "Monitors order lifecycle, updates statuses, prints invoices and bills.",
+        isCustom: false,
+        permissions: [
+          "ORDERS_VIEW", "ORDERS_STATUS", "ORDERS_SHIPPING", "TICKETS_MANAGE", "CUSTOMERS_VIEW", "TASK_TRANSFER"
+        ]
+      },
+      {
+        name: "Logistics Executive",
+        description: "Coordinates with Delhivery, BlueDart, XpressBees courier carriers for delivery and return pickups.",
+        isCustom: false,
+        permissions: [
+          "ORDERS_VIEW", "ORDERS_STATUS", "ORDERS_SHIPPING", "ORDERS_RETURNS", "TASK_TRANSFER"
+        ]
+      },
+      {
+        name: "Inventory Executive",
+        description: "Monitors warehouse stock thresholds, updates product inventory, and reserves replacement items.",
+        isCustom: false,
+        permissions: [
+          "INVENTORY_VIEW", "INVENTORY_MANAGE", "PRODUCTS_VIEW", "TASK_TRANSFER"
         ]
       }
     ];
@@ -505,6 +601,58 @@ const seedCmsContent = async () => {
       if (!exists) {
         await CustomerSegment.create(seg);
         console.log(`[seeder] Created default CRM segment: ${seg.name}`);
+      }
+    }
+
+    // 6. Seed Default SLA Policies
+    const defaultSlaPolicies = [
+      {
+        name: "Callback Request SLA",
+        source: "Callback Request",
+        priority: "All",
+        firstResponseMinutes: 15,
+        resolutionMinutes: 240, // 4 hours
+        autoEscalate: true,
+      },
+      {
+        name: "Critical Complaints & Escalations SLA",
+        source: "Complaint",
+        priority: "Critical",
+        firstResponseMinutes: 30,
+        resolutionMinutes: 720, // 12 hours
+        autoEscalate: true,
+      },
+      {
+        name: "Returns & Replacements SLA",
+        source: "Return Request",
+        priority: "All",
+        firstResponseMinutes: 60,
+        resolutionMinutes: 2880, // 48 hours
+        autoEscalate: true,
+      },
+      {
+        name: "Refund Processing SLA",
+        source: "Refund Request",
+        priority: "All",
+        firstResponseMinutes: 60,
+        resolutionMinutes: 1440, // 24 hours
+        autoEscalate: true,
+      },
+      {
+        name: "General Customer Queries SLA",
+        source: "Contact Form",
+        priority: "All",
+        firstResponseMinutes: 60,
+        resolutionMinutes: 1440, // 24 hours
+        autoEscalate: true,
+      },
+    ];
+
+    for (const policy of defaultSlaPolicies) {
+      const exists = await SlaPolicy.findOne({ name: policy.name });
+      if (!exists) {
+        await SlaPolicy.create(policy);
+        console.log(`[seeder] Created default SLA policy: ${policy.name}`);
       }
     }
 

@@ -268,12 +268,139 @@ const buildSummaryCardHtml = (order) => {
   `;
 };
 
+
+/**
+ * Centrally and robustly resolves customer email and name from any combination of:
+ * - Order document / object (with order.email, order.userId, order.address.fullName)
+ * - User document / object / ObjectId / string ID
+ * - ReturnRequest / Return document / object (with customerId, user, items)
+ * - Fallback document or User
+ */
+const resolveCustomerDetails = async (target, fallbackDoc = null) => {
+  let email = "";
+  let name = "";
+
+  const extractFromObject = async (obj) => {
+    if (!obj) return;
+
+    // 1. Direct email string passed as obj
+    if (typeof obj === "string" && obj.includes("@")) {
+      email = obj.trim().toLowerCase();
+      return;
+    }
+
+    if (typeof obj !== "object") return;
+
+    // 2. Direct email property on object
+    if (typeof obj.email === "string" && obj.email.includes("@")) {
+      email = obj.email.trim().toLowerCase();
+      name = obj.name || obj.address?.fullName || name;
+    }
+
+    // 3. Populated userId object with email
+    if (!email && obj.userId && typeof obj.userId === "object" && obj.userId.email) {
+      email = obj.userId.email.trim().toLowerCase();
+      name = obj.userId.name || obj.address?.fullName || name;
+    }
+
+    // 4. Populated customerId object with email
+    if (!email && obj.customerId && typeof obj.customerId === "object" && obj.customerId.email) {
+      email = obj.customerId.email.trim().toLowerCase();
+      name = obj.customerId.name || name;
+    }
+
+    // 5. Populated user object with email
+    if (!email && obj.user && typeof obj.user === "object" && obj.user.email) {
+      email = obj.user.email.trim().toLowerCase();
+      name = obj.user.name || name;
+    }
+
+    // 6. Direct ObjectId or hex string pointing to User document
+    const isObjectId = obj._bsontype === "ObjectID" ||
+      (typeof obj.toString === "function" && /^[a-f\d]{24}$/i.test(obj.toString()));
+
+    if (!email && isObjectId) {
+      try {
+        const u = await User.findById(obj).select("name email").lean();
+        if (u?.email) {
+          email = u.email.trim().toLowerCase();
+          name = u.name || name;
+        }
+      } catch (err) {
+        // silent lookup fallback
+      }
+    }
+
+    // 7. Unpopulated userId ObjectId/string
+    if (!email && obj.userId) {
+      try {
+        const u = await User.findById(obj.userId).select("name email").lean();
+        if (u?.email) {
+          email = u.email.trim().toLowerCase();
+          name = u.name || name;
+        }
+      } catch (err) {
+        // silent lookup fallback
+      }
+    }
+
+    // 8. Unpopulated customerId ObjectId/string
+    if (!email && obj.customerId) {
+      try {
+        const u = await User.findById(obj.customerId).select("name email").lean();
+        if (u?.email) {
+          email = u.email.trim().toLowerCase();
+          name = u.name || name;
+        }
+      } catch (err) {
+        // silent lookup fallback
+      }
+    }
+
+    // 9. Unpopulated user ObjectId/string
+    if (!email && obj.user) {
+      try {
+        const u = await User.findById(obj.user).select("name email").lean();
+        if (u?.email) {
+          email = u.email.trim().toLowerCase();
+          name = u.name || name;
+        }
+      } catch (err) {
+        // silent lookup fallback
+      }
+    }
+
+    // Fallback name from address if still unset
+    if (!name && obj.address?.fullName) {
+      name = obj.address.fullName;
+    }
+  };
+
+  if (target) {
+    await extractFromObject(target);
+  }
+
+  if (!email && fallbackDoc) {
+    await extractFromObject(fallbackDoc);
+  }
+
+  return {
+    email: (email || "").trim().toLowerCase(),
+    name: (name || "Valued Customer").trim(),
+  };
+};
+
 /**
  * CENTRAL DISPATCH AND LOGGING QUEUE
  */
 const queueEmail = async (to, subject, bodyHtml, bodyText, type, referenceId = null, referenceModel = null) => {
   let logEntry = null;
   try {
+    if (!to || typeof to !== "string" || !to.includes("@")) {
+      console.warn(`[emailService] ⚠️ Skipped queueing email: Invalid or missing recipient address "${to}" for type "${type}" ("${subject}")`);
+      return null;
+    }
+
     const config = getSmtpConfig();
     const settings = await getEmailSettings();
 
@@ -427,16 +554,19 @@ const startEmailWorker = () => {
    1. CUSTOMER TEMPLATE GENERATORS
    ========================================================================== */
 
-const sendCustomerOrderConfirmation = async (order) => {
+const sendCustomerOrderConfirmation = async (order, fallbackUser = null) => {
   const storeInfo = await getStoreDetails();
-  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+  const orderCode = order.orderCode || `ORD-${order._id ? order._id.toString().slice(-8).toUpperCase() : "REF"}`;
   const orderDate = order.createdAt
     ? new Date(order.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })
     : new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium" });
 
-  const customerName = order.address?.fullName || "Valued Guest";
-  const customerEmail = order.userId?.email || order.email || "";
-  if (!customerEmail) return null;
+  const { email: customerEmail, name: resolvedCustomerName } = await resolveCustomerDetails(order, fallbackUser);
+  const customerName = resolvedCustomerName || order.address?.fullName || "Valued Guest";
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Order Confirmation: No customer email resolved for order ${orderCode}`);
+    return null;
+  }
 
   const fullAddress = [order.address?.line1, order.address?.city, order.address?.state, order.address?.postalCode, order.address?.country || "India"].filter(Boolean).join(", ");
   
@@ -492,12 +622,15 @@ const sendCustomerOrderConfirmation = async (order) => {
   return queueEmail(customerEmail, title, htmlContent, textContent, "customer_order_confirmation", order._id, "Order");
 };
 
-const sendCustomerOrderShipped = async (order) => {
+const sendCustomerOrderShipped = async (order, fallbackUser = null) => {
   const storeInfo = await getStoreDetails();
-  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
-  const customerName = order.address?.fullName || "Valued Customer";
-  const customerEmail = order.userId?.email || order.email || "";
-  if (!customerEmail) return null;
+  const orderCode = order.orderCode || `ORD-${order._id ? order._id.toString().slice(-8).toUpperCase() : "REF"}`;
+  const { email: customerEmail, name: resolvedCustomerName } = await resolveCustomerDetails(order, fallbackUser);
+  const customerName = resolvedCustomerName || order.address?.fullName || "Valued Customer";
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Order Shipped email: No customer email resolved for order ${orderCode}`);
+    return null;
+  }
 
   const trackingId = order.trackingId || "N/A";
   const carrier = order.trackingCarrier ? order.trackingCarrier.toUpperCase() : "Courier Partner";
@@ -554,12 +687,15 @@ const sendCustomerOrderShipped = async (order) => {
   return queueEmail(customerEmail, title, htmlContent, textContent, "customer_order_shipped", order._id, "Order");
 };
 
-const sendCustomerOrderDelivered = async (order) => {
+const sendCustomerOrderDelivered = async (order, fallbackUser = null) => {
   const storeInfo = await getStoreDetails();
-  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
-  const customerName = order.address?.fullName || "Valued Customer";
-  const customerEmail = order.userId?.email || order.email || "";
-  if (!customerEmail) return null;
+  const orderCode = order.orderCode || `ORD-${order._id ? order._id.toString().slice(-8).toUpperCase() : "REF"}`;
+  const { email: customerEmail, name: resolvedCustomerName } = await resolveCustomerDetails(order, fallbackUser);
+  const customerName = resolvedCustomerName || order.address?.fullName || "Valued Customer";
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Order Delivered email: No customer email resolved for order ${orderCode}`);
+    return null;
+  }
 
   const title = `Delivered: Order Confirmed #${orderCode}`;
   const headline = `Your package has been successfully delivered!`;
@@ -586,12 +722,15 @@ const sendCustomerOrderDelivered = async (order) => {
   return queueEmail(customerEmail, title, htmlContent, textContent, "customer_order_delivered", order._id, "Order");
 };
 
-const sendCustomerOrderCancelled = async (order, reason = "Not specified", refundTimeline = "5-7 business days") => {
+const sendCustomerOrderCancelled = async (order, reason = "Not specified", refundTimeline = "5-7 business days", fallbackUser = null) => {
   const storeInfo = await getStoreDetails();
-  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
-  const customerName = order.address?.fullName || "Valued Customer";
-  const customerEmail = order.userId?.email || order.email || "";
-  if (!customerEmail) return null;
+  const orderCode = order.orderCode || `ORD-${order._id ? order._id.toString().slice(-8).toUpperCase() : "REF"}`;
+  const { email: customerEmail, name: resolvedCustomerName } = await resolveCustomerDetails(order, fallbackUser);
+  const customerName = resolvedCustomerName || order.address?.fullName || "Valued Customer";
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Order Cancelled email: No customer email resolved for order ${orderCode}`);
+    return null;
+  }
 
   const isPaid = order.paymentStatus === "Paid";
 
@@ -631,13 +770,19 @@ const sendCustomerOrderCancelled = async (order, reason = "Not specified", refun
 
 const sendCustomerReturnSubmitted = async (user, order, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
-  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
+  const orderCode = order?.orderCode || `ORD-${order?._id ? order._id.toString().slice(-8).toUpperCase() : "REF"}`;
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, order || returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_return_request (submitted): No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Return Request Submitted: ${code}`;
   const headline = `We have received your Return Request`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Thank you for contacting customer support. We have successfully received your return request <strong>${code}</strong> for order <strong>#${escapeHtml(orderCode)}</strong>. Our quality verification team is reviewing the description and uploaded media.</p>
     
     <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
@@ -651,11 +796,11 @@ const sendCustomerReturnSubmitted = async (user, order, returnRequest) => {
       </tr>
       <tr>
         <td><strong>Reason:</strong></td>
-        <td align="right">${escapeHtml(returnRequest.reason)}</td>
+        <td align="right">${escapeHtml(returnRequest.reason || returnRequest.returnReason || "Return")}</td>
       </tr>
       <tr>
         <td><strong>Preferred Resolution:</strong></td>
-        <td align="right" style="font-weight: bold;">${escapeHtml(returnRequest.preferredResolution)}</td>
+        <td align="right" style="font-weight: bold;">${escapeHtml(returnRequest.preferredResolution || returnRequest.requestType || "Return")}</td>
       </tr>
       <tr>
         <td><strong>Status:</strong></td>
@@ -671,15 +816,21 @@ const sendCustomerReturnSubmitted = async (user, order, returnRequest) => {
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour return request ${code} for order #${orderCode} is received. Status: Under Review. Resolution: ${returnRequest.preferredResolution}.`;
+  const textContent = `Hi ${customerName},\nYour return request ${code} for order #${orderCode} is received. Status: Under Review. Resolution: ${returnRequest.preferredResolution || "Return"}.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
 };
 
 const sendCustomerReturnApproved = async (user, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_return_approved: No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Return Request Approved: ${code}`;
   const headline = `Your Return Request has been Approved!`;
   
@@ -688,7 +839,7 @@ const sendCustomerReturnApproved = async (user, returnRequest) => {
     : "Soon (within 1-2 business days)";
 
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Your return request <strong>${code}</strong> has been <strong>Approved</strong>. We have coordinated a reverse logistics pickup for your package.</p>
     
     <div style="background-color: #FCFAF5; border-left: 4px solid #D4AF37; padding: 15px; margin: 20px 0; border-radius: 8px;">
@@ -710,19 +861,25 @@ const sendCustomerReturnApproved = async (user, returnRequest) => {
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour return request ${code} is approved. Reverse pickup is scheduled. Please prepare the items in original packaging.`;
+  const textContent = `Hi ${customerName},\nYour return request ${code} is approved. Reverse pickup is scheduled. Please prepare the items in original packaging.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_approved", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_approved", returnRequest._id, "Return");
 };
 
 const sendCustomerReturnRejected = async (user, returnRequest, note = "") => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_return_rejected: No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Return Request Update: ${code}`;
   const headline = `Return Request Update`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We are writing to update you regarding your return request <strong>${code}</strong>.</p>
     <p>Following review by our customer support specialists, your request has been <strong>Declined</strong> at this time due to the following reason:</p>
     <div style="background-color: #FCFAF5; border-left: 3px solid #D4AF37; padding: 12px 18px; margin: 15px 0; font-style: italic; color: #1C1C1C; font-size: 13.5px; border-radius: 6px;">
@@ -737,21 +894,27 @@ const sendCustomerReturnRejected = async (user, returnRequest, note = "") => {
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour return request ${code} was declined. Reason: ${note}. Support link: ${shopUrl}/my-profile`;
+  const textContent = `Hi ${customerName},\nYour return request ${code} was declined. Reason: ${note}. Support link: ${shopUrl}/my-profile`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
 };
 
 const sendCustomerPickupScheduled = async (user, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
-  const p = returnRequest.pickupDetails || {};
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
+  const p = returnRequest?.pickupDetails || {};
   const dateStr = p.pickupDate ? new Date(p.pickupDate).toLocaleDateString("en-IN", { dateStyle: "long" }) : "Soon";
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_pickup_scheduled: No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Reverse Pickup Scheduled: ${code}`;
   const headline = `Reverse Pickup Scheduled`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Your reverse logistics pickup has been scheduled for return request <strong>${code}</strong>.</p>
     
     <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
@@ -772,56 +935,74 @@ const sendCustomerPickupScheduled = async (user, returnRequest) => {
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nReverse pickup scheduled for return ${code} via ${p.courier}. AWB: ${p.trackingId}. Date: ${dateStr}`;
+  const textContent = `Hi ${customerName},\nReverse pickup scheduled for return ${code} via ${p.courier}. AWB: ${p.trackingId}. Date: ${dateStr}`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
 };
 
 const sendCustomerProductReceived = async (user, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_product_received: No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Returned Package Received: ${code}`;
   const headline = `Returned Product Received`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We are writing to confirm that the package containing your returned items for return claim <strong>${code}</strong> has been received at our fulfillment center.</p>
-    <p>Our quality verification desk is doing a quick inspection. We will proceed with your selected resolution preference: <strong>${escapeHtml(returnRequest.preferredResolution)}</strong> shortly.</p>
+    <p>Our quality verification desk is doing a quick inspection. We will proceed with your selected resolution preference: <strong>${escapeHtml(returnRequest?.preferredResolution || "Resolution")}</strong> shortly.</p>
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nReturned package received for claim ${code}. Processing your selected resolution: ${returnRequest.preferredResolution}.`;
+  const textContent = `Hi ${customerName},\nReturned package received for claim ${code}. Processing your selected resolution.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
 };
 
 const sendCustomerRefundInitiated = async (user, returnRequest, amount) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_refund_initiated: No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Refund Process Initiated: ${code}`;
   const headline = `Refund is being Processed`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We have initiated the refund process for your return claim <strong>${code}</strong>.</p>
     <p>An amount of <strong>INR ${amount}</strong> is being processed back to your original payment source or store credit account as selected.</p>
     <p>This process usually takes 5-7 business days to reflect in your banking statement depending on bank processing cycles.</p>
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nRefund of INR ${amount} initiated for return claim ${code}. Funds will reflect in 5-7 business days.`;
+  const textContent = `Hi ${customerName},\nRefund of INR ${amount} initiated for return claim ${code}. Funds will reflect in 5-7 business days.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
 };
 
 const sendCustomerRefundCompleted = async (user, returnRequest, amount, reference = "") => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_refund_completed: No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Refund Completed: ${code}`;
   const headline = `Refund Successfully Processed`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We are pleased to inform you that your refund has been successfully completed for return request <strong>${code}</strong>.</p>
     
     <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
@@ -838,19 +1019,25 @@ const sendCustomerRefundCompleted = async (user, returnRequest, amount, referenc
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nRefund of INR ${amount} completed for return request ${code}. Transaction Ref: ${reference}`;
+  const textContent = `Hi ${customerName},\nRefund of INR ${amount} completed for return request ${code}. Transaction Ref: ${reference}`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
 };
 
 const sendCustomerReplacementShipped = async (user, returnRequest, replacementOrderCode) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_replacement_shipped: No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Replacement Package Shipped: ${code}`;
   const headline = `Replacement Package is on the Way!`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We have shipped your replacement package matching return request <strong>${code}</strong>.</p>
     <p>Your new replacement order code is: <strong>${escapeHtml(replacementOrderCode)}</strong>.</p>
     <p>You can track the shipment live via the Order Tracking module in your profile dashboard.</p>
@@ -858,31 +1045,37 @@ const sendCustomerReplacementShipped = async (user, returnRequest, replacementOr
 
   const shopUrl = getShopUrl();
   const actionBtnHtml = `
-    <a href="${shopUrl}/track-order?orderId=${replacementOrderCode}&email=${encodeURIComponent(user.email)}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C; box-shadow: 0 4px 10px rgba(212, 175, 55, 0.15);">Track Replacement Order</a>
+    <a href="${shopUrl}/track-order?orderId=${replacementOrderCode}&email=${encodeURIComponent(customerEmail)}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C; box-shadow: 0 4px 10px rgba(212, 175, 55, 0.15);">Track Replacement Order</a>
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour replacement order ${replacementOrderCode} has been shipped matching return request ${code}.`;
+  const textContent = `Hi ${customerName},\nYour replacement order ${replacementOrderCode} has been shipped matching return request ${code}.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
 };
 
 const sendCustomerReturnClosed = async (user, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
   
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot dispatch customer_return_closed: No recipient email found for ${code}`);
+    return null;
+  }
+
   const title = `Return Case Closed: ${code}`;
   const headline = `Return Case Resolved and Closed`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>This is to notify you that return request case <strong>${code}</strong> has been resolved and is now marked as <strong>Closed</strong>.</p>
     <p>We hope we resolved this issue to your complete satisfaction. Thank you for choosing ${escapeHtml(storeInfo.storeName)}!</p>
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour return case ${code} has been resolved and marked as closed.`;
+  const textContent = `Hi ${customerName},\nYour return case ${code} has been resolved and marked as closed.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "Return");
 };
 
 const sendAgentTicketAssigned = async (agent, ticket, returnRequest) => {
@@ -1090,6 +1283,24 @@ const sendAdminReturnRequestAlert = async (returnRequest, order) => {
    3. SUPPORT TEAM TEMPLATE GENERATOR
    ========================================================================== */
 
+const getSwitchKeyForSupport = (eventType) => {
+  switch (eventType) {
+    case "New Order":
+      return "supportNewOrderAlert";
+    case "Cancellation Request":
+    case "Customer Cancelled Order":
+      return "supportCancelRequestAlert";
+    case "Return Request":
+      return "supportReturnRequestAlert";
+    case "Return Approved":
+      return "supportReturnApprovedAlert";
+    case "Refund Process":
+      return "supportRefundProcessAlert";
+    default:
+      return null;
+  }
+};
+
 const sendSupportNotification = async (eventType, data) => {
   const storeInfo = await getStoreDetails();
   const settings = await getEmailSettings();
@@ -1245,25 +1456,15 @@ const sendSupportNotification = async (eventType, data) => {
   return results;
 };
 
-// Map support event types to settings toggles
-const getSwitchKeyForSupport = (eventType) => {
-  const mapping = {
-    "New Order": "supportNewOrderAlert",
-    "Cancellation Request": "supportCancelRequestAlert",
-    "Return Request": "supportReturnRequestAlert",
-    "Return Approval": "supportReturnApprovedAlert",
-    "Refund Process": "supportRefundProcessAlert",
-  };
-  return mapping[eventType] || null;
-};
-
-
-const sendCustomerCancellationReview = async (order, isApproved, adminNote = "") => {
+const sendCustomerCancellationReview = async (order, isApproved, adminNote = "", fallbackUser = null) => {
   const storeInfo = await getStoreDetails();
-  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
-  const customerName = order.address?.fullName || "Valued Customer";
-  const customerEmail = order.userId?.email || order.email || "";
-  if (!customerEmail) return null;
+  const orderCode = order.orderCode || `ORD-${order._id ? order._id.toString().slice(-8).toUpperCase() : "REF"}`;
+  const { email: customerEmail, name: resolvedCustomerName } = await resolveCustomerDetails(order, fallbackUser);
+  const customerName = resolvedCustomerName || order.address?.fullName || "Valued Customer";
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Cancellation Review email: No customer email resolved for order ${orderCode}`);
+    return null;
+  }
 
   const title = isApproved ? `Order Cancelled: #${orderCode}` : `Cancellation Request Update: #${orderCode}`;
   const headline = isApproved ? `Your order cancellation is confirmed` : `Cancellation request update`;
@@ -1311,8 +1512,14 @@ const sendCustomerCancellationReview = async (order, isApproved, adminNote = "")
 
 const sendReturnRequestSubmitted = async (user, order, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
-  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
+  const orderCode = order?.orderCode || `ORD-${order?._id ? order._id.toString().slice(-8).toUpperCase() : "REF"}`;
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, order || returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Return Request Submitted: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Return Requested: ${code}`;
   const headline = `Return Request Submitted`;
@@ -1341,7 +1548,7 @@ const sendReturnRequestSubmitted = async (user, order, returnRequest) => {
   ` : "";
 
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Your return request <strong>${code}</strong> for order <strong>#${escapeHtml(orderCode)}</strong> has been successfully submitted and is now under review.</p>
     <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
       <tr>
@@ -1350,7 +1557,7 @@ const sendReturnRequestSubmitted = async (user, order, returnRequest) => {
       </tr>
       <tr>
         <td><strong>Reason:</strong></td>
-        <td align="right">${escapeHtml(returnRequest.reason)}</td>
+        <td align="right">${escapeHtml(returnRequest.reason || returnRequest.returnReason || "Return")}</td>
       </tr>
       ${codDetailsHtml}
       <tr>
@@ -1366,19 +1573,25 @@ const sendReturnRequestSubmitted = async (user, order, returnRequest) => {
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour return request ${code} for order #${orderCode} has been submitted. Status: Pending.`;
+  const textContent = `Hi ${customerName},\nYour return request ${code} for order #${orderCode} has been submitted. Status: Pending.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
 };
 
 const sendReturnRequestApproved = async (user, order, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, order || returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Return Request Approved: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Return Approved: ${code}`;
   const headline = `Your Return Request has been Approved`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We are pleased to inform you that your return request <strong>${code}</strong> has been approved.</p>
     <p>Please prepare the package in its original condition. We will coordinate the reverse pickup shortly.</p>
   `;
@@ -1389,19 +1602,25 @@ const sendReturnRequestApproved = async (user, order, returnRequest) => {
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour return request ${code} has been approved. Please pack the items in original condition.`;
+  const textContent = `Hi ${customerName},\nYour return request ${code} has been approved. Please pack the items in original condition.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_approved", returnRequest._id, "ReturnRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_approved", returnRequest._id, "ReturnRequest");
 };
 
 const sendReturnRequestRejected = async (user, order, returnRequest, note = "") => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, order || returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Return Request Rejected: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Return Request Rejected: ${code}`;
   const headline = `Return Request Update`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Your return request <strong>${code}</strong> has been declined.</p>
     ${note ? `<p><strong>Reason:</strong> ${escapeHtml(note)}</p>` : ""}
   `;
@@ -1412,21 +1631,27 @@ const sendReturnRequestRejected = async (user, order, returnRequest, note = "") 
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour return request ${code} was declined. Reason: ${note}.`;
+  const textContent = `Hi ${customerName},\nYour return request ${code} was declined. Reason: ${note}.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
 };
 
 const sendReturnRequestPickupScheduled = async (user, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
   const p = returnRequest.pickupDetails || {};
   const dateStr = p.pickupDate ? new Date(p.pickupDate).toLocaleDateString("en-IN", { dateStyle: "long" }) : "Soon";
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Return Pickup Scheduled: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Return Pickup Scheduled: ${code}`;
   const headline = `Pickup Scheduled`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>A reverse pickup has been scheduled for your return request <strong>${code}</strong>.</p>
     <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
       <tr>
@@ -1445,39 +1670,51 @@ const sendReturnRequestPickupScheduled = async (user, returnRequest) => {
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour return pickup is scheduled for ${dateStr} via ${p.courier}. AWB: ${p.trackingId}`;
+  const textContent = `Hi ${customerName},\nYour return pickup is scheduled for ${dateStr} via ${p.courier}. AWB: ${p.trackingId}`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
 };
 
 const sendReturnRequestRefundCompleted = async (user, returnRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = returnRequest.returnCode;
-  const refundAmount = returnRequest.refundDetails?.refundAmount || 0;
+  const code = returnRequest?.requestId || returnRequest?.returnCode || "CLAIM";
+  const refundAmount = returnRequest.refundDetails?.refundAmount || returnRequest.refundAmount || 0;
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, returnRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Return Refund Completed: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Refund Processed: ${code}`;
   const headline = `Refund Completed successfully`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
-    <p>A refund of <strong>₹${refundAmount.toFixed(2)}</strong> has been successfully processed for your return request <strong>${code}</strong>.</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
+    <p>A refund of <strong>₹${Number(refundAmount).toFixed(2)}</strong> has been successfully processed for your return request <strong>${code}</strong>.</p>
     <p>The amount has been credited back to your original payment source and should reflect in your account within 5-7 business days.</p>
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nRefund of ₹${refundAmount} has been processed for return request ${code}.`;
+  const textContent = `Hi ${customerName},\nRefund of ₹${refundAmount} has been processed for return request ${code}.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", returnRequest._id, "ReturnRequest");
 };
 
 const sendReplacementRequestSubmitted = async (user, order, replacementRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = replacementRequest.replacementCode;
-  const orderCode = order.orderCode || `ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+  const code = replacementRequest?.replacementCode || replacementRequest?.requestId || "REPLACE";
+  const orderCode = order?.orderCode || `ORD-${order?._id ? order._id.toString().slice(-8).toUpperCase() : "REF"}`;
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, order || replacementRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Replacement Request Submitted: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Replacement Requested: ${code}`;
   const headline = `Replacement Request Submitted`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Your replacement request <strong>${code}</strong> for order <strong>#${escapeHtml(orderCode)}</strong> has been submitted and is under review.</p>
     <table width="100%" style="background-color: #FCFAF5; border-radius: 12px; padding: 15px; border: 1px solid #FAF4E5; margin: 20px 0; font-size: 13px; line-height: 1.6; color: #1C1C1C;">
       <tr>
@@ -1486,7 +1723,7 @@ const sendReplacementRequestSubmitted = async (user, order, replacementRequest) 
       </tr>
       <tr>
         <td><strong>Reason:</strong></td>
-        <td align="right">${escapeHtml(replacementRequest.reason)}</td>
+        <td align="right">${escapeHtml(replacementRequest.reason || replacementRequest.returnReason || "Replacement")}</td>
       </tr>
       <tr>
         <td><strong>Status:</strong></td>
@@ -1501,37 +1738,49 @@ const sendReplacementRequestSubmitted = async (user, order, replacementRequest) 
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour replacement request ${code} for order #${orderCode} has been submitted.`;
+  const textContent = `Hi ${customerName},\nYour replacement request ${code} for order #${orderCode} has been submitted.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_request", replacementRequest._id, "ReplacementRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_request", replacementRequest._id, "ReplacementRequest");
 };
 
 const sendReplacementRequestApproved = async (user, order, replacementRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = replacementRequest.replacementCode;
+  const code = replacementRequest?.replacementCode || replacementRequest?.requestId || "REPLACE";
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, order || replacementRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Replacement Request Approved: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Replacement Approved: ${code}`;
   const headline = `Your Replacement Request has been Approved`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>We are pleased to inform you that your replacement request <strong>${code}</strong> has been approved.</p>
     <p>We are preparing your replacement items now and will notify you as soon as they are packed and shipped.</p>
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nYour replacement request ${code} has been approved. We are preparing the replacement items.`;
+  const textContent = `Hi ${customerName},\nYour replacement request ${code} has been approved. We are preparing the replacement items.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_return_approved", replacementRequest._id, "ReplacementRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_return_approved", replacementRequest._id, "ReplacementRequest");
 };
 
 const sendReplacementRequestShipped = async (user, replacementRequest, replacementOrderCode) => {
   const storeInfo = await getStoreDetails();
-  const code = replacementRequest.replacementCode;
+  const code = replacementRequest?.replacementCode || replacementRequest?.requestId || "REPLACE";
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, replacementRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Replacement Request Shipped: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Replacement Order Shipped: ${code}`;
   const headline = `Your Replacement is on the Way!`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Your replacement items under request <strong>${code}</strong> have been shipped.</p>
     <p>Replacement Order Code: <strong>${escapeHtml(replacementOrderCode)}</strong></p>
     <p>You can track the delivery status using the order code above in your profile dashboard.</p>
@@ -1539,31 +1788,37 @@ const sendReplacementRequestShipped = async (user, replacementRequest, replaceme
 
   const shopUrl = getShopUrl();
   const actionBtnHtml = `
-    <a href="${shopUrl}/track-order?orderId=${replacementOrderCode}&email=${encodeURIComponent(user.email)}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C;">Track Delivery</a>
+    <a href="${shopUrl}/track-order?orderId=${replacementOrderCode}&email=${encodeURIComponent(customerEmail)}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-transform: uppercase; letter-spacing: 0.08em; padding: 13px 30px; font-size: 11px; font-weight: bold; text-decoration: none; border-radius: 99px; text-align: center; border: 1px solid #C49A2C;">Track Delivery</a>
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, actionBtnHtml, "", storeInfo);
-  const textContent = `Hi ${user.name},\nReplacement items for ${code} have been shipped. New order: ${replacementOrderCode}`;
+  const textContent = `Hi ${customerName},\nReplacement items for ${code} have been shipped. New order: ${replacementOrderCode}`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_order_shipped", replacementRequest._id, "ReplacementRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_order_shipped", replacementRequest._id, "ReplacementRequest");
 };
 
 const sendReplacementRequestDelivered = async (user, replacementRequest) => {
   const storeInfo = await getStoreDetails();
-  const code = replacementRequest.replacementCode;
+  const code = replacementRequest?.replacementCode || replacementRequest?.requestId || "REPLACE";
+
+  const { email: customerEmail, name: customerName } = await resolveCustomerDetails(user, replacementRequest);
+  if (!customerEmail) {
+    console.warn(`[emailService] ⚠️ Cannot send Replacement Request Delivered: No recipient email resolved for ${code}`);
+    return null;
+  }
 
   const title = `Replacement Order Delivered: ${code}`;
   const headline = `Your Replacement has been Delivered`;
   const bodyHtml = `
-    <p>Hi ${escapeHtml(user.name)},</p>
+    <p>Hi ${escapeHtml(customerName)},</p>
     <p>Your replacement order under request <strong>${code}</strong> has been successfully delivered.</p>
     <p>We hope the replacement product meets your expectations. Thank you for your patience and for choosing ${escapeHtml(storeInfo.storeName)}!</p>
   `;
 
   const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
-  const textContent = `Hi ${user.name},\nReplacement order for ${code} has been delivered successfully.`;
+  const textContent = `Hi ${customerName},\nReplacement order for ${code} has been delivered successfully.`;
 
-  return queueEmail(user.email, title, htmlContent, textContent, "customer_order_delivered", replacementRequest._id, "ReplacementRequest");
+  return queueEmail(customerEmail, title, htmlContent, textContent, "customer_order_delivered", replacementRequest._id, "ReplacementRequest");
 };
 
 const sendAdminReturnRequestAlertV2 = async (returnRequest, order) => {
