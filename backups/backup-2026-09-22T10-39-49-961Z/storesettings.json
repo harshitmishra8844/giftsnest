@@ -1,0 +1,48 @@
+[
+  {
+    "_id": "69dacd60219e478c66b4c016",
+    "singletonKey": "store",
+    "__v": 0,
+    "createdAt": "2026-04-11T22:38:24.555Z",
+    "offers": [
+      {
+        "title": "Midnight Surprise Drop",
+        "subtitle": "Order before 11 PM and unlock priority prep on select gifts.",
+        "code": "MIDNIGHT12",
+        "ctaText": "Shop Late Night",
+        "active": true,
+        "_id": "6a3d0b872887b9db824ab033"
+      },
+      {
+        "title": "Birthday Bundle Wave",
+        "subtitle": "Combo gifts with curated cards and packaging at festival pricing.",
+        "code": "BDAYBLISS",
+        "ctaText": "View Bundles",
+        "active": true,
+        "_id": "6a3d0b872887b9db824ab034"
+      }
+    ],
+    "specialOffer": {
+      "title": "Festive Mega Sale",
+      "subtitle": "Celebrate the season with curated gifts and limited-time savings.",
+      "eventName": "Festive",
+      "code": "HOLI30",
+      "ctaText": "Grab Offer",
+      "startDate": "2026-06-20T00:00:00.000Z",
+      "endDate": "2026-06-30T00:00:00.000Z",
+      "active": true
+    },
+    "storeAddress": "152 Alpha 1 Block B, Gautam Buddha Nagar 201310, India",
+    "storeName": "Niyora Gifts",
+    "storePhone": "+91-8445050035",
+    "updatedAt": "2026-06-25T11:05:43.315Z",
+    "storeLogoUrl": "",
+    "smtpFrom": "niyoragifts@gmail.com",
+    "smtpHost": "smtp.gmail.com",
+    "smtpPass": "cfth enwc iapc smdx",
+    "smtpPort": 587,
+    "smtpSecure": false,
+    "smtpUser": "niyoragifts@gmail.com",
+    "codEnabled": true
+  }
+]

@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const { logActivity } = require("../services/logService");
+const cacheService = require("../services/cacheService");
 
 const slugify = (text) =>
   String(text || "")
@@ -111,21 +112,55 @@ const normalizeProductPayload = (source = {}, existingProduct = null) => {
   };
 };
 
-let productsCache = null;
-
 const invalidateProductsCache = () => {
-  productsCache = null;
+  cacheService.delPrefix("products");
+  cacheService.delPrefix("product:");
 };
 
 const getProducts = async (req, res) => {
   try {
-    if (productsCache) {
-      return res.status(200).json(productsCache);
+    const { category, search, limit, lean } = req.query;
+    const cacheKey = `products:${category || 'all'}:${search || 'none'}:${limit || 'all'}:${lean || 'full'}`;
+
+    const cached = cacheService.get(cacheKey);
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.status(200).json(cached);
     }
-    const products = await Product.find().sort({ createdAt: -1 });
-    productsCache = products;
-    res.status(200).json(products);
+
+    const query = {};
+    if (category && category !== "All") {
+      query.category = { $regex: new RegExp(category, "i") };
+    }
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    let queryBuilder = Product.find(query).sort({ createdAt: -1 });
+
+    if (lean === "card") {
+      // High-performance lean card projection for catalog & homepage
+      queryBuilder = queryBuilder.select(
+        "name slug price originalPrice discountPercentage image images category stock stockStatus rating numReviews isFeatured"
+      );
+    }
+
+    if (limit && Number(limit) > 0) {
+      queryBuilder = queryBuilder.limit(Number(limit));
+    }
+
+    const products = await queryBuilder.lean();
+
+    // Cache products for 5 minutes
+    cacheService.set(cacheKey, products, 300);
+
+    res.setHeader("X-Cache", "MISS");
+    return res.status(200).json(products);
   } catch (error) {
+    console.error("Failed to fetch products:", error.message);
     res.status(500).json({ message: "Failed to fetch products" });
   }
 };
@@ -136,7 +171,7 @@ const hasPurchasedProduct = async (userId, productId) => {
     userId,
     status: { $ne: "Cancelled" },
     "products.productId": String(productId),
-  }).select("_id");
+  }).select("_id").lean();
   return Boolean(order);
 };
 
@@ -151,17 +186,30 @@ const getProductByIdOrSlug = async (req, res) => {
   try {
     const { idOrSlug } = req.params;
     const normalizedValue = String(idOrSlug || "").trim();
+    const cacheKey = `product:${normalizedValue.toLowerCase()}`;
+
+    const cached = cacheService.get(cacheKey);
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.status(200).json(cached);
+    }
+
     const product = mongoose.Types.ObjectId.isValid(normalizedValue)
-      ? (await Product.findById(normalizedValue)) ||
-        (await Product.findOne({ slug: normalizedValue.toLowerCase() }))
-      : await Product.findOne({ slug: normalizedValue.toLowerCase() });
+      ? (await Product.findById(normalizedValue).lean()) ||
+        (await Product.findOne({ slug: normalizedValue.toLowerCase() }).lean())
+      : await Product.findOne({ slug: normalizedValue.toLowerCase() }).lean();
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    // Cache single product details for 5 minutes
+    cacheService.set(cacheKey, product, 300);
+
+    res.setHeader("X-Cache", "MISS");
     return res.status(200).json(product);
   } catch (error) {
+    console.error("Failed to fetch product:", error.message);
     return res.status(500).json({ message: "Failed to fetch product" });
   }
 };

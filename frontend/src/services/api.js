@@ -45,9 +45,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export const clearApiCache = () => {
+  Object.keys(cache).forEach((key) => delete cache[key]);
+};
+
 api.interceptors.response.use(
   (response) => {
-    if (response.config.method === "get" && CACHEABLE_URLS.includes(response.config.url)) {
+    // Automatically clear cached queries when mutative requests succeed
+    if (response.config?.method && response.config.method.toLowerCase() !== "get") {
+      clearApiCache();
+    } else if (response.config?.method?.toLowerCase() === "get" && CACHEABLE_URLS.includes(response.config.url)) {
       const cacheKey = response.config.url + (response.config.params ? JSON.stringify(response.config.params) : "");
       cache[cacheKey] = {
         data: response.data,

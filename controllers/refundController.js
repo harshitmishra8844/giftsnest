@@ -10,6 +10,7 @@ const EmployeeActivityLog = require("../models/EmployeeActivityLog");
 const razorpay = require("../config/razorpay");
 const { createAndDispatchNotification } = require("../services/notificationService");
 const { sendSupportNotification } = require("../services/emailService");
+const storeCreditService = require("../services/storeCreditService");
 
 /**
  * Helper: Strict Role Guard for Refund Processing
@@ -599,7 +600,34 @@ const processRefundGateway = async (req, res) => {
       String(process.env.RAZORPAY_DEMO_MODE || "").toLowerCase() === "true" ||
       !process.env.RAZORPAY_KEY_SECRET;
 
-    if (
+    if (refund.refundMethod === "Store Credit") {
+      const customerUserId = refund.customerId || order.userId;
+      if (!customerUserId) {
+        return res.status(400).json({ message: "Cannot disburse Store Credit: customer account reference missing." });
+      }
+      const creditResult = await storeCreditService.addCredit({
+        userId: customerUserId,
+        amount: amountToRefund,
+        referenceType: "REFUND",
+        referenceId: refund.refundId,
+        refundId: refund._id,
+        orderId: order._id,
+        description: `Refund #${refund.refundId} disbursed to Store Credit wallet`,
+        performedBy: req.user._id,
+        performedByName: processorName,
+        performedByRole: processorRole,
+        req,
+      });
+
+      gatewayRefundId = creditResult.transaction.transactionId;
+      gatewayResponse = {
+        status: "processed",
+        mode: "store_credit",
+        transactionId: creditResult.transaction.transactionId,
+        creditedAmount: amountToRefund,
+        settlementTimestamp: new Date(),
+      };
+    } else if (
       order.paymentMethod === "Online" &&
       order.razorpayPaymentId &&
       !isDemoMode &&
@@ -628,7 +656,7 @@ const processRefundGateway = async (req, res) => {
         };
       }
     } else {
-      // Demo / COD / Bank Transfer / Store Credit Simulated Processing
+      // Demo / COD / Bank Transfer Simulated Processing
       gatewayRefundId = `rfnd_sim_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
       gatewayResponse = {
         status: "processed",
@@ -1327,6 +1355,41 @@ const getRefundAuditLogs = async (req, res) => {
   }
 };
 
+/**
+ * Customer Self-Service: Get logged-in customer's refunds
+ */
+const getMyRefunds = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const userEmail = req.user?.email;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const query = {
+      $or: [
+        { customerId: userId },
+        ...(userEmail ? [{ customerEmail: userEmail }] : []),
+      ],
+    };
+
+    const refunds = await RefundRecord.find(query)
+      .sort({ createdAt: -1 })
+      .populate("orderId", "orderNumber totalAmount paymentMethod orderStatus createdAt")
+      .lean();
+
+    return res.json({
+      success: true,
+      count: refunds.length,
+      refunds,
+    });
+  } catch (error) {
+    console.error("getMyRefunds error:", error);
+    return res.status(500).json({ message: "Failed to fetch customer refunds: " + error.message });
+  }
+};
+
 module.exports = {
   raiseRefundRequest,
   verifyRefundEligibility,
@@ -1341,4 +1404,6 @@ module.exports = {
   getRefundReports,
   exportRefundReportsCsv,
   getRefundAuditLogs,
+  getMyRefunds,
 };
+

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import api, { resolveMediaUrl } from "../services/api";
+import { getOptimizedImageUrl, optimizeUnsplashUrl } from "../utils/imageOptimizer";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import WishlistButton from "../components/WishlistButton";
@@ -69,30 +70,23 @@ const aboutHighlights = [
   { title: "Personal Touch", text: "From custom messages to thoughtful packaging, we help you make each gift truly memorable." },
 ];
 
-const optimizeUnsplashUrl = (url, width, height) => {
+// Image optimizer alias with absolute media URL resolution
+const optimizeImageUrl = (url, width, height) => {
   if (!url) return "";
-  if (typeof url !== "string") return url;
-  if (url.includes("images.unsplash.com")) {
-    let cleanUrl = url;
-    cleanUrl = cleanUrl.replace(/&fm=[^&]*/g, "").replace(/\?fm=[^&]*/g, "?");
-    cleanUrl = cleanUrl.replace(/&auto=[^&]*/g, "").replace(/\?auto=[^&]*/g, "?");
-    if (cleanUrl.includes("?")) {
-      cleanUrl += `&fm=webp&q=80`;
-    } else {
-      cleanUrl += `?fm=webp&q=80`;
-    }
-    if (width) {
-      cleanUrl = cleanUrl.replace(/&w=[^&]*/g, "").replace(/\?w=[^&]*/g, "?");
-      cleanUrl += `&w=${width}`;
-    }
-    if (height) {
-      cleanUrl = cleanUrl.replace(/&h=[^&]*/g, "").replace(/\?h=[^&]*/g, "?");
-      cleanUrl += `&h=${height}`;
-    }
-    cleanUrl = cleanUrl.replace(/\?&/g, "?").replace(/\?$/g, "");
-    return cleanUrl;
-  }
-  return url;
+  const resolved = resolveMediaUrl(url);
+  return getOptimizedImageUrl(resolved, { width, height });
+};
+
+// Fallback high-res image generator for categories created in CMS without an image
+const getCategoryFallbackImage = (name = "") => {
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("birth")) return "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center";
+  if (lower.includes("anniv") || lower.includes("romance") || lower.includes("love")) return "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center";
+  if (lower.includes("flower") || lower.includes("bouquet") || lower.includes("rose")) return "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center";
+  if (lower.includes("cake") || lower.includes("sweet") || lower.includes("dessert") || lower.includes("choc")) return "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center";
+  if (lower.includes("plant") || lower.includes("succulent")) return "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center";
+  if (lower.includes("person") || lower.includes("custom") || lower.includes("mug")) return "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center";
+  return "https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=300&h=300&fit=crop&crop=center";
 };
 
 const Home = () => {
@@ -233,57 +227,53 @@ const Home = () => {
     return () => clearInterval(intervalId);
   }, [specialOffer?.endDate]);
 
-  // Fetch offers & promos
+  // Parallel fetch: Store Info, CMS Homepage, and Top Products in a single batch
   useEffect(() => {
-    const fetchOffers = async () => {
+    let isMounted = true;
+    const fetchHomepageData = async () => {
       try {
-        const { data } = await api.get("/store-info");
-        const liveOffers = Array.isArray(data?.offers) ? data.offers.filter((offer) => offer?.active) : [];
-        const topOffer = isSpecialOfferLive(data?.specialOffer) ? data.specialOffer : null;
-        setSpecialOffer(topOffer);
-        setOffers(liveOffers.slice(0, 4));
-      } catch {
-        setSpecialOffer(null);
-        setOffers([]);
-      }
-    };
-    fetchOffers();
-  }, []);
+        const [storeRes, cmsRes, prodRes] = await Promise.all([
+          api.get("/store-info"),
+          api.get("/cms/content/homepage"),
+          api.get("/products?lean=card&limit=8")
+        ]);
 
-  // Fetch homepage CMS content
-  useEffect(() => {
-    const fetchHomeContent = async () => {
-      try {
-        const { data } = await api.get("/cms/content/homepage");
-        setCmsContent(data);
-      } catch (err) {
-        console.error("Failed to load homepage content:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHomeContent();
-  }, []);
+        if (!isMounted) return;
 
-  // Fetch products for featured showcase
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setProductsLoading(true);
-        const { data } = await api.get("/products");
-        if (Array.isArray(data) && data.length > 0) {
-          setProducts(data);
+        // 1. Offers & Promos
+        if (storeRes?.data) {
+          const liveOffers = Array.isArray(storeRes.data.offers)
+            ? storeRes.data.offers.filter((offer) => offer?.active)
+            : [];
+          const topOffer = isSpecialOfferLive(storeRes.data.specialOffer) ? storeRes.data.specialOffer : null;
+          setSpecialOffer(topOffer);
+          setOffers(liveOffers.slice(0, 4));
+        }
+
+        // 2. CMS Content
+        if (cmsRes?.data) {
+          setCmsContent(cmsRes.data);
+        }
+
+        // 3. Products
+        if (Array.isArray(prodRes?.data) && prodRes.data.length > 0) {
+          setProducts(prodRes.data);
         } else {
           setProducts(mockGiftProducts);
         }
       } catch (err) {
-        console.error("Failed to load products for homepage:", err);
-        setProducts(mockGiftProducts);
+        console.error("Homepage data fetch error:", err);
+        if (isMounted) setProducts(mockGiftProducts);
       } finally {
-        setProductsLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setProductsLoading(false);
+        }
       }
     };
-    fetchProducts();
+
+    fetchHomepageData();
+    return () => { isMounted = false; };
   }, []);
 
   // Sync scroll-reveal class hooks for loaded content
@@ -383,11 +373,18 @@ const Home = () => {
     }
   };
 
-  // CMS Mappings & Fallbacks
-  const categories = cmsContent?.content?.featuredCategories || quickCategories;
+  // CMS Mappings & Fallbacks with dynamic auto-alignment support
+  const categories = useMemo(() => {
+    const list = cmsContent?.content?.featuredCategories;
+    if (Array.isArray(list) && list.length > 0) {
+      const valid = list.filter((c) => c && c.name && c.name.trim());
+      if (valid.length > 0) return valid;
+    }
+    return quickCategories;
+  }, [cmsContent]);
   const reviews = cmsContent?.content?.testimonials || testimonials;
   const highlights = cmsContent?.content?.whyChooseUs || aboutHighlights;
-  const heroBgImage = optimizeUnsplashUrl(cmsContent?.content?.heroImages?.[0] || "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=1920&q=80", 1920);
+  const heroBgImage = optimizeImageUrl(cmsContent?.content?.heroImages?.[0] || "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=1920&q=80", 1920);
 
   // Slice first 8 products for bestsellers
   const bestsellingProducts = useMemo(() => {
@@ -565,20 +562,21 @@ const Home = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8">
+          {/* Self-Realigning Category Showcase (Auto-centers dynamically for any count 2, 3, 4, 5, 6, 7, 8+) */}
+          <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-8 md:gap-10 max-w-6xl mx-auto">
             {categories.map((category, idx) => (
               <Link
                 key={`${category.name}-${idx}`}
                 to={`/products?category=${encodeURIComponent(category.name)}`}
-                className="group flex flex-col items-center gap-3 transition shrink-0"
+                className="group flex flex-col items-center gap-3 transition shrink-0 w-[calc(50%-16px)] sm:w-36 md:w-40 lg:w-44 max-w-[176px]"
               >
                 <div 
-                  className="relative w-full aspect-square overflow-hidden rounded-full shadow-md border-4 border-white group-hover:border-gold-400 group-hover:shadow-lg transition-all duration-500 hover:-translate-y-1 bg-gray-100"
-                  style={{ backgroundImage: `url(${optimizeUnsplashUrl(category.image, 300, 300)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                  className="relative w-full aspect-square overflow-hidden rounded-full shadow-md border-4 border-white group-hover:border-gold-400 group-hover:shadow-xl transition-all duration-500 hover:-translate-y-1.5 bg-gray-100"
+                  style={{ backgroundImage: `url(${optimizeImageUrl(category.image || getCategoryFallbackImage(category.name), 300, 300)})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                 >
-                  <div className="absolute inset-0 bg-luxury-black/30 group-hover:bg-luxury-black/45 transition-colors duration-300" />
-                  <div className="absolute inset-0 flex items-center justify-center p-2.5">
-                    <span className="text-center text-xs font-bold uppercase tracking-widest text-white leading-relaxed">
+                  <div className="absolute inset-0 bg-luxury-black/35 group-hover:bg-luxury-black/50 transition-colors duration-300" />
+                  <div className="absolute inset-0 flex items-center justify-center p-3">
+                    <span className="text-center text-xs font-bold uppercase tracking-widest text-white leading-relaxed drop-shadow-sm group-hover:scale-105 transition-transform duration-300">
                       {category.name}
                     </span>
                   </div>

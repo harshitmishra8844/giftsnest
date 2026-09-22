@@ -11,10 +11,20 @@ import {
   ShoppingBag, Heart, MapPin, Truck, Bell, Gift, Compass, ShieldCheck, HelpCircle,
   Edit, Trash2, Plus, Search, Share2, Camera, FileText, CheckCircle, MessageSquare,
   Paperclip, ArrowLeft, AlertCircle, TrendingUp, Lock, Moon, Globe, RefreshCw, Download,
-  Info, CreditCard, ChevronDown, Check, X, Shield, Eye, LockKeyhole, UserCog, ToggleLeft, HelpCircle as HelpIcon
+  Info, CreditCard, ChevronDown, Check, X, Shield, Eye, LockKeyhole, UserCog, ToggleLeft, HelpCircle as HelpIcon,
+  Wallet, PhoneCall, RotateCcw, Tag, Headphones
 } from "lucide-react";
 
+import StoreCreditTab from "../components/profile/StoreCreditTab";
+import RefundsTab from "../components/profile/RefundsTab";
+import CallbacksTab from "../components/profile/CallbacksTab";
+import ReplacementsTab from "../components/profile/ReplacementsTab";
+import PersonalInfoTab from "../components/profile/PersonalInfoTab";
+import SecurityTab from "../components/profile/SecurityTab";
+import { validateAddress } from "../utils/validation";
+
 const trackingSteps = ["Pending", "Order Confirmed", "Processing", "Shipped", "Delivered"];
+
 
 const getStepIndex = (status) => {
   const index = trackingSteps.findIndex((step) => step === status);
@@ -56,6 +66,7 @@ const initialAddressForm = {
   fullName: "",
   phone: "",
   line1: "",
+  line2: "",
   city: "",
   state: "",
   postalCode: "",
@@ -82,7 +93,21 @@ const MyProfile = () => {
   const [orders, setOrders] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [storeInfo, setStoreInfo] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab");
+      return t && t !== "overview" ? t : "orders";
+    } catch {
+      return "orders";
+    }
+  });
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    navigate(`/my-profile?tab=${tabId}`, { replace: true });
+  };
+  const [storeCreditBalance, setStoreCreditBalance] = useState({ availableBalance: 0, reservedBalance: 0, expiringCredit: 0 });
   const [expandedTrackerOrderId, setExpandedTrackerOrderId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -90,6 +115,7 @@ const MyProfile = () => {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState(initialAddressForm);
+  const [addressErrors, setAddressErrors] = useState({});
   const [savingAddress, setSavingAddress] = useState(false);
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -648,14 +674,19 @@ const MyProfile = () => {
   };
 
   useEffect(() => {
-    if (activeTab === "help" && auth?.token) {
+    if ((activeTab === "help" || activeTab === "support") && auth?.token) {
       fetchTickets();
     }
-    if (activeTab === "returns" && auth?.token) {
+    if ((activeTab === "returns" || activeTab === "replacements") && auth?.token) {
       fetchReturns();
     }
     if (activeTab === "notifications" && auth?.token) {
       fetchNotifications();
+    }
+    if ((activeTab === "overview" || activeTab === "store-credit") && auth?.token) {
+      api.get("/store-credit/my/balance").then((res) => {
+        if (res.data?.success) setStoreCreditBalance(res.data.balance);
+      }).catch(() => null);
     }
   }, [activeTab, auth]);
 
@@ -676,8 +707,30 @@ const MyProfile = () => {
   }, []);
 
   const activeOrdersCount = useMemo(() => {
-    return orders.filter((o) => !["Delivered", "Cancelled"].includes(o.status)).length;
+    return orders.filter((o) => !["Delivered", "Cancelled", "CUSTOMER_CANCELLED", "FAILED_PAYMENT"].includes(o.status)).length;
   }, [orders]);
+
+  const totalSpend = useMemo(() => {
+    return orders
+      .filter((o) => o.paymentStatus === "Paid" || o.status === "Delivered")
+      .reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+  }, [orders]);
+
+  const activeClaimsCount = useMemo(() => {
+    return returnsList.filter(
+      (r) => !["Refund Completed", "Refunded", "Replacement Shipped", "Delivered", "Completed", "Rejected"].includes(r.status)
+    ).length;
+  }, [returnsList]);
+
+  const profileCompletion = useMemo(() => {
+    const checks = [
+      Boolean(auth?.name),
+      Boolean(auth?.email),
+      Boolean(auth?.mobileNumber),
+      addresses.length > 0,
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }, [auth, addresses]);
 
   const defaultAddress = useMemo(() => {
     return addresses.find((addr) => addr.isDefault) || null;
@@ -687,6 +740,7 @@ const MyProfile = () => {
     if (!orders.length) return null;
     return orders[0];
   }, [orders]);
+
 
   const canRequestCancellation = (order) => {
     if (!order) return false;
@@ -899,16 +953,20 @@ const MyProfile = () => {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const queryTab = params.get("tab");
     const state = location.state || {};
-    if (state.activeTab === "addresses") {
-      setActiveTab("addresses");
+    if (queryTab) {
+      setActiveTab(queryTab);
+    } else if (state.activeTab) {
+      setActiveTab(state.activeTab);
     }
     if (state.openAddressForm) {
       setShowAddressForm(true);
       setEditingAddress(null);
       setAddressForm(initialAddressForm);
     }
-  }, [location.state]);
+  }, [location.search, location.state]);
 
   useEffect(() => {
     if (!auth?.token) {
@@ -921,15 +979,19 @@ const MyProfile = () => {
         setLoading(true);
         setError("");
         setSuccessMessage("");
-        const [ordersRes, addressesRes, storeInfoRes] = await Promise.all([
+        const [ordersRes, addressesRes, storeInfoRes, storeCreditRes] = await Promise.all([
           api.get("/orders/my"),
           api.get("/user/addresses"),
           api.get("/store-info").catch(() => null),
+          api.get("/store-credit/my/balance").catch(() => null),
         ]);
         setOrders(ordersRes.data);
         setAddresses(addressesRes.data);
         if (storeInfoRes && storeInfoRes.data) {
           setStoreInfo(storeInfoRes.data);
+        }
+        if (storeCreditRes?.data?.success) {
+          setStoreCreditBalance(storeCreditRes.data.balance);
         }
         await Promise.all([fetchReturns(), fetchNotifications(), fetchUserCoupons()]);
       } catch (err) {
@@ -958,16 +1020,21 @@ const MyProfile = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+    if (addressErrors[name]) {
+      setAddressErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const resetAddressForm = () => {
     setAddressForm(initialAddressForm);
+    setAddressErrors({});
     setEditingAddress(null);
     setShowAddressForm(false);
   };
 
   const handleAddAddress = () => {
     setAddressForm(initialAddressForm);
+    setAddressErrors({});
     setEditingAddress(null);
     setShowAddressForm(true);
   };
@@ -979,32 +1046,49 @@ const MyProfile = () => {
     setAddressForm({
       label: isCustomLabel ? "Other" : address.label,
       customLabel: isCustomLabel ? address.label : "",
-      fullName: address.fullName,
-      phone: address.phone,
-      line1: address.line1,
-      city: address.city,
-      state: address.state,
-      postalCode: address.postalCode,
-      country: address.country,
-      isDefault: address.isDefault,
+      fullName: address.fullName || "",
+      phone: address.phone || "",
+      line1: address.line1 || "",
+      line2: address.line2 || "",
+      city: address.city || "",
+      state: address.state || "",
+      postalCode: address.postalCode || "",
+      country: address.country || "India",
+      isDefault: Boolean(address.isDefault),
     });
+    setAddressErrors({});
     setEditingAddress(address);
     setShowAddressForm(true);
   };
 
   const handleSaveAddress = async (e) => {
     e.preventDefault();
+    setError("");
+
+    const finalLabel =
+      addressForm.label === "Other" && addressForm.customLabel
+        ? addressForm.customLabel.trim()
+        : addressForm.label;
+
+    const validation = validateAddress({
+      ...addressForm,
+      label: finalLabel,
+    });
+
+    if (!validation.isValid) {
+      setAddressErrors(validation.errors);
+      setError(Object.values(validation.errors)[0] || "Please enter valid address details.");
+      return;
+    }
+
+    setAddressErrors({});
     setSavingAddress(true);
 
     try {
-      const finalLabel =
-        addressForm.label === "Other" && addressForm.customLabel
-          ? addressForm.customLabel.trim()
-          : addressForm.label;
-
       const addressData = {
         ...addressForm,
         label: finalLabel,
+        ...validation.sanitizedAddress,
       };
 
       if (editingAddress) {
@@ -1629,113 +1713,88 @@ const MyProfile = () => {
   );
 
   return (
-    <section className="space-y-8 max-w-7xl mx-auto px-4 py-8">
-      {/* Luxury Hero Banner Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="rounded-3xl bg-gradient-to-tr from-luxury-black via-[#1E1E1E] to-[#2D2A22] text-white p-6 md:p-8 relative overflow-hidden shadow-2xl border border-gold-500/20"
-      >
-        <div className="absolute right-0 top-0 w-80 h-80 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute left-1/3 bottom-0 w-44 h-44 bg-gold-400/5 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="relative group">
-              <div className="w-24 h-24 rounded-full border-2 border-gold-500 bg-gold-500/10 flex items-center justify-center text-4xl font-serif text-gold-400 font-bold backdrop-blur-md shadow-inner transition-transform duration-300 group-hover:scale-105">
-                {(auth?.name || "G").charAt(0).toUpperCase()}
-              </div>
-              <span className="absolute bottom-1 right-1 bg-emerald-500 h-3 w-3 rounded-full border-2 border-luxury-black animate-pulse" />
-            </div>
-
-            <div className="text-center md:text-left space-y-1">
-              <div className="flex flex-wrap justify-center md:justify-start items-center gap-2">
-                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                  <ShieldCheck className="w-2.5 h-2.5" /> Email Verified
-                </span>
-                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                  <ShieldCheck className="w-2.5 h-2.5" /> Mobile Verified
-                </span>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-serif font-light tracking-wide mt-1 text-white">
-                {getGreeting()}, {auth?.name ? auth.name.split(" ")[0] : "Gift Lover"}
+    <div className="max-w-7xl mx-auto px-4 py-6 md:py-8 space-y-6">
+      {/* 1. Sleek Modern Customer Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-2xl p-4 sm:p-5 border border-champagne/60 shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-white font-serif font-bold text-xl flex items-center justify-center shadow-xs">
+            {(auth?.name || "U").charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-serif font-bold text-luxury-black">
+                {auth?.name || "My Account"}
               </h1>
-              <div className="flex flex-col sm:flex-row gap-x-4 gap-y-1 pt-1.5 text-xs text-gold-100/70 font-light justify-center md:justify-start">
-                <p className="flex items-center justify-center md:justify-start gap-1">
-                  <Mail className="w-3.5 h-3.5" /> {auth?.email}
-                </p>
-                {auth?.mobileNumber && (
-                  <p className="flex items-center justify-center md:justify-start gap-1">
-                    <Phone className="w-3.5 h-3.5" /> {auth?.mobileNumber}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row md:flex-col items-center gap-4 self-center md:self-auto w-full sm:w-auto md:w-auto">
-            <div className="flex gap-2 w-full">
-              <button
-                onClick={() => setActiveTab("settings")}
-                className="flex-1 rounded-full border border-gold-500/40 hover:border-gold-500 text-gold-300 hover:text-white px-5 py-2 text-xs font-bold uppercase tracking-widest transition duration-300 cursor-pointer text-center bg-transparent"
-              >
-                Edit Profile
-              </button>
-              <button
-                onClick={handleLogout}
-                className="rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-2 text-xs font-bold uppercase tracking-widest text-white transition hover:scale-[1.02] shadow-md cursor-pointer flex items-center justify-center gap-1"
-              >
-                <LogOut className="w-3.5 h-3.5" /> Logout
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Profile Completion Progress */}
-        <div className="mt-6 pt-4 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-light text-gold-100/80">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="font-semibold text-gold-400 uppercase tracking-wider text-[10px]">Profile Status:</span>
-            <span>85% Completed</span>
-            <div className="w-32 h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gold-500 rounded-full" style={{ width: "85%" }} />
-            </div>
-          </div>
-          <span className="text-[10px] text-gray-400 uppercase tracking-widest">Joined {auth?.createdAt ? new Date(auth.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "June 2026"}</span>
-        </div>
-      </motion.div>
-
-
-      {/* Scrollable Sticky Tab Navigation */}
-      <div className="sticky top-0 bg-[#FAF7F2]/90 backdrop-blur-md z-30 py-3 border-b border-champagne/15 flex gap-2 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap -mx-4 px-4 md:mx-0 md:px-0">
-        {[
-          { id: "overview", label: "Overview", icon: <Activity className="w-3.5 h-3.5" /> },
-          { id: "orders", label: "My Orders", icon: <ShoppingBag className="w-3.5 h-3.5" /> },
-          { id: "returns", label: "Returns & Claims", icon: <RefreshCw className="w-3.5 h-3.5" />, count: returnsList.filter(r => !["Refund Completed", "Refunded", "Replacement Shipped", "Delivered", "Completed", "Rejected"].includes(r.status)).length },
-          { id: "wishlist", label: "Wishlist", icon: <Heart className="w-3.5 h-3.5" /> },
-          { id: "addresses", label: "Addresses", icon: <MapPin className="w-3.5 h-3.5" /> },
-          { id: "coupons", label: "Coupons", icon: <Gift className="w-3.5 h-3.5" /> },
-          { id: "help", label: "Support", icon: <HelpCircle className="w-3.5 h-3.5" /> },
-          { id: "settings", label: "Settings", icon: <Settings className="w-3.5 h-3.5" /> }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer select-none ${activeTab === tab.id
-                ? "bg-gold-500 text-white shadow-md scale-[1.02]"
-                : "bg-white text-luxury-black hover:bg-gold-50 hover:text-gold-600 border border-champagne/50"
-              }`}
-          >
-            {tab.icon}
-            <span>{tab.label}</span>
-            {tab.count > 0 && (
-              <span className="rounded-full bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 animate-pulse">
-                {tab.count}
+              <span className="rounded-full bg-gold-50 px-2 py-0.5 text-[10px] font-extrabold text-gold-700 border border-gold-200">
+                MEMBER
               </span>
-            )}
+            </div>
+            <p className="text-xs text-text-secondary font-light">
+              {auth?.email} {auth?.mobileNumber ? `• ${auth.mobileNumber}` : ""}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-4 text-xs text-text-secondary px-3 py-1.5 rounded-xl bg-gold-50/50 border border-champagne/40">
+            <span>Orders: <strong className="text-luxury-black">{orders.length}</strong></span>
+            <span>Store Credit: <strong className="text-gold-700">₹{storeCreditBalance.availableBalance || 0}</strong></span>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-full border border-champagne hover:border-red-300 hover:bg-red-50 text-luxury-black hover:text-red-600 px-4 py-2 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
           </button>
-        ))}
+        </div>
       </div>
+
+      {/* 2. Standard E-Commerce Account Layout: Left Sidebar + Right Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Navigation Sidebar */}
+        <aside className="lg:col-span-3 bg-white rounded-2xl border border-champagne/60 shadow-xs p-3 sticky top-24">
+          <nav className="space-y-1 text-xs">
+            {[
+              { id: "orders", label: "My Orders", icon: <ShoppingBag className="w-4 h-4" />, count: activeOrdersCount },
+              { id: "addresses", label: "My Addresses", icon: <MapPin className="w-4 h-4" /> },
+              { id: "coupons", label: "Coupons & Offers", icon: <Tag className="w-4 h-4" /> },
+              { id: "store-credit", label: "Store Credit & Rewards", icon: <CreditCard className="w-4 h-4" /> },
+              { id: "callbacks", label: "Request Call Back", icon: <PhoneCall className="w-4 h-4" /> },
+              { id: "help", label: "Support & Help Desk", icon: <Headphones className="w-4 h-4" /> },
+              { id: "returns", label: "Returns & Refunds", icon: <RotateCcw className="w-4 h-4" />, count: returnsList.filter(r => r.type !== "Replacement" && !["Refund Completed", "Refunded", "Completed", "Rejected"].includes(r.status)).length },
+              { id: "settings", label: "Account Settings", icon: <Settings className="w-4 h-4" /> },
+            ].map((item) => {
+              const isActive = activeTab === item.id || (item.id === "settings" && activeTab === "profile") || (item.id === "returns" && activeTab === "refunds");
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleTabChange(item.id)}
+                  className={`flex w-full items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl font-medium transition cursor-pointer text-left ${
+                    isActive
+                      ? "bg-gold-500 text-white font-bold shadow-xs"
+                      : "text-luxury-black hover:bg-gold-50/70 hover:text-gold-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </div>
+                  {item.count > 0 && (
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${isActive ? "bg-white text-gold-700" : "bg-gold-100 text-gold-800"}`}>
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Right Active Content Panel */}
+        <main className="lg:col-span-9 min-w-0 space-y-6">
 
       {/* Notification Banner messages */}
       <AnimatePresence>
@@ -1788,6 +1847,62 @@ const MyProfile = () => {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
+              {/* Real Metrics KPI Ribbon */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div
+                  onClick={() => setActiveTab("orders")}
+                  className="rounded-2xl border border-champagne/45 bg-white/80 p-3.5 shadow-xs hover:border-gold-400 cursor-pointer transition"
+                >
+                  <span className="text-[9px] uppercase font-bold text-text-secondary tracking-wider block">Total Orders</span>
+                  <p className="text-xl font-serif font-bold text-luxury-black mt-1">{orders.length}</p>
+                  <span className="text-[10px] text-gold-700 font-semibold mt-0.5 block">View History &rarr;</span>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab("orders")}
+                  className="rounded-2xl border border-blue-200/60 bg-blue-50/20 p-3.5 shadow-xs hover:border-blue-400 cursor-pointer transition"
+                >
+                  <span className="text-[9px] uppercase font-bold text-blue-900 tracking-wider block">Active Orders</span>
+                  <p className="text-xl font-serif font-bold text-blue-900 mt-1">{activeOrdersCount}</p>
+                  <span className="text-[10px] text-blue-700 font-semibold mt-0.5 block">In Delivery &rarr;</span>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab("store-credit")}
+                  className="rounded-2xl border border-gold-300 bg-gradient-to-br from-gold-50/70 to-white p-3.5 shadow-xs hover:border-gold-500 cursor-pointer transition"
+                >
+                  <span className="text-[9px] uppercase font-bold text-gold-800 tracking-wider block">Store Credit</span>
+                  <p className="text-xl font-serif font-bold text-gold-900 mt-1">₹{Number(storeCreditBalance?.availableBalance || 0).toLocaleString("en-IN")}</p>
+                  <span className="text-[10px] text-gold-700 font-semibold mt-0.5 block">Wallet Ledger &rarr;</span>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab("orders")}
+                  className="rounded-2xl border border-champagne/45 bg-white/80 p-3.5 shadow-xs hover:border-gold-400 cursor-pointer transition"
+                >
+                  <span className="text-[9px] uppercase font-bold text-text-secondary tracking-wider block">Total Spend</span>
+                  <p className="text-xl font-serif font-bold text-luxury-black mt-1">₹{totalSpend.toLocaleString("en-IN")}</p>
+                  <span className="text-[10px] text-gray-500 font-light mt-0.5 block">Verified orders</span>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab("returns")}
+                  className="rounded-2xl border border-champagne/45 bg-white/80 p-3.5 shadow-xs hover:border-gold-400 cursor-pointer transition"
+                >
+                  <span className="text-[9px] uppercase font-bold text-text-secondary tracking-wider block">Active Claims</span>
+                  <p className="text-xl font-serif font-bold text-luxury-black mt-1">{activeClaimsCount}</p>
+                  <span className="text-[10px] text-gold-700 font-semibold mt-0.5 block">Returns & Exchanges</span>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab("notifications")}
+                  className="rounded-2xl border border-champagne/45 bg-white/80 p-3.5 shadow-xs hover:border-gold-400 cursor-pointer transition"
+                >
+                  <span className="text-[9px] uppercase font-bold text-text-secondary tracking-wider block">Notifications</span>
+                  <p className="text-xl font-serif font-bold text-luxury-black mt-1">{unreadCount}</p>
+                  <span className="text-[10px] text-gold-700 font-semibold mt-0.5 block">Unread Alerts &rarr;</span>
+                </div>
+              </div>
 
               <div className="grid gap-6 md:grid-cols-3">
                 {/* Recent Activity Card */}
@@ -2340,6 +2455,82 @@ const MyProfile = () => {
             </motion.div>
           )}
 
+          {/* REPLACEMENTS TAB */}
+          {activeTab === "replacements" && !loading && (
+            <motion.div
+              key="replacements"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <ReplacementsTab
+                returnsList={returnsList}
+                loading={loadingReturns}
+                onRefresh={fetchReturns}
+              />
+            </motion.div>
+          )}
+
+          {/* REFUNDS TRACKER TAB */}
+          {activeTab === "refunds" && !loading && (
+            <motion.div
+              key="refunds"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <RefundsTab />
+            </motion.div>
+          )}
+
+          {/* STORE CREDIT CENTER TAB */}
+          {activeTab === "store-credit" && !loading && (
+            <motion.div
+              key="store-credit"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <StoreCreditTab />
+            </motion.div>
+          )}
+
+          {/* CONCIERGE CALLBACKS TAB */}
+          {activeTab === "callbacks" && !loading && (
+            <motion.div
+              key="callbacks"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <CallbacksTab />
+            </motion.div>
+          )}
+
+          {/* PERSONAL INFORMATION TAB */}
+          {activeTab === "profile" && !loading && (
+            <motion.div
+              key="profile"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <PersonalInfoTab />
+            </motion.div>
+          )}
+
+          {/* SECURITY & ACCESS TAB */}
+          {activeTab === "security" && !loading && (
+            <motion.div
+              key="security"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <SecurityTab />
+            </motion.div>
+          )}
+
           {/* ADDRESSES TAB */}
           {activeTab === "addresses" && (
             <motion.div
@@ -2414,32 +2605,57 @@ const MyProfile = () => {
                           name="fullName"
                           value={addressForm.fullName}
                           onChange={handleAddressFormChange}
+                          placeholder="e.g. John Doe"
                           required
                           className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
                         />
+                        {addressErrors.fullName && (
+                          <p className="text-[10px] text-rose-600 mt-1 pl-2">{addressErrors.fullName}</p>
+                        )}
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Mobile Phone Number *</label>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Mobile Phone Number (10 Digits) *</label>
                         <input
                           name="phone"
                           value={addressForm.phone}
                           onChange={handleAddressFormChange}
+                          placeholder="e.g. 9876543210"
                           required
                           className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
                         />
+                        {addressErrors.phone && (
+                          <p className="text-[10px] text-rose-600 mt-1 pl-2">{addressErrors.phone}</p>
+                        )}
                       </div>
                     </div>
 
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Street Address Detail *</label>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">House / Flat / Building *</label>
                         <input
                           name="line1"
                           value={addressForm.line1}
                           onChange={handleAddressFormChange}
+                          placeholder="Flat / House No., Floor, Building Name"
                           required
                           className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
                         />
+                        {addressErrors.line1 && (
+                          <p className="text-[10px] text-rose-600 mt-1 pl-2">{addressErrors.line1}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Street / Area / Landmark</label>
+                        <input
+                          name="line2"
+                          value={addressForm.line2 || ""}
+                          onChange={handleAddressFormChange}
+                          placeholder="Street Name, Sector, Landmark (optional)"
+                          className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
+                        />
+                        {addressErrors.line2 && (
+                          <p className="text-[10px] text-rose-600 mt-1 pl-2">{addressErrors.line2}</p>
+                        )}
                       </div>
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div>
@@ -2448,9 +2664,13 @@ const MyProfile = () => {
                             name="city"
                             value={addressForm.city}
                             onChange={handleAddressFormChange}
+                            placeholder="e.g. New Delhi"
                             required
                             className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
                           />
+                          {addressErrors.city && (
+                            <p className="text-[10px] text-rose-600 mt-1 pl-2">{addressErrors.city}</p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">State *</label>
@@ -2458,19 +2678,27 @@ const MyProfile = () => {
                             name="state"
                             value={addressForm.state}
                             onChange={handleAddressFormChange}
+                            placeholder="e.g. Delhi"
                             required
                             className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
                           />
+                          {addressErrors.state && (
+                            <p className="text-[10px] text-rose-600 mt-1 pl-2">{addressErrors.state}</p>
+                          )}
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">Pincode *</label>
+                          <label className="block text-[10px] font-bold text-luxury-black uppercase tracking-wider mb-1">PIN Code (6 Digits) *</label>
                           <input
                             name="postalCode"
                             value={addressForm.postalCode}
                             onChange={handleAddressFormChange}
+                            placeholder="e.g. 110001"
                             required
                             className="w-full rounded-full border border-champagne bg-white px-4 py-2.5 text-xs outline-none focus:border-gold-500"
                           />
+                          {addressErrors.postalCode && (
+                            <p className="text-[10px] text-rose-600 mt-1 pl-2">{addressErrors.postalCode}</p>
+                          )}
                         </div>
                       </div>
                       <div>
@@ -2824,7 +3052,7 @@ const MyProfile = () => {
           )}
 
           {/* SUPPORT TAB */}
-          {activeTab === "help" && !loading && (
+          {(activeTab === "help" || activeTab === "support") && !loading && (
             <motion.div
               key="help"
               initial={{ opacity: 0, y: 10 }}
@@ -3457,7 +3685,9 @@ const MyProfile = () => {
           </div>
         </div>
       )}
-    </section>
+        </main>
+      </div>
+    </div>
   );
 
   // Return & Replacement tab detailed component

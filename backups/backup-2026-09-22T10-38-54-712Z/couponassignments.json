@@ -1,0 +1,32 @@
+[
+  {
+    "_id": "6a435effb84a0f721aebc438",
+    "userId": "6a42867795d5212ab19282b8",
+    "couponId": "6a435ef3b84a0f721aebc433",
+    "assignedBy": "Master Admin",
+    "assignmentType": "manual",
+    "status": "Unused",
+    "timesUsed": 0,
+    "remainingUses": 1,
+    "redeemedDates": [],
+    "assignedDate": "2026-06-30T06:15:27.895Z",
+    "createdAt": "2026-06-30T06:15:27.895Z",
+    "updatedAt": "2026-06-30T06:15:27.895Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a435f5cb84a0f721aebc458",
+    "userId": "6a42867795d5212ab19282b8",
+    "couponId": "6a435f3fb84a0f721aebc453",
+    "assignedBy": "Master Admin",
+    "assignmentType": "manual",
+    "status": "Unused",
+    "timesUsed": 0,
+    "remainingUses": 1,
+    "redeemedDates": [],
+    "assignedDate": "2026-06-30T06:17:00.834Z",
+    "createdAt": "2026-06-30T06:17:00.835Z",
+    "updatedAt": "2026-06-30T06:17:00.835Z",
+    "__v": 0
+  }
+]

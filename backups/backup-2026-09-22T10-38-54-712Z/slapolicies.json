@@ -1,0 +1,72 @@
+[
+  {
+    "_id": "6aaba3fc593e7c10a1cc7657",
+    "name": "Callback Request SLA",
+    "description": "",
+    "source": "Callback Request",
+    "priority": "All",
+    "firstResponseMinutes": 15,
+    "resolutionMinutes": 240,
+    "autoEscalate": true,
+    "isActive": true,
+    "createdAt": "2026-09-17T08:25:32.609Z",
+    "updatedAt": "2026-09-17T08:25:32.609Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaba3fc593e7c10a1cc7658",
+    "name": "Critical Complaints & Escalations SLA",
+    "description": "",
+    "source": "Complaint",
+    "priority": "Critical",
+    "firstResponseMinutes": 30,
+    "resolutionMinutes": 720,
+    "autoEscalate": true,
+    "isActive": true,
+    "createdAt": "2026-09-17T08:25:32.800Z",
+    "updatedAt": "2026-09-17T08:25:32.800Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaba3fd593e7c10a1cc7659",
+    "name": "Returns & Replacements SLA",
+    "description": "",
+    "source": "Return Request",
+    "priority": "All",
+    "firstResponseMinutes": 60,
+    "resolutionMinutes": 2880,
+    "autoEscalate": true,
+    "isActive": true,
+    "createdAt": "2026-09-17T08:25:33.035Z",
+    "updatedAt": "2026-09-17T08:25:33.035Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaba3fd593e7c10a1cc765a",
+    "name": "Refund Processing SLA",
+    "description": "",
+    "source": "Refund Request",
+    "priority": "All",
+    "firstResponseMinutes": 60,
+    "resolutionMinutes": 1440,
+    "autoEscalate": true,
+    "isActive": true,
+    "createdAt": "2026-09-17T08:25:33.323Z",
+    "updatedAt": "2026-09-17T08:25:33.323Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaba3fd593e7c10a1cc765b",
+    "name": "General Customer Queries SLA",
+    "description": "",
+    "source": "Contact Form",
+    "priority": "All",
+    "firstResponseMinutes": 60,
+    "resolutionMinutes": 1440,
+    "autoEscalate": true,
+    "isActive": true,
+    "createdAt": "2026-09-17T08:25:33.521Z",
+    "updatedAt": "2026-09-17T08:25:33.521Z",
+    "__v": 0
+  }
+]

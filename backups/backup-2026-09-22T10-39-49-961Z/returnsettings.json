@@ -1,0 +1,14 @@
+[
+  {
+    "_id": "6a3a8a529087d5b2bcaf2f86",
+    "singletonKey": "settings",
+    "returnWindowDays": 7,
+    "returnPolicyText": "Returns must be requested within 7 days of delivery with original packaging and product photos.",
+    "enabled": true,
+    "createdAt": "2026-06-23T13:29:54.177Z",
+    "updatedAt": "2026-09-17T05:13:06.700Z",
+    "__v": 0,
+    "allowPersonalizedExceptions": true,
+    "replacementWindowDays": 7
+  }
+]

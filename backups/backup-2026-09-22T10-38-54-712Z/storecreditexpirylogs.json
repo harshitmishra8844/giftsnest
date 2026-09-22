@@ -1,0 +1,62 @@
+[
+  {
+    "_id": "6ab16ee17d8e54d5734103c4",
+    "transactionId": "6ab16ee17d8e54d5734103c3",
+    "userId": "6ab16ebe7d8e54d573410373",
+    "originalAmount": 150,
+    "remainingAmount": 0,
+    "expiresAt": "2026-09-20T17:52:32.840Z",
+    "reminderSent7Days": false,
+    "reminderSent3Days": false,
+    "reminderSent1Day": false,
+    "expiredAt": "2026-09-21T17:52:34.349Z",
+    "createdAt": "2026-09-21T17:52:33.841Z",
+    "updatedAt": "2026-09-21T17:52:36.234Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ab16ee67d8e54d5734103cb",
+    "transactionId": "6ab16ee67d8e54d5734103ca",
+    "userId": "6ab16ebe7d8e54d573410373",
+    "originalAmount": 200,
+    "remainingAmount": 200,
+    "expiresAt": "2026-09-28T15:28:37.732Z",
+    "reminderSent7Days": true,
+    "reminderSent3Days": false,
+    "reminderSent1Day": false,
+    "expiredAt": null,
+    "createdAt": "2026-09-21T17:52:38.409Z",
+    "updatedAt": "2026-09-21T17:52:39.051Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ab16f1f60a0ec1ca790323e",
+    "transactionId": "6ab16f1f60a0ec1ca790323d",
+    "userId": "6ab16f0960a0ec1ca79031ed",
+    "originalAmount": 150,
+    "remainingAmount": 0,
+    "expiresAt": "2026-09-20T17:53:35.667Z",
+    "reminderSent7Days": false,
+    "reminderSent3Days": false,
+    "reminderSent1Day": false,
+    "expiredAt": "2026-09-21T17:53:36.199Z",
+    "createdAt": "2026-09-21T17:53:35.947Z",
+    "updatedAt": "2026-09-21T17:53:36.799Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ab16f2160a0ec1ca7903245",
+    "transactionId": "6ab16f2160a0ec1ca7903244",
+    "userId": "6ab16f0960a0ec1ca79031ed",
+    "originalAmount": 200,
+    "remainingAmount": 200,
+    "expiresAt": "2026-09-28T15:29:37.326Z",
+    "reminderSent7Days": true,
+    "reminderSent3Days": false,
+    "reminderSent1Day": false,
+    "expiredAt": null,
+    "createdAt": "2026-09-21T17:53:37.640Z",
+    "updatedAt": "2026-09-21T17:53:37.955Z",
+    "__v": 0
+  }
+]

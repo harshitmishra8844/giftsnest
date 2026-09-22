@@ -1,0 +1,30 @@
+{
+  "startedAt": "2026-09-22T10:40:04.743Z",
+  "backupId": "backup-2026-09-22T10-39-57-524Z",
+  "executedBy": "Antigravity Pre-Launch Test",
+  "deleted": {
+    "orders": 0,
+    "supportAndEnquiries": 0,
+    "returnsAndRefunds": 85,
+    "taskRouting": 49,
+    "storeCredit": 123,
+    "customerInteractions": 23,
+    "notifications": 1077,
+    "systemLogs": 534,
+    "coupons": 5,
+    "wishlistsAndOtps": 1,
+    "demoReviews": "Cleaned embedded reviews and reset ratings to default",
+    "testCustomerAccounts": 57,
+    "countersReset": "Ticket, Refund, and Store Credit sequence counters reset to 0",
+    "tempUploads": 3
+  },
+  "preserved": {
+    "masterAdminAccount": "niyoragifts@gmail.com",
+    "remainingUsersCount": 8,
+    "productCatalogCount": 18,
+    "status": "Production Ready"
+  },
+  "errors": [],
+  "completedAt": "2026-09-22T10:40:17.954Z",
+  "success": true
+}

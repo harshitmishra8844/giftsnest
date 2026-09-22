@@ -32,13 +32,26 @@ const taskRoutes = require("./routes/taskRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const agentAssistRoutes = require("./routes/agentAssistRoutes");
 const refundRoutes = require("./routes/refundRoutes");
+const storeCreditRoutes = require("./routes/storeCreditRoutes");
+const cleanupRoutes = require("./routes/cleanupRoutes");
 const { getStoreInfo } = require("./controllers/adminController");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { verifyEmailTransporter, getSmtpConfig } = require("./services/emailTransporter");
 
 const app = express();
+const compression = require("compression");
+const ensureIndexes = require("./config/ensureIndexes");
 
 const { securityHeaders, csrfProtection } = require("./middleware/securityMiddleware");
+
+// ✅ HTTP Response Compression (Gzip/Deflate)
+app.use(compression({
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers["x-no-compression"]) return false;
+    return compression.filter(req, res);
+  }
+}));
 
 // ✅ FINAL CORS FIX (WORKS 100%)
 app.use(cors({
@@ -52,9 +65,11 @@ app.use(csrfProtection);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
+  maxAge: "1d",
   setHeaders: (res, filePath, stat) => {
     res.set("X-Content-Type-Options", "nosniff");
     res.set("Content-Security-Policy", "default-src 'none'");
+    res.set("Cache-Control", "public, max-age=86400, immutable");
     
     const ext = path.extname(filePath).toLowerCase();
     if ([".html", ".htm", ".svg", ".pdf", ".xml", ".txt", ".js"].includes(ext)) {
@@ -94,6 +109,8 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/agent-assist", agentAssistRoutes);
 app.use("/api/refunds", refundRoutes);
+app.use("/api/store-credit", storeCreditRoutes);
+app.use("/api/admin/cleanup", cleanupRoutes);
 
 
 app.use(notFound);
@@ -122,8 +139,15 @@ const logSmtpStartupInfo = () => {
 const startServer = async () => {
   try {
     await connectDB();
+    ensureIndexes().catch(err => console.warn("[indexes] Warning:", err.message));
+    
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+
     const { seedDB } = require("./services/seedService");
-    await seedDB();
+    seedDB().catch((err) => console.error("[seeder] Seed error:", err.message));
+
     const { startEmailWorker } = require("./services/emailService");
     startEmailWorker();
     const { startCrmCampaignWorker } = require("./services/crmCampaignWorker");
@@ -149,10 +173,6 @@ const startServer = async () => {
         });
       }
     }
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
   } catch (error) {
     console.error("Failed to start server:", error.message, error.stack);
     process.exit(1);

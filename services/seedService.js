@@ -254,18 +254,19 @@ const seedDB = async () => {
       }
     }
 
-    // 3. Ensure Master Admin account exists
+    // 3. Ensure Master Admin account exists (Singleton Master Admin)
     const masterEmail = (process.env.ADMIN_EMAIL || "niyoragifts@gmail.com").toLowerCase().trim();
     const masterPassword = process.env.ADMIN_PASSWORD || "harshit@123";
 
-    let masterAdmin = await User.findOne({
-      $or: [
-        { email: masterEmail },
-        { employeeId: "EMP-MASTER-001" }
-      ]
-    });
+    // Release EMP-MASTER-001 if held by another account
+    await User.updateMany(
+      { email: { $ne: masterEmail }, employeeId: "EMP-MASTER-001" },
+      { $unset: { employeeId: 1 } }
+    );
+
+    let masterAdmin = await User.findOne({ email: masterEmail });
     if (!masterAdmin) {
-      const hashedPassword = await bcrypt.hash(masterPassword, 10);
+      const hashedPassword = await bcrypt.hash(masterPassword, 12);
       
       // Assign IT department if found
       const itDeptId = departmentMap["IT"] || null;
@@ -276,15 +277,14 @@ const seedDB = async () => {
         password: hashedPassword,
         isAdmin: true,
         isMasterAdmin: true,
+        role: "admin",
         employeeId: "EMP-MASTER-001",
         designation: "Chief Technical Officer",
         department: itDeptId,
         status: "Active",
       });
-      console.log("Master Admin created successfully.");
+      console.log(`[seeder] Master Admin created successfully for ${masterEmail}.`);
     } else {
-      console.log("Master Admin already exists. Skipping creation.");
-      // Ensure existing admin document matches master flags if it has the master email
       let changed = false;
       if (!masterAdmin.isAdmin) {
         masterAdmin.isAdmin = true;
@@ -294,10 +294,37 @@ const seedDB = async () => {
         masterAdmin.isMasterAdmin = true;
         changed = true;
       }
+      if (masterAdmin.role !== "admin") {
+        masterAdmin.role = "admin";
+        changed = true;
+      }
+      if (masterAdmin.status !== "Active") {
+        masterAdmin.status = "Active";
+        changed = true;
+      }
+      if (masterAdmin.employeeId !== "EMP-MASTER-001") {
+        masterAdmin.employeeId = "EMP-MASTER-001";
+        changed = true;
+      }
+      if (!masterAdmin.department && departmentMap["IT"]) {
+        masterAdmin.department = departmentMap["IT"];
+        changed = true;
+      }
       if (changed) {
         await masterAdmin.save();
         console.log(`[seeder] Updated existing user ${masterAdmin.email} to hold Master Admin privileges`);
+      } else {
+        console.log(`[seeder] Master Admin ${masterAdmin.email} is active and verified.`);
       }
+    }
+
+    // Strictly enforce singleton: demote any other users holding isMasterAdmin
+    const demoted = await User.updateMany(
+      { email: { $ne: masterEmail }, isMasterAdmin: true },
+      { $set: { isMasterAdmin: false } }
+    );
+    if (demoted.modifiedCount > 0) {
+      console.log(`[seeder] Demoted ${demoted.modifiedCount} other account(s) to guarantee ${masterEmail} as the single Master Admin.`);
     }
 
     // 4. Seed Default Email Configurations

@@ -1,0 +1,97 @@
+[
+  {
+    "_id": "6a3a91799087d5b2bcaf3155",
+    "returnCode": "RET-D894345D",
+    "order": "6a3a8df69087d5b2bcaf3081",
+    "user": "6a3a87729087d5b2bcaf2f83",
+    "items": [
+      {
+        "productId": "6a36b44980b7f20f0021f54a",
+        "name": "3D Dolphin Crystal Ball",
+        "price": 199,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1781969963/gift-store/products/zbz61az4vgvmdj6wcfnd.png",
+        "_id": "6a3a91799087d5b2bcaf3156"
+      }
+    ],
+    "reason": "Wrong Product Received",
+    "description": "sorry",
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782223220/gift-store/returns/yi25nkcm3rwrgz059poh.png",
+        "publicId": "gift-store/returns/yi25nkcm3rwrgz059poh",
+        "_id": "6a3a91799087d5b2bcaf3157"
+      }
+    ],
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "preferredResolution": "Refund",
+    "status": "Completed",
+    "statusHistory": [
+      {
+        "status": "Return Requested",
+        "note": "Return request submitted by customer.",
+        "updatedBy": null,
+        "_id": "6a3a91799087d5b2bcaf3158",
+        "updatedAt": "2026-06-23T14:00:25.761Z"
+      },
+      {
+        "status": "Approved",
+        "note": "Status transitioned manually.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3a91b89087d5b2bcaf3192",
+        "updatedAt": "2026-06-23T14:01:28.987Z"
+      },
+      {
+        "status": "Refund Processing",
+        "note": "Return status updated to Refund Processing by Master Admin.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3a91c99087d5b2bcaf31a7",
+        "updatedAt": "2026-06-23T14:01:45.026Z"
+      },
+      {
+        "status": "Refunded",
+        "note": "Status transitioned manually.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3a91f69087d5b2bcaf31eb",
+        "updatedAt": "2026-06-23T14:02:30.983Z"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "Return status updated to Pickup Scheduled by Master Admin.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3a92079087d5b2bcaf3204",
+        "updatedAt": "2026-06-23T14:02:47.404Z"
+      },
+      {
+        "status": "Completed",
+        "note": "Return status updated to Completed by Master Admin.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3a92309087d5b2bcaf323b",
+        "updatedAt": "2026-06-23T14:03:28.120Z"
+      }
+    ],
+    "ticket": "6a3a91799087d5b2bcaf3159",
+    "assignedSupportAgent": null,
+    "pickupDetails": {
+      "courier": "32356526",
+      "trackingId": "3333333",
+      "pickupDate": "2026-06-23T14:02:00.000Z",
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 200,
+      "refundMethod": "Refund",
+      "refundDate": "2026-06-23T14:03:28.118Z",
+      "refundStatus": "Success",
+      "transactionReference": "6562326565"
+    },
+    "replacementOrder": null,
+    "internalNotes": [],
+    "createdAt": "2026-06-23T14:00:25.764Z",
+    "updatedAt": "2026-06-23T14:03:28.253Z",
+    "__v": 5
+  }
+]

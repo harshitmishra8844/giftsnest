@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { NavLink, Route, Routes, Link, useLocation, Navigate, useNavigate } from "react-router-dom";
 import { PremiumRingLoader } from "./components/SkeletonLoaders";
+import api from "./services/api";
 
 const Home = lazy(() => import("./pages/Home"));
 const About = lazy(() => import("./pages/About"));
@@ -27,9 +28,10 @@ import { useWishlist } from "./context/WishlistContext";
 import { useAuth } from "./context/AuthContext";
 import SearchBar from "./components/search/SearchBar";
 import { mockGiftProducts, trendingSearches } from "./data/mockGiftProducts";
-import api, { resolveMediaUrl } from "./services/api";
 import SEO from "./components/SEO";
 import { Sparkles, X, Copy, Check, Phone } from "lucide-react";
+import Header from "./components/navigation/Header";
+import MobileBottomNav from "./components/navigation/MobileBottomNav";
 
 
 
@@ -52,12 +54,13 @@ const UserProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  const location = useLocation();
   const { itemCount, cartItems, setCartItems } = useCart();
   const { wishlistCount } = useWishlist();
-  const location = useLocation();
   const navigate = useNavigate();
   const { auth, showLoginModal } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const [cmsShell, setCmsShell] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
@@ -395,36 +398,6 @@ function App() {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname, location.search]);
 
-  // Close mobile menu on route changes
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname, location.search]);
-
-  // Lock body scroll when mobile menu is open
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mobileMenuOpen]);
-
-  // Reset mobile menu state on window resize (e.g. orientation change)
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setMobileMenuOpen(false);
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
   return (
     <div className={isAdminRoute ? "min-h-screen bg-[#FAF7F2] font-sans" : "min-h-screen bg-ivory"}>
       {!isDynamicRoute && (
@@ -439,278 +412,21 @@ function App() {
           schemaJson={seoData.schemaJson}
         />
       )}
-      {!isAdminRoute && cmsShell?.announcements?.active && (
-        <div 
-          style={{ 
-            backgroundColor: cmsShell.announcements.bgColor || "#B28A30", 
-            color: cmsShell.announcements.textColor || "#ffffff" 
-          }}
-          className="text-center py-2 px-4 text-xs font-bold tracking-wider transition-all"
-        >
-          {cmsShell.announcements.link ? (
-            <Link to={cmsShell.announcements.link} className="hover:underline">
-              {cmsShell.announcements.text}
-            </Link>
-          ) : (
-            <span>{cmsShell.announcements.text}</span>
-          )}
-        </div>
-      )}
       {!isAdminRoute && (
-        <header className="sticky top-0 z-20 backdrop-blur-lg bg-white/85 border-b border-champagne/40 shadow-xs transition-all duration-300">
-        <div className="mx-auto w-full max-w-7xl px-4 py-3 md:px-8">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between lg:gap-6">
-            <div className="flex items-center justify-between min-w-[150px] shrink-0">
-              <NavLink to="/" className="group inline-flex items-center gap-2.5">
-                {cmsShell?.header?.logoImage ? (
-                  <img src={cmsShell.header.logoImage} alt="Logo" className="h-9 w-9 object-contain" />
-                ) : (
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-sm font-serif font-bold text-white shadow-md transition group-hover:scale-105">
-                    {cmsShell?.header?.logoText?.[0] || "N"}
-                  </span>
-                )}
-                <span className="text-xl font-bold tracking-widest text-luxury-black font-serif">
-                  {cmsShell?.header?.logoText || "Niyora Gifts"}
-                </span>
-              </NavLink>
-              <span className="hidden md:inline-block text-[9px] font-bold uppercase tracking-[0.3em] text-gold-600 bg-gold-50 px-2.5 py-1 rounded-sm border border-gold-200/30">
-                curated gifting
-              </span>
-              <div className="ml-2 flex items-center gap-2 md:hidden">
-                <NavLink
-                  to="/wishlist"
-                  aria-label={`Wishlist (${wishlistCount})`}
-                  title={`Wishlist (${wishlistCount})`}
-                  className="relative shrink-0 rounded-full bg-white border border-champagne p-2.5 text-luxury-black transition hover:bg-gold-50 shadow-sm flex items-center justify-center"
-                >
-                  <span className="inline-flex items-center">
-                    <svg className="h-4 w-4 fill-red-500 stroke-red-500 animate-pulse-subtle" viewBox="0 0 24 24">
-                      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                    </svg>
-                  </span>
-                  {wishlistCount > 0 ? (
-                    <span
-                      key={`wishlist-count-mobile-${wishlistCount}`}
-                      className="cart-badge-bump absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold leading-4 text-white shadow-sm"
-                    >
-                      {wishlistCount > 99 ? "99+" : wishlistCount}
-                    </span>
-                  ) : null}
-                </NavLink>
-                <NavLink
-                  to="/cart"
-                  aria-label={`Cart (${itemCount})`}
-                  title={`Cart (${itemCount})`}
-                  className="relative shrink-0 rounded-full bg-luxury-black p-2.5 text-white transition hover:bg-gold-600 shadow-sm"
-                >
-                  <span className="inline-flex items-center">
-                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v8a2 2 0 01-2 2H9a2 2 0 01-2-2v-8" />
-                    </svg>
-                  </span>
-                  {itemCount > 0 ? (
-                    <span
-                      key={`cart-count-mobile-${itemCount}`}
-                      className="cart-badge-bump absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold leading-4 text-white shadow-sm"
-                    >
-                      {itemCount > 99 ? "99+" : itemCount}
-                    </span>
-                  ) : null}
-                </NavLink>
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen((prev) => !prev)}
-                  aria-label="Toggle navigation menu"
-                  className="rounded-full border border-gold-200 bg-white p-2 text-luxury-black hover:bg-gold-50 cursor-pointer"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {mobileMenuOpen ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    )}
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Global Search Bar */}
-            <div className="w-full max-w-md md:max-w-lg lg:max-w-xl mx-auto flex-1 px-1.5 md:px-0">
-              <SearchBar
-                products={products}
-                trendingSearches={trendingSearches}
-                onSearch={handleSearch}
-                placeholder={cmsShell?.header?.searchPlaceholder}
-              />
-            </div>
-
-            <div className="hidden items-center gap-1.5 rounded-full border border-gray-200/50 bg-gray-50/50 p-1.5 shadow-inner md:flex lg:flex-wrap shrink-0">
-              {(cmsShell?.header?.navigationMenu || [
-                { label: "Home", link: "/" },
-                { label: "Products", link: "/products" },
-                { label: "About Us", link: "/about" }
-              ]).map((nav, index) => (
-                <NavLink key={index} to={nav.link} className={navLinkClass}>
-                  {nav.label}
-                </NavLink>
-              ))}
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (auth?.token) {
-                    navigate("/my-profile");
-                  } else {
-                    navigate("/login", { state: { redirectTo: "/my-profile" } });
-                  }
-                }}
-                className={navLinkClass({ isActive: location.pathname === "/my-profile" })}
-              >
-                Profile
-              </button>
-              <NavLink
-                to="/wishlist"
-                aria-label={`Wishlist (${wishlistCount})`}
-                title={`Wishlist (${wishlistCount})`}
-                className="relative shrink-0 rounded-full bg-white hover:bg-gold-50 px-5 py-2 text-luxury-black hover:text-gold-600 border border-champagne transition hover:scale-102 hover:shadow-md flex items-center gap-2 font-semibold"
-              >
-                <span>
-                  <svg className="h-4 w-4 fill-red-500 stroke-red-500" viewBox="0 0 24 24">
-                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                  </svg>
-                </span>
-                {wishlistCount > 0 ? (
-                  <span
-                    key={`wishlist-count-desktop-${wishlistCount}`}
-                    className="cart-badge-bump inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-[10px] font-extrabold leading-3 text-white"
-                  >
-                    {wishlistCount > 99 ? "99+" : wishlistCount}
-                  </span>
-                ) : null}
-              </NavLink>
-              <NavLink
-                to="/cart"
-                aria-label={`Cart (${itemCount})`}
-                title={`Cart (${itemCount})`}
-                className="relative shrink-0 rounded-full bg-luxury-black hover:bg-gold-600 px-5 py-2 text-white transition hover:scale-102 hover:shadow-md flex items-center gap-2"
-              >
-                <span>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v8a2 2 0 01-2 2H9a2 2 0 01-2-2v-8" />
-                  </svg>
-                </span>
-                {itemCount > 0 ? (
-                  <span
-                    key={`cart-count-desktop-${itemCount}`}
-                    className="cart-badge-bump inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-[10px] font-extrabold leading-3 text-white"
-                  >
-                    {itemCount > 99 ? "99+" : itemCount}
-                  </span>
-                ) : null}
-              </NavLink>
-            </div>
-
-          </div>
-        </div>
-      </header>
+        <Header
+          products={products}
+          trendingSearches={trendingSearches}
+          onSearch={handleSearch}
+          cmsShell={cmsShell}
+          onOpenCallbackModal={() => setShowCallbackModal(true)}
+          mobileDrawerOpen={mobileDrawerOpen}
+          setMobileDrawerOpen={setMobileDrawerOpen}
+          mobileSearchOpen={mobileSearchOpen}
+          setMobileSearchOpen={setMobileSearchOpen}
+        />
       )}
 
-      {!isAdminRoute && mobileMenuOpen ? (
-        <>
-          {/* Backdrop overlay */}
-          <div
-            onClick={() => setMobileMenuOpen(false)}
-            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm animate-fade-in-backdrop md:hidden"
-          />
-          {/* Slide-in drawer */}
-          <div
-            className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-ivory shadow-2xl p-6 md:hidden flex flex-col justify-between animate-slide-in-right border-l border-gold-100/20"
-          >
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-gray-200/40 pb-4">
-                <span className="text-lg font-serif font-bold tracking-wider text-luxury-black">Menu</span>
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-label="Close menu"
-                  className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-50 transition cursor-pointer"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <nav className="flex flex-col gap-3">
-                {(cmsShell?.header?.navigationMenu || [
-                  { label: "Home", link: "/" },
-                  { label: "Products", link: "/products" },
-                  { label: "About Us", link: "/about" }
-                ]).map((nav, index) => (
-                  <NavLink
-                    key={index}
-                    to={nav.link}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
-                        isActive
-                          ? "bg-gold-500 text-white shadow-sm"
-                          : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
-                      }`
-                    }
-                  >
-                    {nav.label}
-                  </NavLink>
-                ))}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMobileMenuOpen(false);
-                    if (auth?.token) {
-                      navigate("/my-profile");
-                    } else {
-                      navigate("/login", { state: { redirectTo: "/my-profile" } });
-                    }
-                  }}
-                  className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 cursor-pointer ${
-                    location.pathname === "/my-profile"
-                      ? "bg-gold-500 text-white shadow-sm"
-                      : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
-                  }`}
-                >
-                  My Profile
-                </button>
-                <NavLink
-                  to="/wishlist"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 ${
-                      isActive
-                        ? "bg-gold-500 text-white shadow-sm"
-                        : "text-luxury-black hover:bg-gold-50 hover:text-gold-600"
-                    }`
-                  }
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="text-red-500">❤️</span> Wishlist
-                  </span>
-                  {wishlistCount > 0 && (
-                    <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-gold-500 px-1.5 py-0.5 text-[10px] font-bold leading-3 text-white">
-                      {wishlistCount}
-                    </span>
-                  )}
-                </NavLink>
-              </nav>
-            </div>
-
-            <div className="border-t border-gray-200/40 pt-4 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-gold-600 font-bold">Niyora Gifts</p>
-              <p className="text-[9px] text-gray-405 mt-1 font-light">Curated with love</p>
-            </div>
-          </div>
-        </>
-      ) : null}
-
-      <main className={isAdminRoute ? "min-h-screen w-full bg-[#FAF7F2]" : location.pathname === "/" ? "w-full page-enter" : "mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-10 page-enter"}>
+      <main className={isAdminRoute ? "min-h-screen w-full bg-[#FAF7F2]" : location.pathname === "/" ? "w-full page-enter pb-16 md:pb-0" : "mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-10 page-enter pb-16 md:pb-0"}>
         <Suspense fallback={<PremiumRingLoader text="Loading page..." />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -737,6 +453,10 @@ function App() {
                 </UserProtectedRoute>
               }
             />
+            <Route path="/account" element={<Navigate to="/my-profile?tab=orders" replace />} />
+            <Route path="/orders" element={<Navigate to="/my-profile?tab=orders" replace />} />
+            <Route path="/addresses" element={<Navigate to="/my-profile?tab=addresses" replace />} />
+            <Route path="/coupons" element={<Navigate to="/my-profile?tab=coupons" replace />} />
             <Route path="/add-product" element={<AddProduct />} />
             <Route path="/admin" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
             <Route path="/admin/login" element={<Navigate to="/niyora-admin-portal-2026/login" replace />} />
@@ -1161,6 +881,21 @@ function App() {
             </div>
           )}
         </>
+      )}
+
+      {/* Sticky Mobile Bottom Navigation Bar */}
+      {!isAdminRoute && (
+        <MobileBottomNav
+          onOpenCategories={() => setMobileDrawerOpen(true)}
+          onOpenSearch={() => {
+            setMobileSearchOpen(true);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            setTimeout(() => {
+              const searchInput = document.getElementById("gift-search-input");
+              if (searchInput) searchInput.focus();
+            }, 100);
+          }}
+        />
       )}
     </div>
   );

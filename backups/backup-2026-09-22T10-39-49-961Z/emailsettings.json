@@ -1,0 +1,30 @@
+[
+  {
+    "_id": "6a3a87729087d5b2bcaf2f84",
+    "singletonKey": "email",
+    "adminEmails": [
+      "niyoragifts@gmail.com"
+    ],
+    "supportEmails": [
+      "niyoragifts@gmail.com"
+    ],
+    "notificationsEnabled": true,
+    "customerOrderConfirmation": true,
+    "customerOrderShipped": true,
+    "customerOrderDelivered": true,
+    "customerOrderCancelled": true,
+    "customerReturnRequest": true,
+    "customerReturnApproved": true,
+    "adminNewOrderAlert": true,
+    "adminCancelRequestAlert": true,
+    "adminReturnRequestAlert": true,
+    "supportNewOrderAlert": true,
+    "supportCancelRequestAlert": true,
+    "supportReturnRequestAlert": true,
+    "supportReturnApprovedAlert": true,
+    "supportRefundProcessAlert": true,
+    "createdAt": "2026-06-23T13:17:38.177Z",
+    "updatedAt": "2026-06-23T13:17:38.177Z",
+    "__v": 0
+  }
+]

@@ -436,6 +436,80 @@ const notifyReturnStatusUpdated = async (returnRequest, status) => {
   });
 };
 
+/**
+ * Store Credit Events
+ */
+const notifyStoreCreditAdded = async ({ userId, amount, balance, reason, referenceType }) => {
+  return await createAndDispatchNotification({
+    recipient: userId,
+    role: "customer",
+    category: "PAYMENT",
+    event: "STORE_CREDIT_ADDED",
+    title: "Store Credit Received! 🪙",
+    message: `₹${Number(amount).toFixed(2)} store credit added to your wallet. Reason: ${reason || referenceType || "Credit Disbursed"}. Current Balance: ₹${Number(balance).toFixed(2)}.`,
+    priority: "Medium",
+    link: "profile",
+    metadata: { amount, balance, reason, referenceType },
+  });
+};
+
+const notifyStoreCreditUsed = async ({ userId, amount, balance, orderCode }) => {
+  return await createAndDispatchNotification({
+    recipient: userId,
+    role: "customer",
+    category: "ORDER",
+    event: "STORE_CREDIT_USED",
+    title: "Store Credit Applied",
+    message: `₹${Number(amount).toFixed(2)} store credit deducted for Order #${orderCode || "N/A"}. Remaining Balance: ₹${Number(balance).toFixed(2)}.`,
+    priority: "Low",
+    link: "profile",
+    metadata: { amount, balance, orderCode },
+  });
+};
+
+const notifyStoreCreditRestored = async ({ userId, amount, balance, orderCode, reason }) => {
+  return await createAndDispatchNotification({
+    recipient: userId,
+    role: "customer",
+    category: "PAYMENT",
+    event: "STORE_CREDIT_RESTORED",
+    title: "Store Credit Restored",
+    message: `₹${Number(amount).toFixed(2)} store credit restored to your wallet for Order #${orderCode || "N/A"}. Current Balance: ₹${Number(balance).toFixed(2)}.`,
+    priority: "Medium",
+    link: "profile",
+    metadata: { amount, balance, orderCode, reason },
+  });
+};
+
+const notifyStoreCreditExpiring = async ({ userId, amount, daysRemaining, expiryDate }) => {
+  const urgency = daysRemaining <= 1 ? "Urgent" : daysRemaining <= 3 ? "High" : "Medium";
+  return await createAndDispatchNotification({
+    recipient: userId,
+    role: "customer",
+    category: "PAYMENT",
+    event: "STORE_CREDIT_EXPIRING",
+    title: `⚠️ ₹${Number(amount).toFixed(2)} Store Credit Expiring in ${daysRemaining} Day${daysRemaining === 1 ? "" : "s"}!`,
+    message: `You have ₹${Number(amount).toFixed(2)} in Store Credit that will expire on ${new Date(expiryDate).toLocaleDateString()}. Use it now before it lapses!`,
+    priority: urgency,
+    link: "products",
+    metadata: { amount, daysRemaining, expiryDate },
+  });
+};
+
+const notifyStoreCreditExpired = async ({ userId, amount, remainingBalance }) => {
+  return await createAndDispatchNotification({
+    recipient: userId,
+    role: "customer",
+    category: "PAYMENT",
+    event: "STORE_CREDIT_EXPIRED",
+    title: "Store Credit Expired",
+    message: `₹${Number(amount).toFixed(2)} store credit has expired per our validity policy. Current Balance: ₹${Number(remainingBalance).toFixed(2)}.`,
+    priority: "Low",
+    link: "profile",
+    metadata: { amount, remainingBalance },
+  });
+};
+
 module.exports = {
   addSseClient,
   removeSseClient,
@@ -462,4 +536,10 @@ module.exports = {
   notifyReturnRequested,
   notifyReplacementRequested,
   notifyReturnStatusUpdated,
+  // Store credit triggers
+  notifyStoreCreditAdded,
+  notifyStoreCreditUsed,
+  notifyStoreCreditRestored,
+  notifyStoreCreditExpiring,
+  notifyStoreCreditExpired,
 };

@@ -1,0 +1,9 @@
+{
+  "ignore": [
+    "scratch/*",
+    "backups/*",
+    "uploads/*",
+    "frontend/*",
+    "node_modules/*"
+  ]
+}

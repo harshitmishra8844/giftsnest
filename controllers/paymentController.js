@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const razorpay = require("../config/razorpay");
 const Order = require("../models/Order");
 const FailedOrderRecord = require("../models/FailedOrderRecord");
+const storeCreditService = require("../services/storeCreditService");
 const { decrementStockForPaidOrder } = require("../services/inventoryService");
 const {
   sendCustomerOrderConfirmation,
@@ -46,7 +47,15 @@ const createPaymentOrder = async (req, res) => {
       return res.status(400).json({ message: "Order is already paid and confirmed." });
     }
 
-    const amountPaise = Math.round(appOrder.totalPrice * 100);
+    if (appOrder.paymentMethod === "Store Credit") {
+      return res.status(400).json({ message: "Order is already 100% paid with Store Credit. No online payment required." });
+    }
+
+    const payableAmount = appOrder.paymentMethod === "Store Credit + Online"
+      ? (appOrder.onlinePaymentAmount != null ? appOrder.onlinePaymentAmount : appOrder.totalPrice)
+      : appOrder.totalPrice;
+
+    const amountPaise = Math.round(payableAmount * 100);
 
     if (isRazorpayDemoMode()) {
       const demoOrderId = `demo_${appOrder._id}_${Date.now()}`;
@@ -116,11 +125,22 @@ const completeDemoPayment = async (req, res) => {
 
     const wasAlreadyPaid = appOrder.paymentStatus === "Paid";
 
+    if (!wasAlreadyPaid && appOrder.paymentMethod === "Store Credit + Online" && appOrder.storeCreditReservationId) {
+      await storeCreditService.commitReservation({
+        reservationId: appOrder.storeCreditReservationId,
+        orderId: appOrder._id,
+        performedBy: appOrder.userId,
+        req,
+      }).catch((e) => console.warn("[completeDemoPayment] commitReservation warning:", e.message));
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       appOrderId,
       {
         paymentStatus: "Paid",
         status: "Order Confirmed",
+        orderStatus: "CONFIRMED",
+        storeCreditStatus: appOrder.paymentMethod === "Store Credit + Online" ? "COMMITTED" : (appOrder.storeCreditStatus || "NONE"),
         razorpayPaymentId: `demo_pay_${appOrder._id}`,
       },
       { returnDocument: 'after' }
@@ -179,11 +199,20 @@ const verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (generatedSignature !== razorpay_signature) {
+      if (appOrder.storeCreditReservationId && appOrder.storeCreditStatus === "RESERVED") {
+        await storeCreditService.releaseReservation({
+          reservationId: appOrder.storeCreditReservationId,
+          reason: "Razorpay signature verification mismatch",
+          req,
+        }).catch((e) => console.warn("[verifyPayment] releaseReservation warning:", e.message));
+      }
+
       const failureTimestamp = new Date();
       await Order.findByIdAndUpdate(appOrderId, {
         paymentStatus: "Failed",
         status: "FAILED_PAYMENT",
         orderStatus: "FAILED_PAYMENT",
+        storeCreditStatus: "RELEASED",
         failureReason: "Razorpay payment verification signature mismatch",
         failureTimestamp,
         paymentAttemptId: razorpay_payment_id || razorpay_order_id,
@@ -198,8 +227,8 @@ const verifyPayment = async (req, res) => {
         customerId: appOrder.userId || null,
         customerEmail: appOrder.email || "",
         paymentAttemptId: razorpay_payment_id || razorpay_order_id || "",
-        paymentMethod: "Online",
-        amount: appOrder.totalPrice || 0,
+        paymentMethod: appOrder.paymentMethod || "Online",
+        amount: appOrder.onlinePaymentAmount || appOrder.totalPrice || 0,
         failureReason: "Razorpay payment verification signature mismatch",
         failureType: "PAYMENT_VERIFICATION_FAILED",
         failureTimestamp,
@@ -220,12 +249,22 @@ const verifyPayment = async (req, res) => {
 
     const wasAlreadyPaid = appOrder.paymentStatus === "Paid";
 
+    if (!wasAlreadyPaid && appOrder.paymentMethod === "Store Credit + Online" && appOrder.storeCreditReservationId) {
+      await storeCreditService.commitReservation({
+        reservationId: appOrder.storeCreditReservationId,
+        orderId: appOrder._id,
+        performedBy: appOrder.userId,
+        req,
+      }).catch((e) => console.warn("[verifyPayment] commitReservation warning:", e.message));
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       appOrderId,
       {
         paymentStatus: "Paid",
         status: "Order Confirmed",
         orderStatus: "CONFIRMED",
+        storeCreditStatus: appOrder.paymentMethod === "Store Credit + Online" ? "COMMITTED" : (appOrder.storeCreditStatus || "NONE"),
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
       },
@@ -283,6 +322,16 @@ const recordPaymentFailure = async (req, res) => {
     }
 
     const failureTimestamp = new Date();
+
+    if (appOrder.storeCreditReservationId && appOrder.storeCreditStatus === "RESERVED") {
+      await storeCreditService.releaseReservation({
+        reservationId: appOrder.storeCreditReservationId,
+        reason: failureReason,
+        req,
+      }).catch((e) => console.warn("[recordPaymentFailure] releaseReservation warning:", e.message));
+      appOrder.storeCreditStatus = "RELEASED";
+    }
+
     appOrder.status = "FAILED_PAYMENT";
     appOrder.orderStatus = "FAILED_PAYMENT";
     appOrder.paymentStatus = "Failed";

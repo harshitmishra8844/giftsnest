@@ -38,7 +38,7 @@ const Products = () => {
       try {
         setLoading(true);
         setError("");
-        const { data } = await api.get("/products");
+        const { data } = await api.get("/products?lean=card");
         setProducts(Array.isArray(data) ? data : []);
       } catch {
         setError("Unable to load products right now.");

@@ -155,11 +155,25 @@ const Customer360Drawer = ({
                 >
                   {profile.status || "Active"}
                 </span>
-                {profile.verificationStatus && (
-                  <span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                    {profile.verificationStatus}
-                  </span>
-                )}
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    profile.isEmailVerified || profile.verificationStatus === "Verified"
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                      : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                  }`}
+                >
+                  {profile.isEmailVerified || profile.verificationStatus === "Verified" ? "✓ Email Verified" : "⏳ Email Pending"}
+                </span>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    profile.isPhoneVerified
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                      : "bg-gray-500/10 text-gray-500 dark:text-gray-400 border border-gray-500/20"
+                  }`}
+                  title={profile.isPhoneVerified ? "Phone verified" : "SMS OTP verification not yet active"}
+                >
+                  {profile.isPhoneVerified ? "✓ Phone Verified" : "📱 Phone Unverified"}
+                </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
                 <span>📧 {profile.email || "No email"}</span>
@@ -174,6 +188,16 @@ const Customer360Drawer = ({
                       })
                     : "—"}
                 </span>
+                {profile.emailVerifiedAt && (
+                  <span>
+                    🛡️ Verified on{" "}
+                    {new Date(profile.emailVerifiedAt).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                )}
               </div>
             </div>
           </div>

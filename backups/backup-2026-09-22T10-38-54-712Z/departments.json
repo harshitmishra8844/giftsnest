@@ -1,0 +1,66 @@
+[
+  {
+    "_id": "6a396b9fa153c1bf690b556b",
+    "name": "Marketing",
+    "description": "Promotional campaigns, coupons, and newsletters.",
+    "createdAt": "2026-06-22T17:06:39.941Z",
+    "updatedAt": "2026-06-22T17:06:39.941Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a396ba0a153c1bf690b556d",
+    "name": "Customer Support",
+    "description": "Customer chat, complaints, queries, and refunds.",
+    "createdAt": "2026-06-22T17:06:40.246Z",
+    "updatedAt": "2026-06-22T17:06:40.246Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a396ba0a153c1bf690b556f",
+    "name": "Content",
+    "description": "Blog administration, homepage content, banners, and store descriptions.",
+    "createdAt": "2026-06-22T17:06:40.521Z",
+    "updatedAt": "2026-06-22T17:06:40.521Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a396ba0a153c1bf690b5570",
+    "name": "Inventory",
+    "description": "Stock lists, item catalog replenishment, and low stock planning.",
+    "createdAt": "2026-06-22T17:06:40.642Z",
+    "updatedAt": "2026-06-22T17:06:40.642Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a396ba0a153c1bf690b5571",
+    "name": "IT",
+    "description": "System maintenance, settings controls, and developer operations.",
+    "createdAt": "2026-06-22T17:06:40.758Z",
+    "updatedAt": "2026-06-22T17:06:40.758Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a3a39ab60069fe41344f954",
+    "name": "Operations",
+    "description": "General daily tasks, order processing, and warehousing.",
+    "createdAt": "2026-06-23T07:45:47.151Z",
+    "updatedAt": "2026-06-23T07:45:47.151Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a3a39ab60069fe41344f955",
+    "name": "Finance",
+    "description": "Accounting, revenue tracking, tax filings, and payout audits.",
+    "createdAt": "2026-06-23T07:45:47.805Z",
+    "updatedAt": "2026-06-23T07:45:47.805Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a3ad9dcaaae0eee493d6a24",
+    "name": "Sales",
+    "description": "Sales department, deals, leads, and orders.",
+    "createdAt": "2026-06-23T19:09:16.376Z",
+    "updatedAt": "2026-06-23T19:09:16.376Z",
+    "__v": 0
+  }
+]

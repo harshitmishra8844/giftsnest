@@ -72,10 +72,17 @@ const getCustomers = async (req, res) => {
     }
 
     // Verification Status
-    if (emailVerified === "true" || phoneVerified === "true") {
-      matchQuery.verificationStatus = "Verified";
-    } else if (emailVerified === "false" || phoneVerified === "false") {
-      matchQuery.verificationStatus = "Pending";
+    if (emailVerified === "true") {
+      matchQuery.$or = [{ isEmailVerified: true }, { verificationStatus: "Verified" }];
+    } else if (emailVerified === "false") {
+      matchQuery.isEmailVerified = { $ne: true };
+      matchQuery.verificationStatus = { $ne: "Verified" };
+    }
+
+    if (phoneVerified === "true") {
+      matchQuery.isPhoneVerified = true;
+    } else if (phoneVerified === "false") {
+      matchQuery.isPhoneVerified = { $ne: true };
     }
 
     // Guest Status

@@ -3,7 +3,9 @@ const Order = require("../models/Order");
 const Coupon = require("../models/Coupon");
 const User = require("../models/User");
 const Product = require("../models/Product");
+const storeCreditService = require("../services/storeCreditService");
 const { logActivity } = require("../services/logService");
+const { validateAddress } = require("../utils/validation");
 const {
   notifyOrderCreated,
   notifyOrderCancelled,
@@ -216,38 +218,56 @@ const applyCoupon = async (req, res) => {
 
 const createOrder = async (req, res) => {
   try {
-    const { products, address, couponCode, paymentMethod = "Online" } = req.body;
+    const {
+      products,
+      address,
+      couponCode,
+      paymentMethod: rawPaymentMethod = "Online",
+      useStoreCredit = false,
+    } = req.body;
     const userId = req.user?._id;
     if (!userId) {
       return res.status(401).json({ message: "Login required to place order" });
+    }
+
+    const currentUser = await User.findById(userId);
+    if (!currentUser) {
+      return res.status(401).json({ message: "User account not found" });
+    }
+    if (currentUser.status === "Suspended") {
+      return res.status(403).json({ message: "Your account is suspended. Please contact customer support." });
+    }
+    if (currentUser.status === "Deleted") {
+      return res.status(403).json({ message: "Your account has been deactivated." });
     }
 
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ message: "At least one product is required" });
     }
 
-    if (!address || !address.fullName || !address.phone || !address.line1) {
-      return res.status(400).json({ message: "Complete shipping address is required" });
+    // Comprehensive Address Validation
+    const addressValidation = validateAddress(address);
+    if (!addressValidation.isValid) {
+      const firstError = Object.values(addressValidation.errors)[0] || "Please provide complete and valid shipping address details.";
+      return res.status(400).json({
+        message: firstError,
+        errors: addressValidation.errors,
+      });
     }
-
-    const subtotal = calculateSubtotal(products);
-    if (!subtotal || Number(subtotal) <= 0) {
-      return res.status(400).json({ message: "Subtotal must be greater than zero" });
-    }
-
-    const couponSummary = await getCouponSummary(couponCode, subtotal, userId);
-    if (!couponSummary.valid) {
-      return res.status(400).json({ message: couponSummary.message });
-    }
+    const sanitizedOrderAddress = addressValidation.sanitizedAddress;
 
     const productIds = products
       .map((item) => item.productId || item._id)
       .filter((pid) => pid != null && mongoose.Types.ObjectId.isValid(String(pid)));
 
-    const dbProducts = await Product.find({ _id: { $in: productIds } }).select("name stock codEnabled");
+    if (productIds.length !== products.length) {
+      return res.status(400).json({ message: "One or more products in your cart are invalid." });
+    }
+
+    const dbProducts = await Product.find({ _id: { $in: productIds } }).select("name price stock codEnabled images");
     const productMap = new Map(dbProducts.map((p) => [String(p._id), p]));
 
-    if (paymentMethod === "COD") {
+    if (rawPaymentMethod === "COD") {
       const StoreSetting = require("../models/StoreSetting");
       const dbStoreInfo = await StoreSetting.findOne({ singletonKey: "store" });
       const isCodGloballyEnabled = dbStoreInfo?.codEnabled !== false;
@@ -265,21 +285,89 @@ const createOrder = async (req, res) => {
       }
     }
 
+    // Verify stock and compute subtotal strictly from authoritative DB prices
+    let serverSubtotal = 0;
+    const verifiedProducts = [];
+
     for (const item of products) {
-      const pid = item.productId || item._id;
-      const pidStr = pid != null ? String(pid) : "";
-      if (!pidStr || !mongoose.Types.ObjectId.isValid(pidStr)) {
-        continue;
-      }
+      const pidStr = String(item.productId || item._id || "");
       const prod = productMap.get(pidStr);
       if (!prod) {
-        return res.status(400).json({ message: "One or more products in your cart are no longer available." });
+        return res.status(400).json({ message: `Product "${item.name || pidStr}" is no longer available.` });
       }
       const qty = Math.max(1, Math.floor(Number(item.quantity || 1)));
       if (prod.stock < qty) {
         return res.status(400).json({
           message: `Insufficient stock for "${prod.name}". Available: ${prod.stock}, you have ${qty} in cart.`,
         });
+      }
+
+      const authoritativePrice = Number(prod.price);
+      serverSubtotal += authoritativePrice * qty;
+
+      verifiedProducts.push({
+        productId: String(prod._id),
+        name: prod.name,
+        price: authoritativePrice,
+        quantity: qty,
+        image: item.image || (prod.images && prod.images[0] ? prod.images[0].url : ""),
+        customization: item.customization || {},
+      });
+    }
+
+    if (serverSubtotal <= 0) {
+      return res.status(400).json({ message: "Order subtotal must be greater than zero" });
+    }
+
+    // Recalculate coupon summary based on server-verified subtotal
+    const couponSummary = await getCouponSummary(couponCode, serverSubtotal, userId);
+    if (!couponSummary.valid) {
+      return res.status(400).json({ message: couponSummary.message });
+    }
+
+    // Store Credit Calculation & Reservation Logic
+    let finalPaymentMethod = rawPaymentMethod;
+    let storeCreditAmount = 0;
+    let onlinePaymentAmount = couponSummary.finalTotal;
+    let storeCreditReservationId = "";
+    let storeCreditStatus = "NONE";
+    let initialStatus = finalPaymentMethod === "COD" ? "Order Confirmed" : "Pending";
+    let initialOrderStatus = finalPaymentMethod === "COD" ? "CONFIRMED" : "PAYMENT_PENDING";
+    let initialPaymentStatus = finalPaymentMethod === "COD" ? "Pending" : "Pending";
+
+    if (useStoreCredit) {
+      const balanceInfo = await storeCreditService.getAccountBalance(userId);
+      const availableCredit = balanceInfo.status === "Active" ? Math.max(0, balanceInfo.balance) : 0;
+
+      if (availableCredit > 0) {
+        const appliedCredit = Math.min(availableCredit, couponSummary.finalTotal);
+        const remainingOnline = Number((couponSummary.finalTotal - appliedCredit).toFixed(2));
+
+        if (remainingOnline === 0) {
+          // Scenario A: 100% Store Credit Payment
+          finalPaymentMethod = "Store Credit";
+          storeCreditAmount = appliedCredit;
+          onlinePaymentAmount = 0;
+          initialStatus = "Order Confirmed";
+          initialOrderStatus = "CONFIRMED";
+          initialPaymentStatus = "Paid";
+        } else {
+          // Scenario B: Split Payment (Store Credit + Online)
+          finalPaymentMethod = "Store Credit + Online";
+          storeCreditAmount = appliedCredit;
+          onlinePaymentAmount = remainingOnline;
+          const reservation = await storeCreditService.reserveCredit({
+            userId,
+            amount: appliedCredit,
+            ttlMinutes: 15,
+            req,
+          });
+          storeCreditReservationId = reservation.reservationId;
+          storeCreditStatus = "RESERVED";
+          initialStatus = "Pending";
+          initialOrderStatus = "PAYMENT_PENDING";
+          initialPaymentStatus = "Pending";
+        }
       }
     }
 
@@ -291,23 +379,21 @@ const createOrder = async (req, res) => {
         order = await Order.create({
           orderCode: generateOrderCode(),
           userId,
-          email: req.user?.email || "",
-          products: products.map((item) => ({
-            productId: item.productId || item._id || "",
-            name: item.name,
-            price: Number(item.price),
-            quantity: Number(item.quantity || 1),
-            image: item.image || "",
-            customization: item.customization || {},
-          })),
-          subtotal: Number(subtotal.toFixed(2)),
+          email: req.user?.email || currentUser.email || "",
+          products: verifiedProducts,
+          subtotal: Number(serverSubtotal.toFixed(2)),
           discountAmount: couponSummary.discountAmount,
           couponCode: couponSummary.code,
           totalPrice: couponSummary.finalTotal,
-          address,
-          status: paymentMethod === "COD" ? "Order Confirmed" : "Pending",
-          orderStatus: paymentMethod === "COD" ? "CONFIRMED" : "PAYMENT_PENDING",
-          paymentMethod,
+          address: sanitizedOrderAddress,
+          status: initialStatus,
+          orderStatus: initialOrderStatus,
+          paymentStatus: initialPaymentStatus,
+          paymentMethod: finalPaymentMethod,
+          storeCreditAmount,
+          onlinePaymentAmount,
+          storeCreditReservationId,
+          storeCreditStatus,
         });
       } catch (dbError) {
         // Retry only if orderCode uniqueness collides.
@@ -318,10 +404,48 @@ const createOrder = async (req, res) => {
     }
 
     if (!order) {
+      if (storeCreditReservationId) {
+        await storeCreditService.releaseReservation({
+          reservationId: storeCreditReservationId,
+          reason: "Order generation collision failure",
+          req,
+        }).catch(() => {});
+      }
       return res.status(500).json({ message: "Failed to generate a unique order ID" });
     }
 
-    if (paymentMethod === "COD") {
+    if (finalPaymentMethod === "Store Credit") {
+      const { decrementStockForPaidOrder } = require("../services/inventoryService");
+      const { sendCustomerOrderConfirmation, sendAdminNewOrderAlert, sendSupportNotification } = require("../services/emailService");
+
+      await storeCreditService.deductCreditDirect({
+        userId,
+        amount: storeCreditAmount,
+        referenceType: "ORDER",
+        referenceId: order.orderCode,
+        orderId: order._id,
+        description: `100% Store Credit Payment for Order #${order.orderCode}`,
+        performedBy: userId,
+        performedByName: req.user?.name || "Customer",
+        performedByRole: "Customer",
+        req,
+      });
+
+      order.storeCreditStatus = "COMMITTED";
+      await order.save();
+
+      await decrementStockForPaidOrder(order);
+      notifyOrderCreated(order).catch((err) => console.error("[notif] notifyOrderCreated failed:", err));
+      sendCustomerOrderConfirmation(order).catch((mailErr) => {
+        console.error("[email] Failed to send customer order confirmation email for Store Credit order:", mailErr);
+      });
+      sendAdminNewOrderAlert(order).catch((mailErr) => {
+        console.error("[email] Failed to send admin new order alert for Store Credit order:", mailErr);
+      });
+      sendSupportNotification("New Order", order).catch((mailErr) => {
+        console.error("[email] Failed to send support new order notification for Store Credit order:", mailErr);
+      });
+    } else if (finalPaymentMethod === "COD") {
       const { decrementStockForPaidOrder } = require("../services/inventoryService");
       const { sendCustomerOrderConfirmation, sendAdminNewOrderAlert, sendSupportNotification } = require("../services/emailService");
       
@@ -340,12 +464,12 @@ const createOrder = async (req, res) => {
       // Pending online payment order notification
       createAndDispatchNotification({
         recipient: null,
-        role: "ADMIN",
+        role: "admin",
         category: "ORDER",
         event: "PENDING_ORDER",
         priority: order.totalPrice >= 5000 ? "Urgent" : "Low",
         title: `Pending Payment Order: #${order.orderCode}`,
-        message: `Order #${order.orderCode} placed (₹${order.totalPrice}) awaiting online payment confirmation.`,
+        message: `Order #${order.orderCode} placed (₹${order.totalPrice}${storeCreditAmount > 0 ? `, ₹${storeCreditAmount} Credit, ₹${onlinePaymentAmount} Online` : ""}) awaiting online payment confirmation.`,
         link: `/orders?search=${order.orderCode}`,
         metadata: { orderId: order._id, orderCode: order.orderCode, amount: order.totalPrice },
       }).catch((err) => console.error("[notif] PENDING_ORDER error:", err));
@@ -583,6 +707,79 @@ const customerCancelOrder = async (req, res) => {
       reviewedAt: cancellationTime,
       adminNote: "Cancelled directly by customer before processing.",
     };
+
+    // 1. Release reserved credit if order was in pending split state
+    if (order.storeCreditReservationId && order.storeCreditStatus === "RESERVED") {
+      await storeCreditService.releaseReservation({
+        reservationId: order.storeCreditReservationId,
+        reason: "Order cancelled by customer before payment completion",
+        req,
+      }).catch((e) => console.warn("[customerCancelOrder] releaseReservation warning:", e.message));
+      order.storeCreditStatus = "RELEASED";
+    }
+
+    // 2. Restore debited Store Credit if order was paid with Store Credit
+    if (order.storeCreditAmount > 0 && (order.paymentMethod === "Store Credit" || order.storeCreditStatus === "COMMITTED")) {
+      await storeCreditService.addCredit({
+        userId: order.userId,
+        amount: order.storeCreditAmount,
+        referenceType: "ORDER_CANCELLATION",
+        referenceId: order.orderCode,
+        orderId: order._id,
+        description: `Restoration of ₹${order.storeCreditAmount} Store Credit for cancelled Order #${order.orderCode}`,
+        performedBy: order.userId,
+        performedByName: req.user?.name || "Customer",
+        performedByRole: "Customer",
+        req,
+      }).catch((e) => console.warn("[customerCancelOrder] addCredit restoration warning:", e.message));
+      order.storeCreditStatus = "REFUNDED";
+    }
+
+    // 3. Queue eligible refund for Refund Team if order had a verified paid online portion
+    const paidOnlineAmount = order.paymentMethod === "Store Credit + Online" && order.paymentStatus === "Paid"
+      ? (order.onlinePaymentAmount || 0)
+      : (order.paymentMethod === "Online" && order.paymentStatus === "Paid" ? order.totalPrice : 0);
+
+    if (paidOnlineAmount > 0) {
+      try {
+        const RefundCounter = require("../models/RefundCounter");
+        const RefundRecord = require("../models/RefundRecord");
+        const refundCode = await RefundCounter.getNextRefundCode();
+        await RefundRecord.create({
+          refundId: refundCode,
+          orderId: order._id,
+          orderCode: order.orderCode,
+          customerId: order.userId,
+          customerName: order.address?.fullName || req.user?.name || "Customer",
+          customerEmail: order.email || req.user?.email || "",
+          customerPhone: order.address?.phone || req.user?.mobileNumber || "",
+          refundAmount: paidOnlineAmount,
+          refundType: "Full",
+          refundReason: `Order cancelled by customer before processing: ${reason}`,
+          customerExplanation: details || reason,
+          executiveRemarks: "System-generated refund request upon customer pre-processing cancellation.",
+          source: "Support Ticket",
+          status: "PENDING_REFUND_REVIEW",
+          refundStatus: "PENDING_REFUND_REVIEW",
+          refundMethod: "Original Source",
+          isAgentCreated: false,
+          assignedTeam: "Refund Team",
+        });
+        order.refundStatus = "PENDING_REFUND_REVIEW";
+        order.refundDetails = {
+          refundId: refundCode,
+          paymentId: order.razorpayPaymentId || "N/A",
+          gatewayRefundId: "",
+          refundAmount: paidOnlineAmount,
+          refundDate: null,
+          processedBy: null,
+          processedByName: "",
+          processingTimeMs: 0,
+        };
+      } catch (refErr) {
+        console.warn("[customerCancelOrder] RefundRecord creation warning:", refErr.message);
+      }
+    }
 
     await order.save();
 

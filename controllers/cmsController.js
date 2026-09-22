@@ -5,9 +5,7 @@ const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-
-// In-memory cache for published CMS sections
-const cmsCache = {};
+const cacheService = require("../services/cacheService");
 
 // Helper to sanitize HTML content to prevent XSS
 const sanitizeHtml = (html) => {
@@ -53,11 +51,13 @@ const getCmsContent = async (req, res) => {
   const { section } = req.params;
   try {
     // Return cached value if available
-    if (cmsCache[section]) {
-      return res.status(200).json(cmsCache[section]);
+    const cached = cacheService.get(`cms:${section}`);
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.status(200).json(cached);
     }
 
-    const content = await CmsContent.findOne({ section });
+    const content = await CmsContent.findOne({ section }).lean();
     if (!content) {
       return res.status(404).json({ message: `CMS section '${section}' not found.` });
     }
@@ -68,8 +68,9 @@ const getCmsContent = async (req, res) => {
       seo: content.seo,
     };
 
-    // Cache the output
-    cmsCache[section] = responseData;
+    // Cache the output for 10 minutes
+    cacheService.set(`cms:${section}`, responseData, 600);
+    res.setHeader("X-Cache", "MISS");
 
     return res.status(200).json(responseData);
   } catch (error) {
@@ -81,14 +82,16 @@ const getCmsContent = async (req, res) => {
 // 2. GET CMS Shell Content (Aggregated Layout & Settings)
 const getShellContent = async (req, res) => {
   try {
-    // Serve from cache if fully populated
-    if (cmsCache["cms_shell"]) {
-      return res.status(200).json(cmsCache["cms_shell"]);
+    // Serve from cache if available
+    const cached = cacheService.get("cms:shell");
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.status(200).json(cached);
     }
 
     const sections = ["header", "footer", "announcements", "popups"];
-    const records = await CmsContent.find({ section: { $in: sections } });
-    const allCms = await CmsContent.find({});
+    const records = await CmsContent.find({ section: { $in: sections } }).lean();
+    const allCms = await CmsContent.find({}).lean();
 
     const shell = {};
     records.forEach((rec) => {
@@ -110,10 +113,17 @@ const getShellContent = async (req, res) => {
         seoMap[pathKey] = item.seo;
       }
     });
-    shell.seoMap = seoMap;
 
-    cmsCache["cms_shell"] = shell;
-    return res.status(200).json(shell);
+    const payload = {
+      shell,
+      seoMap,
+    };
+
+    // Cache shell content for 10 minutes
+    cacheService.set("cms:shell", payload, 600);
+    res.setHeader("X-Cache", "MISS");
+
+    return res.status(200).json(payload);
   } catch (error) {
     console.error("Error fetching CMS shell:", error.message);
     return res.status(500).json({ message: "Failed to load site configurations." });
@@ -204,8 +214,9 @@ const publishDraft = async (req, res) => {
     });
 
     // Invalidate local in-memory caches
-    delete cmsCache[section];
-    delete cmsCache["cms_shell"];
+    cacheService.del(`cms:${section}`);
+    cacheService.del("cms:shell");
+    cacheService.delPrefix("cms:");
 
     return res.status(200).json({
       message: "Draft published successfully.",

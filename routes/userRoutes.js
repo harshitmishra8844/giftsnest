@@ -1,6 +1,7 @@
 const express = require("express");
 const { protect } = require("../middleware/authMiddleware");
 const User = require("../models/User");
+const { validateAddress, validateName, validateEmail, validatePhone } = require("../utils/validation");
 
 const router = express.Router();
 
@@ -21,10 +22,13 @@ router.get("/addresses", protect, async (req, res) => {
 // Add new address
 router.post("/addresses", protect, async (req, res) => {
   try {
-    const { label, fullName, phone, line1, city, state, postalCode, country, isDefault } = req.body;
-
-    if (!label || !fullName || !phone || !line1 || !city || !state || !postalCode) {
-      return res.status(400).json({ message: "All required fields must be provided" });
+    const addressValidation = validateAddress(req.body);
+    if (!addressValidation.isValid) {
+      const firstError = Object.values(addressValidation.errors)[0] || "Invalid address details";
+      return res.status(400).json({
+        message: firstError,
+        errors: addressValidation.errors,
+      });
     }
 
     const user = await User.findById(req.user._id);
@@ -32,21 +36,15 @@ router.post("/addresses", protect, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const isDefault = Boolean(req.body.isDefault);
     // If this is set as default, unset other defaults
     if (isDefault) {
-      user.addresses.forEach(addr => addr.isDefault = false);
+      user.addresses.forEach((addr) => (addr.isDefault = false));
     }
 
     const newAddress = {
-      label: label.trim(),
-      fullName: fullName.trim(),
-      phone: phone.trim(),
-      line1: line1.trim(),
-      city: city.trim(),
-      state: state.trim(),
-      postalCode: postalCode.trim(),
-      country: country || "India",
-      isDefault: Boolean(isDefault),
+      ...addressValidation.sanitizedAddress,
+      isDefault,
     };
 
     user.addresses.push(newAddress);
@@ -54,7 +52,7 @@ router.post("/addresses", protect, async (req, res) => {
 
     return res.status(201).json({
       message: "Address added successfully",
-      address: newAddress
+      address: newAddress,
     });
   } catch (error) {
     console.error("Add address error:", error.message);
@@ -66,10 +64,14 @@ router.post("/addresses", protect, async (req, res) => {
 router.put("/addresses/:addressId", protect, async (req, res) => {
   try {
     const { addressId } = req.params;
-    const { label, fullName, phone, line1, city, state, postalCode, country, isDefault } = req.body;
 
-    if (!label || !fullName || !phone || !line1 || !city || !state || !postalCode) {
-      return res.status(400).json({ message: "All required fields must be provided" });
+    const addressValidation = validateAddress(req.body);
+    if (!addressValidation.isValid) {
+      const firstError = Object.values(addressValidation.errors)[0] || "Invalid address details";
+      return res.status(400).json({
+        message: firstError,
+        errors: addressValidation.errors,
+      });
     }
 
     const user = await User.findById(req.user._id);
@@ -77,32 +79,28 @@ router.put("/addresses/:addressId", protect, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
+    const addressIndex = user.addresses.findIndex((addr) => addr._id.toString() === addressId);
     if (addressIndex === -1) {
       return res.status(404).json({ message: "Address not found" });
     }
 
+    const isDefault = Boolean(req.body.isDefault);
     // If this is set as default, unset other defaults
     if (isDefault) {
-      user.addresses.forEach(addr => addr.isDefault = false);
+      user.addresses.forEach((addr) => (addr.isDefault = false));
     }
 
-    const address = user.addresses[addressIndex];
-    address.label = label.trim();
-    address.fullName = fullName.trim();
-    address.phone = phone.trim();
-    address.line1 = line1.trim();
-    address.city = city.trim();
-    address.state = state.trim();
-    address.postalCode = postalCode.trim();
-    address.country = country || "India";
-    address.isDefault = Boolean(isDefault);
+    const updatedData = {
+      ...addressValidation.sanitizedAddress,
+      isDefault,
+    };
 
+    user.addresses[addressIndex] = Object.assign(user.addresses[addressIndex], updatedData);
     await user.save();
 
     return res.status(200).json({
       message: "Address updated successfully",
-      address: user.addresses[addressIndex]
+      address: user.addresses[addressIndex],
     });
   } catch (error) {
     console.error("Update address error:", error.message);
@@ -173,20 +171,44 @@ router.put("/profile", protect, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (email && email.toLowerCase().trim() !== user.email) {
-      const emailExists = await User.findOne({ email: email.toLowerCase().trim() });
-      if (emailExists) {
-        return res.status(400).json({ message: "Email is already in use" });
+    if (email) {
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.isValid) {
+        return res.status(400).json({ message: emailValidation.error });
       }
-      user.email = email.toLowerCase().trim();
+
+      const normalizedEmail = emailValidation.sanitizedValue;
+      if (normalizedEmail !== user.email) {
+        const emailExists = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } });
+        if (emailExists) {
+          return res.status(400).json({ message: "An account with this email address already exists" });
+        }
+        user.email = normalizedEmail;
+        // Requirement 8: If the field requires verification, mark it as unverified until verification is completed
+        user.isEmailVerified = false;
+        user.emailVerifiedAt = null;
+        user.verificationStatus = "Pending";
+      }
     }
 
     if (name) {
-      user.name = name.trim();
+      const nameValidation = validateName(name);
+      if (!nameValidation.isValid) {
+        return res.status(400).json({ message: nameValidation.error });
+      }
+      user.name = nameValidation.sanitizedValue;
     }
 
-    if (mobileNumber !== undefined) {
-      user.mobileNumber = mobileNumber.trim();
+    if (mobileNumber !== undefined && mobileNumber !== "") {
+      const phoneValidation = validatePhone(mobileNumber);
+      if (!phoneValidation.isValid) {
+        return res.status(400).json({ message: phoneValidation.error });
+      }
+      if (phoneValidation.sanitizedValue !== user.mobileNumber) {
+        user.mobileNumber = phoneValidation.sanitizedValue;
+        user.isPhoneVerified = false;
+        user.phoneVerifiedAt = null;
+      }
     }
 
     if (password && newPassword) {
@@ -202,6 +224,7 @@ router.put("/profile", protect, async (req, res) => {
       user.password = await bcrypt.hash(newPassword, salt);
     }
 
+    user.profileUpdatedAt = new Date();
     await user.save();
 
     const { notifyProfileUpdated } = require("../services/notificationService");
@@ -215,6 +238,9 @@ router.put("/profile", protect, async (req, res) => {
       email: user.email,
       mobileNumber: user.mobileNumber || "",
       isAdmin: Boolean(user.isAdmin),
+      isEmailVerified: Boolean(user.isEmailVerified),
+      isPhoneVerified: Boolean(user.isPhoneVerified),
+      verificationStatus: user.verificationStatus || "Pending",
       token: generateToken(user._id),
     });
   } catch (error) {

@@ -2,9 +2,6 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { clearAdminAuth, getAdminAuth, saveAdminAuth } from "../services/adminAuth";
-import * as XLSX from "xlsx";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import SEO from "../components/SEO";
 import AddProduct from "./AddProduct";
 import ReturnsReplacementsTab from "./ReturnsReplacementsTab";
@@ -21,6 +18,8 @@ import EmployeeWorkDeskTab from "../components/EmployeeWorkDeskTab";
 import EnterpriseReportsTab from "../components/EnterpriseReportsTab";
 import CustomerServiceDeskTab from "../components/CustomerServiceDeskTab";
 import RefundManagementTab from "../components/RefundManagementTab";
+import AdminStoreCreditTab from "../components/AdminStoreCreditTab";
+import ProductionCleanupTab from "../components/ProductionCleanupTab";
 import {
   PremiumRingLoader,
   LoadingOverlay,
@@ -791,8 +790,9 @@ const AdminDashboard = () => {
   const findOrderCustomImage = (order) =>
     order.products?.find((product) => product.customization?.uploadedImage)?.customization?.uploadedImage || "";
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
+      const XLSX = await import("xlsx");
       const dataToExport = productsByStock.map((prod) => {
         const stockLevel = Number(prod.stock ?? 0);
         const status = stockLevel <= 0 ? "Out of stock" : stockLevel <= 5 ? "Low stock" : "In stock";
@@ -830,8 +830,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     try {
+      const { jsPDF } = await import("jspdf");
+      const autoTableModule = await import("jspdf-autotable");
+      const autoTable = autoTableModule.default || autoTableModule;
       const doc = new jsPDF();
       const dateStr = new Date().toLocaleString("en-IN");
       const cleanDateStr = new Date().toISOString().split("T")[0];
@@ -4513,6 +4516,7 @@ const AdminDashboard = () => {
     { id: "orders", label: "Orders", icon: "📦", permission: "ORDERS_VIEW" },
     { id: "returns-replacements", label: "Returns & Replacements", icon: "🔄", permission: ["ORDERS_RETURNS", "ORDERS_VIEW"] },
     { id: "refunds", label: "Refund Management", icon: "💳", permission: ["FINANCE_MANAGE", "ORDERS_RETURNS", "ORDERS_VIEW"] },
+    { id: "store-credit", label: "Store Credit Ledger", icon: "🪙", permission: ["FINANCE_MANAGE", "CUSTOMERS_VIEW", "ORDERS_VIEW"] },
     { id: "customers", label: "Customers", icon: "👤", permission: "CUSTOMERS_VIEW" },
     { id: "crm-dashboard", label: "CRM Console", icon: "🎯", permission: "CUSTOMERS_VIEW" },
     { id: "crm-campaigns", label: "CRM Campaigns", icon: "📣", permission: "MARKETING_CAMPAIGNS" },
@@ -4525,10 +4529,12 @@ const AdminDashboard = () => {
     { id: "newsletter", label: "Newsletter", icon: "✉️", permission: "MARKETING_CAMPAIGNS" },
     { id: "employees", label: "Employees & Roles", icon: "👥", permission: ["EMPLOYEES_MANAGE", "ROLES_MANAGE", "DEPARTMENTS_MANAGE"] },
     { id: "logs", label: "Activity Logs", icon: "📋", permission: "ACTIVITY_LOGS_VIEW" },
-    { id: "cms", label: "Content Management", icon: "📝", permission: ["CONTENT_HOMEPAGE", "CONTENT_BLOGS", "CONTENT_SEO", "BANNER_MANAGE"] }
+    { id: "cms", label: "Content Management", icon: "📝", permission: ["CONTENT_HOMEPAGE", "CONTENT_BLOGS", "CONTENT_SEO", "BANNER_MANAGE"] },
+    { id: "cleanup", label: "Production Cleanup", icon: "🧹", masterAdminOnly: true }
   ];
 
   const visibleSidebarItems = sidebarItems.filter(item => {
+    if (item.masterAdminOnly) return adminAuth?.isMasterAdmin === true;
     if (!item.permission) return true;
     if (Array.isArray(item.permission)) {
       return item.permission.some(p => hasPermission(p));
@@ -4794,12 +4800,21 @@ const AdminDashboard = () => {
             />
           )}
           {activeTab === "returns-replacements" && <ReturnsReplacementsTab />}
+          {activeTab === "store-credit" && (
+            <AdminStoreCreditTab
+              authHeader={authHeader}
+              adminAuth={adminAuth}
+            />
+          )}
           {activeTab === "customers" && <CustomersSection authHeader={authHeader} adminAuth={adminAuth} globalSearchQuery={globalSearchQuery} />}
           {activeTab === "crm-dashboard" && <CrmDashboardTab authHeader={authHeader} adminAuth={adminAuth} />}
           {activeTab === "crm-campaigns" && <CampaignsTab authHeader={authHeader} adminAuth={adminAuth} />}
           {activeTab === "crm-segments" && <SegmentsTab authHeader={authHeader} adminAuth={adminAuth} />}
           {activeTab === "crm-alerts" && <AlertsTab authHeader={authHeader} adminAuth={adminAuth} />}
           {activeTab === "cms" && <CmsManager authHeader={authHeader} adminAuth={adminAuth} />}
+          {activeTab === "cleanup" && adminAuth?.isMasterAdmin && (
+            <ProductionCleanupTab authHeader={authHeader} adminAuth={adminAuth} />
+          )}
 
           {activeTab === "coupons" && couponsSubTab === "store-settings" && (
             <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">

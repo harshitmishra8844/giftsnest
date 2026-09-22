@@ -66,7 +66,27 @@ const userSchema = new mongoose.Schema(
     verificationStatus: {
       type: String,
       enum: ["Pending", "Verified"],
-      default: "Verified",
+      default: "Pending",
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+    phoneVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+    profileUpdatedAt: {
+      type: Date,
+      default: null,
     },
     isGuest: {
       type: Boolean,
@@ -173,6 +193,11 @@ const userSchema = new mongoose.Schema(
           type: String,
           required: true,
           trim: true,
+        },
+        line2: {
+          type: String,
+          trim: true,
+          default: "",
         },
         city: {
           type: String,

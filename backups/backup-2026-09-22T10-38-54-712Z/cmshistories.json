@@ -1,0 +1,1875 @@
+[
+  {
+    "_id": "6a436c2ae56e43dd0748a26d",
+    "section": "homepage",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "newContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "previousSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-06-30T07:11:38.185Z",
+    "updatedAt": "2026-06-30T07:11:38.185Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a436c62e56e43dd0748a271",
+    "section": "homepage",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "newContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "previousSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-06-30T07:12:34.739Z",
+    "updatedAt": "2026-06-30T07:12:34.739Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a436c9be56e43dd0748a276",
+    "section": "homepage",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "newContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        ""
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "previousSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-06-30T07:13:31.977Z",
+    "updatedAt": "2026-06-30T07:13:31.977Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a436f01e56e43dd0748a287",
+    "section": "homepage",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        ""
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "newContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        ""
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "previousSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "action": "restore_version_6a436c9b",
+    "createdAt": "2026-06-30T07:23:45.367Z",
+    "updatedAt": "2026-06-30T07:23:45.367Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a436f10e56e43dd0748a289",
+    "section": "homepage",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        ""
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "newContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "previousSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "action": "restore_version_6a436c62",
+    "createdAt": "2026-06-30T07:24:00.187Z",
+    "updatedAt": "2026-06-30T07:24:00.187Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a436f2fe56e43dd0748a28b",
+    "section": "homepage",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        ""
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "newContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "previousSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-06-30T07:24:31.194Z",
+    "updatedAt": "2026-06-30T07:24:31.194Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaad12c0b4a1c85e8cc8293",
+    "section": "homepage",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "newContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "previousSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T17:26:04.238Z",
+    "updatedAt": "2026-09-16T17:26:04.238Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaad1ac0b4a1c85e8cc82c5",
+    "section": "homepage",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=1200&auto=format&fit=crop&q=80"
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Cakes",
+          "image": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Plants",
+          "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "newContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        ""
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "previousSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T17:28:12.144Z",
+    "updatedAt": "2026-09-16T17:28:12.144Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaad2520b4a1c85e8cc8307",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": false,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T17:30:58.033Z",
+    "updatedAt": "2026-09-16T17:30:58.033Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaad28f0b4a1c85e8cc8319",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T17:31:59.787Z",
+    "updatedAt": "2026-09-16T17:31:59.787Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaad649c08c90ee6a46a87b",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T17:47:53.264Z",
+    "updatedAt": "2026-09-16T17:47:53.264Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaade46bbdf4e411aa60298",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T18:21:58.106Z",
+    "updatedAt": "2026-09-16T18:21:58.106Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaadfa9bbdf4e411aa602ac",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T18:27:53.994Z",
+    "updatedAt": "2026-09-16T18:27:53.994Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaae17fbbdf4e411aa602b8",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount!",
+      "text": "Get 10% off your first purchase. Use code NIYORA10.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T18:35:43.478Z",
+    "updatedAt": "2026-09-16T18:35:43.478Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaae233bbdf4e411aa602ef",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": ""
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "https://res.cloudinary.com/dwzepzssa/image/upload/v1789583912/gift-store/cms/bv1oszkyzoghqrahmxev.jpg"
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T18:38:43.141Z",
+    "updatedAt": "2026-09-16T18:38:43.141Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaae440a7d6246ae87d9235",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "https://res.cloudinary.com/dwzepzssa/image/upload/v1789583912/gift-store/cms/bv1oszkyzoghqrahmxev.jpg"
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "",
+      "delay": 1.5
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T18:47:28.724Z",
+    "updatedAt": "2026-09-16T18:47:28.724Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaae5fba7d6246ae87d9251",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "",
+      "delay": 1.5
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "",
+      "delay": 0
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T18:54:51.845Z",
+    "updatedAt": "2026-09-16T18:54:51.845Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaae7ff414d6206136f123c",
+    "section": "popups",
+    "admin": "6a3a87729087d5b2bcaf2f83",
+    "adminName": "Master Admin",
+    "previousContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "",
+      "delay": 0
+    },
+    "newContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "",
+      "delay": 0
+    },
+    "previousSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "newSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "action": "publish",
+    "createdAt": "2026-09-16T19:03:27.356Z",
+    "updatedAt": "2026-09-16T19:03:27.356Z",
+    "__v": 0
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "_id": "6aaaf23c92b1eee0e2fa6c23",
+    "replacementId": "REP-2026-8D41AD",
+    "requestId": "6aaaf23c92b1eee0e2fa6c1f",
+    "originalOrderId": "6a3d0165b696dd36c6d9ac23",
+    "originalOrderItemId": "",
+    "replacementOrderId": "6a3d0eda7b3b847ecd747d38",
+    "replacementStatus": "Confirmed",
+    "createdAt": "2026-06-25T11:19:23.460Z",
+    "updatedAt": "2026-06-25T11:19:23.460Z",
+    "__v": 0
+  },
+  {
+    "_id": "6aaafb1fdb806d9174be0234",
+    "replacementId": "REP-ORDER-2026-8E4634",
+    "requestId": "6aaafb1adb806d9174be021c",
+    "originalOrderId": "6aaafb19db806d9174be0219",
+    "originalOrderItemId": "",
+    "replacementOrderId": "6aaafb1fdb806d9174be0232",
+    "replacementStatus": "Confirmed",
+    "createdAt": "2026-09-16T20:25:03.859Z",
+    "updatedAt": "2026-09-16T20:25:03.859Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ab0ea35098c6e4d14d5c195",
+    "replacementId": "REP-ORDER-2026-CDF222",
+    "requestId": "6ab0ea35098c6e4d14d5c192",
+    "originalOrderId": "6ab0ea33098c6e4d14d5c18f",
+    "originalOrderItemId": "",
+    "replacementOrderId": "6ab0ea33098c6e4d14d5c18f",
+    "replacementStatus": "Processing",
+    "createdAt": "2026-09-21T08:26:29.419Z",
+    "updatedAt": "2026-09-21T08:26:29.419Z",
+    "__v": 0
+  }
+]

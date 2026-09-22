@@ -1,0 +1,16 @@
+[
+  {
+    "_id": "6aab9417cdb5b3c45cd2f484",
+    "ticketId": "6aab9417cdb5b3c45cd2f482",
+    "ticketCode": "TKT-TEST-463034",
+    "sender": null,
+    "senderName": "Rohan Verma",
+    "isAdmin": false,
+    "message": "Can we add two names on opposite sides of the mug?",
+    "isInternalNote": false,
+    "attachments": [],
+    "createdAt": "2026-09-17T07:17:43.148Z",
+    "updatedAt": "2026-09-17T07:17:43.148Z",
+    "__v": 0
+  }
+]

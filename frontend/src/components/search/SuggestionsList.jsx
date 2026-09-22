@@ -21,7 +21,8 @@ const SuggestionsList = ({
     <div
       id={id}
       role="listbox"
-      className="search-dropdown absolute left-0 right-0 top-13 z-30 rounded-3xl border border-gold-200/40 bg-white/95 backdrop-blur-lg p-4 shadow-[0_20px_50px_rgba(212,175,55,0.08)] flex flex-col gap-4 text-left"
+      style={{ backgroundColor: "#ffffff" }}
+      className="search-dropdown absolute left-0 right-0 top-13 z-30 rounded-3xl border border-gold-200/50 bg-white p-4 shadow-[0_20px_50px_rgba(0,0,0,0.12)] flex flex-col gap-4 text-left"
     >
       {isLoading ? (
         <div className="flex items-center gap-2.5 px-3 py-4 text-sm font-bold text-gold-800 bg-gold-50/50 rounded-2xl border border-gold-200/30">

@@ -1,0 +1,76 @@
+[
+  {
+    "_id": "6a3d0ebb7b3b847ecd747cb4",
+    "replacementCode": "REQ-REP-D70C0582",
+    "orderId": "6a3d0165b696dd36c6d9ac23",
+    "customerId": "6a3cacf15098f184e912fb00",
+    "items": [
+      {
+        "productId": "6a3cdf40350521729503d30b",
+        "name": "Romantic Love Cards Gift Set – 18 Heartfelt Love Message Cards",
+        "price": 149,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782373683/gift-store/products/xtmrryygdll2kfutnsib.png",
+        "_id": "6a3d0ebb7b3b847ecd747cb5"
+      }
+    ],
+    "reason": "Wrong Product Received",
+    "description": "asdfghjkl",
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782386361/gift-store/returns/sxfekq7pauix3l76ek3u.png",
+        "publicId": "gift-store/returns/sxfekq7pauix3l76ek3u",
+        "_id": "6a3d0ebb7b3b847ecd747cb6"
+      }
+    ],
+    "status": "Delivered",
+    "statusHistory": [
+      {
+        "status": "Pending",
+        "note": "Replacement request submitted.",
+        "updatedBy": null,
+        "_id": "6a3d0ebb7b3b847ecd747cb7",
+        "updatedAt": "2026-06-25T11:19:23.453Z"
+      },
+      {
+        "status": "Approved",
+        "note": "Request approved.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0edb7b3b847ecd747d3a",
+        "updatedAt": "2026-06-25T11:19:55.102Z"
+      },
+      {
+        "status": "Replacement Packed",
+        "note": "Replacement packaged and ready.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0ee17b3b847ecd747d47",
+        "updatedAt": "2026-06-25T11:20:01.996Z"
+      },
+      {
+        "status": "Shipped",
+        "note": "Replacement dispatched.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0ef47b3b847ecd747d55",
+        "updatedAt": "2026-06-25T11:20:20.722Z"
+      },
+      {
+        "status": "Delivered",
+        "note": "Replacement delivered to customer.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0efc7b3b847ecd747d67",
+        "updatedAt": "2026-06-25T11:20:28.231Z"
+      }
+    ],
+    "shippingDetails": {
+      "courier": "asdfghjk",
+      "trackingId": "asdfghj",
+      "shippedDate": "2026-06-25T11:20:20.065Z",
+      "deliveredDate": "2026-06-25T11:20:27.467Z",
+      "note": ""
+    },
+    "replacementOrderId": "6a3d0eda7b3b847ecd747d38",
+    "createdAt": "2026-06-25T11:19:23.460Z",
+    "updatedAt": "2026-06-25T11:20:28.394Z",
+    "__v": 4
+  }
+]

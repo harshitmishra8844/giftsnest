@@ -2,39 +2,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import QuantityStepper from "./QuantityStepper";
 import { resolveMediaUrl } from "../services/api";
+import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 import WishlistButton from "./WishlistButton";
-
-const optimizeUnsplashUrl = (url, width, height) => {
-  if (!url) return "";
-  if (typeof url !== "string") return url;
-  if (url.includes("images.unsplash.com")) {
-    let cleanUrl = url;
-    cleanUrl = cleanUrl.replace(/&fm=[^&]*/g, "").replace(/\?fm=[^&]*/g, "?");
-    cleanUrl = cleanUrl.replace(/&auto=[^&]*/g, "").replace(/\?auto=[^&]*/g, "?");
-    if (cleanUrl.includes("?")) {
-      cleanUrl += `&fm=webp&q=80`;
-    } else {
-      cleanUrl += `?fm=webp&q=80`;
-    }
-    if (width) {
-      cleanUrl = cleanUrl.replace(/&w=[^&]*/g, "").replace(/\?w=[^&]*/g, "?");
-      cleanUrl += `&w=${width}`;
-    }
-    if (height) {
-      cleanUrl = cleanUrl.replace(/&h=[^&]*/g, "").replace(/\?h=[^&]*/g, "?");
-      cleanUrl += `&h=${height}`;
-    }
-    cleanUrl = cleanUrl.replace(/\?&/g, "?").replace(/\?$/g, "");
-    return cleanUrl;
-  }
-  return url;
-};
 
 const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
   const navigate = useNavigate();
   const [recentlyAdded, setRecentlyAdded] = useState(false);
   const productUrl = `/products/${product.slug || product._id}`;
-  const imageUrl = optimizeUnsplashUrl(resolveMediaUrl(product.image || product.images?.[0] || "https://via.placeholder.com/600x400?text=Gift"), 400, 300);
+  const rawImageUrl = resolveMediaUrl(product.image || product.images?.[0] || "");
+  const imageUrl = getOptimizedImageUrl(rawImageUrl, { width: 400, height: 300 });
   const stock = product.stock !== undefined && product.stock !== null ? Number(product.stock) : null;
   const hasStockLimit = stock !== null && Number.isFinite(stock);
   const outOfStock = hasStockLimit && stock <= 0;
@@ -65,6 +41,7 @@ const ProductCard = ({ product, quantity, onAdd, onIncrease, onDecrease }) => {
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             loading="lazy"
+            decoding="async"
             width="400"
             height="300"
           />

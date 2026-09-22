@@ -1,0 +1,59 @@
+[
+  {
+    "_id": "6a4334e39498afd68f691564",
+    "name": "VIP Customers",
+    "description": "Shoppers with minimum aggregate purchase volume of ₹15,000",
+    "filters": {
+      "spentMin": 15000
+    },
+    "isDynamic": true,
+    "memberCount": 0,
+    "createdBy": null,
+    "createdAt": "2026-06-30T03:15:47.109Z",
+    "updatedAt": "2026-06-30T03:15:47.109Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a4334e39498afd68f691565",
+    "name": "New Registrations",
+    "description": "Shoppers who registered within the past 30 days",
+    "filters": {
+      "ordersMin": 0,
+      "ordersMax": 2
+    },
+    "isDynamic": true,
+    "memberCount": 0,
+    "createdBy": null,
+    "createdAt": "2026-06-30T03:15:47.420Z",
+    "updatedAt": "2026-06-30T03:15:47.420Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a4334e39498afd68f691566",
+    "name": "Inactive Members",
+    "description": "Shoppers with no order logins tracked for 90+ days",
+    "filters": {
+      "lastLoginDays": 90
+    },
+    "isDynamic": true,
+    "memberCount": 0,
+    "createdBy": null,
+    "createdAt": "2026-06-30T03:15:47.587Z",
+    "updatedAt": "2026-06-30T03:15:47.587Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a4334e39498afd68f691567",
+    "name": "Cart Abandoners",
+    "description": "Shoppers who have items remaining in their shopping carts",
+    "filters": {
+      "cartAbandoned": true
+    },
+    "isDynamic": true,
+    "memberCount": 0,
+    "createdBy": null,
+    "createdAt": "2026-06-30T03:15:47.737Z",
+    "updatedAt": "2026-06-30T03:15:47.737Z",
+    "__v": 0
+  }
+]

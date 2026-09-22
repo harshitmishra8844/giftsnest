@@ -1,0 +1,108 @@
+{
+  "timestamp": "2026-09-22T10:56:54.216Z",
+  "databaseQueries": {
+    "productsFindHydratedMs": 754.82,
+    "productsFindLeanCardFieldsMs": 2053.13,
+    "storeSettingFindMs": 325.92,
+    "cmsHomepageFindMs": 287.18,
+    "productBySlugMs": 358.84
+  },
+  "apiEndpoints": {
+    "products": {
+      "status": 200,
+      "timeMs": 275.77,
+      "bytes": 8483
+    },
+    "storeInfo": {
+      "status": 200,
+      "timeMs": 256.72,
+      "bytes": 793
+    },
+    "cmsHomepage": {
+      "status": 200,
+      "timeMs": 265.04,
+      "bytes": 2469
+    },
+    "singleProduct": {
+      "status": 200,
+      "timeMs": 402.41,
+      "bytes": 3544
+    }
+  },
+  "bundleSizes": {
+    "totalJsKb": 2838.45,
+    "totalCssKb": 234.45,
+    "largestChunks": [
+      {
+        "file": "AdminDashboard-BvkAxQSE.js",
+        "type": "JS",
+        "sizeKb": 1468.02
+      },
+      {
+        "file": "index-BD2YFp5t.js",
+        "type": "JS",
+        "sizeKb": 288.46
+      },
+      {
+        "file": "index-Dq6KH9a1.css",
+        "type": "CSS",
+        "sizeKb": 234.45
+      },
+      {
+        "file": "MyProfile-92mc9dt9.js",
+        "type": "JS",
+        "sizeKb": 204.79
+      },
+      {
+        "file": "html2canvas-CshxQvNN.js",
+        "type": "JS",
+        "sizeKb": 194.89
+      },
+      {
+        "file": "index.es-DCvMcLJC.js",
+        "type": "JS",
+        "sizeKb": 147.82
+      },
+      {
+        "file": "proxy-DprKDGyx.js",
+        "type": "JS",
+        "sizeKb": 118.18
+      },
+      {
+        "file": "api-BlqBSNNH.js",
+        "type": "JS",
+        "sizeKb": 45.14
+      },
+      {
+        "file": "ProductDetails-CIL434nL.js",
+        "type": "JS",
+        "sizeKb": 41.21
+      },
+      {
+        "file": "Home-ByDBrdnY.js",
+        "type": "JS",
+        "sizeKb": 34.5
+      }
+    ]
+  },
+  "imageAnalysis": {
+    "totalProducts": 3,
+    "cloudinaryImages": 3,
+    "uncompressedCloudinary": 3,
+    "externalImages": 0,
+    "sampleImages": [
+      {
+        "name": "Romantic Love Cards Gift Set – 18 Heartfelt Love Message Cards",
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782373683/gift-store/products/xtmrryygdll2kfutnsib.png"
+      },
+      {
+        "name": "3D Dolphin Crystal Ball",
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782467780/gift-store/products/z2bqiokqr6aspajcp9ue.jpg"
+      },
+      {
+        "name": "Personalized Mini Wooden Photo Frame with Custom Photo | Birthday & Anniversary Gift",
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782534933/gift-store/products/vy3lcselhvs9ivjy9sxq.jpg"
+      }
+    ]
+  }
+}

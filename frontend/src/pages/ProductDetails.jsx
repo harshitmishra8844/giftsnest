@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import api, { resolveMediaUrl } from "../services/api";
+import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 import { useCart } from "../context/CartContext";
 import { getUserAuth } from "../services/userAuth";
 import { useWishlist } from "../context/WishlistContext";
@@ -108,7 +109,7 @@ const ProductDetails = () => {
   useEffect(() => {
     const fetchAllProducts = async () => {
       try {
-        const { data } = await api.get("/products");
+        const { data } = await api.get("/products?lean=card");
         setAllProducts(Array.isArray(data) ? data : []);
       } catch {
         setAllProducts([]);
@@ -529,8 +530,10 @@ const ProductDetails = () => {
               onTouchEnd={handleImageTouchEnd}
             >
               <img
-                src={resolveMediaUrl(activeImage) || "https://via.placeholder.com/900x700?text=Niyora+Gifts"}
+                src={getOptimizedImageUrl(resolveMediaUrl(activeImage), { width: 900, height: 700 }) || "https://via.placeholder.com/900x700?text=Niyora+Gifts"}
                 alt={product.name}
+                fetchPriority="high"
+                decoding="async"
                 className="max-h-full max-w-full cursor-zoom-in rounded-xl object-contain transition-all duration-500 ease-out group-hover:scale-[1.05]"
                 style={{ transformOrigin: zoomOrigin }}
                 onClick={() => setLightboxOpen(true)}
@@ -576,7 +579,13 @@ const ProductDetails = () => {
                       : "border-champagne hover:scale-[1.01] hover:border-gold-300"
                       }`}
                   >
-                    <img src={resolveMediaUrl(imageUrl)} alt={product.name} className="max-h-full max-w-full object-contain transition duration-200 hover:brightness-105" />
+                    <img
+                      src={getOptimizedImageUrl(resolveMediaUrl(imageUrl), { width: 140, height: 140 })}
+                      alt={product.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="max-h-full max-w-full object-contain transition duration-200 hover:brightness-105"
+                    />
                   </button>
                 ))}
               </div>

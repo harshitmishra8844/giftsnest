@@ -6,6 +6,7 @@ const Otp = require("../models/Otp");
 const LoginActivityLog = require("../models/LoginActivityLog");
 const { sendOtpEmail } = require("../services/emailService");
 const { notifyNewCustomerRegistered } = require("../services/notificationService");
+const { validateName, validateEmail, validatePhone } = require("../utils/validation");
 
 const parseUserAgent = (userAgentString) => {
   const ua = userAgentString || "";
@@ -35,9 +36,9 @@ const parseUserAgent = (userAgentString) => {
 
 const logUserLoginAttempt = async (userName, email, status, userId, req) => {
   try {
-    const userAgent = req.headers["user-agent"] || "";
+    const userAgent = req?.headers?.["user-agent"] || "";
     const { browser, device } = parseUserAgent(userAgent);
-    const ipAddress = req.ip || req.connection?.remoteAddress || "Unknown";
+    const ipAddress = req?.ip || req?.connection?.remoteAddress || "Unknown";
 
     await LoginActivityLog.create({
       userId: userId || null,
@@ -65,14 +66,11 @@ const serializeUserAuth = (user) => ({
   email: user.email,
   mobileNumber: user.mobileNumber || "",
   isAdmin: Boolean(user.isAdmin),
+  isEmailVerified: Boolean(user.isEmailVerified || user.verificationStatus === "Verified"),
+  isPhoneVerified: Boolean(user.isPhoneVerified),
+  verificationStatus: user.verificationStatus || (user.isEmailVerified ? "Verified" : "Pending"),
   token: generateToken(user._id),
 });
-
-// Helper to check standard email format
-const isValidEmail = (email) => {
-  const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-  return emailRegex.test(email);
-};
 
 // Helper for generating secure 6-digit OTP
 const generate6DigitOtp = () => {
@@ -86,16 +84,12 @@ const generate6DigitOtp = () => {
  */
 const checkEmail = async (req, res) => {
   try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "Email address is required" });
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      return res.status(400).json({ message: emailValidation.error });
     }
 
-    const trimmedEmail = email.toLowerCase().trim();
-    if (!isValidEmail(trimmedEmail)) {
-      return res.status(400).json({ message: "Incorrect email or password" });
-    }
+    const trimmedEmail = emailValidation.sanitizedValue;
 
     const user = await User.findOne({ email: trimmedEmail });
 
@@ -158,16 +152,22 @@ const checkEmail = async (req, res) => {
  */
 const registerSendOtp = async (req, res) => {
   try {
-    const { name, email, mobileNumber } = req.body;
-
-    if (!name || !email || !mobileNumber) {
-      return res.status(400).json({ message: "Name, email, and mobile number are required" });
+    const nameValidation = validateName(name);
+    if (!nameValidation.isValid) {
+      return res.status(400).json({ message: nameValidation.error });
     }
 
-    const trimmedEmail = email.toLowerCase().trim();
-    if (!isValidEmail(trimmedEmail)) {
-      return res.status(400).json({ message: "Please enter a valid email address." });
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      return res.status(400).json({ message: emailValidation.error });
     }
+
+    const phoneValidation = validatePhone(mobileNumber);
+    if (!phoneValidation.isValid) {
+      return res.status(400).json({ message: phoneValidation.error });
+    }
+
+    const trimmedEmail = emailValidation.sanitizedValue;
 
     const existingUser = await User.findOne({ email: trimmedEmail });
     if (existingUser) {
@@ -265,8 +265,8 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    // Compare Hash
-    const isCodeValid = otp === "123456" || await bcrypt.compare(otp, activeOtp.otpHash);
+    // Compare Hash securely without test bypasses
+    const isCodeValid = await bcrypt.compare(otp, activeOtp.otpHash);
     if (!isCodeValid) {
       activeOtp.attempts += 1;
       await activeOtp.save();
@@ -300,13 +300,20 @@ const verifyOtp = async (req, res) => {
         const passwordSalt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(randomPasswordSeed, passwordSalt);
 
+        const nameValidation = validateName(name);
+        const phoneValidation = validatePhone(mobileNumber);
+
         user = await User.create({
-          name: name.trim(),
+          name: nameValidation.isValid ? nameValidation.sanitizedValue : name.trim(),
           email: trimmedEmail,
-          mobileNumber: mobileNumber.trim(),
+          mobileNumber: phoneValidation.isValid ? phoneValidation.sanitizedValue : mobileNumber.trim(),
           password: hashedPassword,
           loginMethod: "OTP",
           verificationStatus: "Verified",
+          isEmailVerified: true,
+          emailVerifiedAt: new Date(),
+          isPhoneVerified: false,
+          phoneVerifiedAt: null,
         });
 
         notifyNewCustomerRegistered(user).catch((err) => console.error("[notif] New customer register error:", err));
@@ -316,6 +323,11 @@ const verifyOtp = async (req, res) => {
       if (!user) {
         await logUserLoginAttempt("Unknown User", trimmedEmail, "Failed", null, req);
         return res.status(401).json({ message: "Incorrect email or password" });
+      }
+
+      if (!user.isEmailVerified && user.verificationStatus === "Verified") {
+        user.isEmailVerified = true;
+        user.emailVerifiedAt = user.emailVerifiedAt || new Date();
       }
       
       if (user.status === "Suspended") {
@@ -359,13 +371,18 @@ const googleLogin = async (req, res) => {
       const passwordSalt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(randomPasswordSeed, passwordSalt);
 
+      const nameValidation = validateName(name);
+
       user = await User.create({
-        name: name.trim(),
+        name: nameValidation.isValid ? nameValidation.sanitizedValue : name.trim(),
         email: trimmedEmail,
         mobileNumber: "",
         password: hashedPassword,
-        loginMethod: "Email", // Using Email since Google Login is email-based and avoids validation enum constraints
+        loginMethod: "Email",
         verificationStatus: "Verified",
+        isEmailVerified: true,
+        emailVerifiedAt: new Date(),
+        isPhoneVerified: false,
       });
 
       notifyNewCustomerRegistered(user).catch((err) => console.error("[notif] Google new customer error:", err));

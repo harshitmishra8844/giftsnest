@@ -7,6 +7,7 @@ const { generateToken } = require("./authController");
 const { getSmtpConfig, isSmtpConfigured, isEmailConfigured, verifyEmailTransporter } = require("../services/emailTransporter");
 const { logActivity } = require("../services/logService");
 const { sendAccountLockoutEmail } = require("../services/emailService");
+const cacheService = require("../services/cacheService");
 
 const parseUserAgent = (userAgentString) => {
   const ua = userAgentString || "";
@@ -429,8 +430,14 @@ const verify2FA = async (req, res) => {
 
 const getStoreInfo = async (req, res) => {
   try {
+    const cached = cacheService.get("store:info");
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      return res.status(200).json(cached);
+    }
+
     const dbStoreInfo = await StoreSetting.findOne({ singletonKey: "store" }).lean();
-    return res.status(200).json({
+    const result = {
       storeName: dbStoreInfo?.storeName || process.env.STORE_NAME || "Niyora Gifts",
       storePhone: dbStoreInfo?.storePhone || process.env.STORE_PHONE || "+91-90000-00000",
       storeAddress: dbStoreInfo?.storeAddress || process.env.STORE_ADDRESS || "123 Commerce Street, Mumbai, Maharashtra 400001, India",
@@ -438,7 +445,11 @@ const getStoreInfo = async (req, res) => {
       specialOffer: sanitizeSpecialOffer(dbStoreInfo?.specialOffer),
       offers: sanitizeOffers(dbStoreInfo?.offers),
       codEnabled: dbStoreInfo?.codEnabled !== undefined ? dbStoreInfo.codEnabled : true,
-    });
+    };
+
+    cacheService.set("store:info", result, 300);
+    res.setHeader("X-Cache", "MISS");
+    return res.status(200).json(result);
   } catch (error) {
     console.error("Get store info error:", error.message);
     return res.status(500).json({ message: "Failed to fetch store info" });
@@ -466,6 +477,9 @@ const updateStoreInfo = async (req, res) => {
       },
       { upsert: true, returnDocument: 'after', runValidators: true, setDefaultsOnInsert: true }
     );
+
+    // Invalidate cached store info immediately
+    cacheService.del("store:info");
 
     if (req.user) {
       await logActivity(

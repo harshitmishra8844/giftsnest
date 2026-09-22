@@ -78,6 +78,7 @@ const orderSchema = new mongoose.Schema(
       fullName: { type: String, required: true, trim: true },
       phone: { type: String, required: true, trim: true },
       line1: { type: String, required: true, trim: true },
+      line2: { type: String, trim: true, default: "" },
       city: { type: String, required: true, trim: true },
       state: { type: String, required: true, trim: true },
       postalCode: { type: String, required: true, trim: true },
@@ -108,8 +109,30 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["Online", "COD"],
+      enum: ["Online", "COD", "Store Credit", "Store Credit + Online"],
       default: "Online",
+    },
+    storeCreditAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    onlinePaymentAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    storeCreditReservationId: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
+    storeCreditStatus: {
+      type: String,
+      enum: ["NONE", "RESERVED", "COMMITTED", "RELEASED", "REFUNDED"],
+      default: "NONE",
+      index: true,
     },
     trackingId: {
       type: String,

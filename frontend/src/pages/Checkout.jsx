@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
 import { getUserAuth } from "../services/userAuth";
+import { validateAddress } from "../utils/validation";
 
 
 
@@ -56,6 +57,9 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState("Online");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [globalStoreInfo, setGlobalStoreInfo] = useState(null);
+  const [storeCreditBalance, setStoreCreditBalance] = useState({ availableBalance: 0, status: "Active" });
+  const [loadingStoreCredit, setLoadingStoreCredit] = useState(false);
+  const [useStoreCredit, setUseStoreCredit] = useState(false);
 
   useEffect(() => {
     const fetchGlobalSettings = async () => {
@@ -96,8 +100,24 @@ const Checkout = () => {
       }
     };
 
+    const fetchStoreCredit = async () => {
+      try {
+        setLoadingStoreCredit(true);
+        const { data } = await api.get("/store-credit/my/balance");
+        if (data?.success) {
+          setStoreCreditBalance(data.balance);
+        }
+      } catch (err) {
+        console.error("Failed to load store credit balance for checkout:", err);
+      } finally {
+        setLoadingStoreCredit(false);
+      }
+    };
+
     fetchAddresses();
+    fetchStoreCredit();
   }, [navigate, userAuth]);
+
 
   useEffect(() => {
     if (!userAuth?.token) return;
@@ -209,6 +229,10 @@ const Checkout = () => {
   const subtotal = Number(totalPrice.toFixed(2));
   const discountAmount = couponData?.discountAmount || 0;
   const finalTotal = couponData?.finalTotal ?? subtotal;
+  const availableCredit = storeCreditBalance.status === "Active" ? Math.max(0, storeCreditBalance.availableBalance || 0) : 0;
+  const appliedStoreCredit = useStoreCredit ? Math.min(availableCredit, finalTotal) : 0;
+  const remainingAmount = Number((finalTotal - appliedStoreCredit).toFixed(2));
+  const isFullStoreCredit = useStoreCredit && remainingAmount === 0 && appliedStoreCredit > 0;
   const hasSavedAddresses = savedAddresses.length > 0;
 
   const handleSubmit = (event) => {
@@ -245,6 +269,19 @@ const Checkout = () => {
       return;
     }
 
+    const addressValidation = validateAddress(selectedAddr);
+    if (!addressValidation.isValid) {
+      const firstError = Object.values(addressValidation.errors)[0] || "Please update your delivery address with complete details.";
+      setError(firstError);
+      return;
+    }
+
+    // If 100% store credit, immediately place order without opening modal
+    if (isFullStoreCredit) {
+      handleConfirmOrder("Store Credit");
+      return;
+    }
+
     // Validation succeeded, show modal
     setShowPaymentModal(true);
   };
@@ -262,10 +299,18 @@ const Checkout = () => {
       return;
     }
 
+    const addressValidation = validateAddress(selectedAddr);
+    if (!addressValidation.isValid) {
+      const firstError = Object.values(addressValidation.errors)[0] || "Invalid delivery address.";
+      setError(firstError);
+      return;
+    }
+
     const orderAddress = {
       fullName: selectedAddr.fullName,
       phone: selectedAddr.phone,
       line1: selectedAddr.line1,
+      line2: selectedAddr.line2 || "",
       city: selectedAddr.city,
       state: selectedAddr.state,
       postalCode: selectedAddr.postalCode,
@@ -279,11 +324,24 @@ const Checkout = () => {
         totalPrice: finalTotal,
         couponCode,
         address: orderAddress,
-        paymentMethod: selectedMethod,
+        paymentMethod: isFullStoreCredit ? "Store Credit" : selectedMethod,
+        useStoreCredit: Boolean(useStoreCredit),
       };
 
       const { data } = await api.post("/orders", payload);
       const appOrder = data.order;
+
+      if (appOrder.paymentMethod === "Store Credit" || selectedMethod === "Store Credit") {
+        clearCart();
+        navigate("/payment-success", {
+          state: {
+            order: appOrder,
+            message: `Your order has been placed successfully using 100% Store Credit!`,
+          },
+        });
+        setPlacingOrder(false);
+        return;
+      }
 
       if (selectedMethod === "COD") {
         clearCart();
@@ -298,6 +356,7 @@ const Checkout = () => {
       }
 
       setInfo("Order created. Opening secure payment...");
+
 
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
@@ -504,8 +563,72 @@ const Checkout = () => {
           )}
         </div>
 
+        {/* STORE CREDIT CARD */}
+        {availableCredit > 0 && (
+          <div className="rounded-3xl border border-gold-400/60 bg-gradient-to-br from-gold-50/50 via-white to-gold-50/20 p-6 shadow-xs space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-gold-600 to-gold-400 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                  💳
+                </div>
+                <div>
+                  <h4 className="text-sm font-serif font-bold text-luxury-black">
+                    Use Store Credit
+                  </h4>
+                  <p className="text-[11px] text-text-secondary font-light">
+                    Available Balance: <strong className="text-luxury-black font-mono">₹{availableCredit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={useStoreCredit}
+                  onChange={(e) => setUseStoreCredit(e.target.checked)}
+                  className="h-5 w-5 rounded border-champagne text-gold-500 accent-gold-600 focus:ring-gold-500/20 cursor-pointer"
+                />
+                <span className="text-xs font-bold uppercase tracking-wider text-luxury-black">
+                  {useStoreCredit ? "Applied" : "Apply"}
+                </span>
+              </label>
+            </div>
+
+            {useStoreCredit && (
+              <div className="rounded-2xl bg-white border border-gold-300/60 p-4 text-xs space-y-2.5 shadow-xs">
+                <div className="flex justify-between text-text-secondary">
+                  <span>Order Total:</span>
+                  <span className="font-semibold text-luxury-black font-mono">₹{finalTotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-emerald-800 font-medium">
+                  <span>Store Credit Applied:</span>
+                  <span className="font-mono font-bold">- ₹{appliedStoreCredit.toFixed(2)}</span>
+                </div>
+                <div className="pt-2 border-t border-champagne/30 flex justify-between font-bold text-luxury-black">
+                  <span className="uppercase text-[11px] tracking-wider">Remaining Amount:</span>
+                  <span className="font-serif text-base text-gold-900 font-bold">
+                    ₹{remainingAmount.toFixed(2)}
+                  </span>
+                </div>
+
+                {isFullStoreCredit ? (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/60 text-[11px] text-emerald-900 font-medium flex items-center gap-2">
+                    <span className="text-sm">✓</span>
+                    <span>100% of your order will be paid with Store Credit. No gateway payment needed!</span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-amber-900 font-light bg-amber-50/50 p-2.5 rounded-xl border border-amber-200/50">
+                    Remaining amount of <strong>₹{remainingAmount.toFixed(2)}</strong> will be paid via your selected payment method.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="rounded-3xl border border-champagne bg-white/70 p-6 shadow-xs space-y-3">
           <div className="flex items-center gap-3">
+
             <div className="w-8 h-8 bg-gold-50 rounded-lg flex items-center justify-center border border-gold-200/30">
               <svg className="w-4 h-4 text-gold-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -688,7 +811,13 @@ const Checkout = () => {
           disabled={placingOrder}
           className="w-full rounded-full bg-gold-500 hover:bg-gold-600 px-5 py-3.5 text-xs font-bold uppercase tracking-widest text-white disabled:cursor-not-allowed disabled:opacity-75 transition-all duration-300 shadow-xs cursor-pointer font-semibold"
         >
-          {placingOrder ? "Processing..." : "Proceed to Pay"}
+          {placingOrder
+            ? "Processing Order..."
+            : isFullStoreCredit
+            ? "Pay INR 0.00 with Store Credit"
+            : useStoreCredit && appliedStoreCredit > 0
+            ? `Proceed to Pay Remaining (INR ${remainingAmount.toFixed(2)})`
+            : "Proceed to Pay"}
         </button>
       </form>
 
@@ -711,10 +840,18 @@ const Checkout = () => {
             <span>Discount</span>
             <span className="text-gold-700 font-bold">- INR {discountAmount}</span>
           </p>
+          {useStoreCredit && appliedStoreCredit > 0 && (
+            <p className="flex items-center justify-between text-emerald-800 font-medium">
+              <span>Store Credit</span>
+              <span className="font-bold">- INR {appliedStoreCredit.toFixed(2)}</span>
+            </p>
+          )}
         </div>
         <div className="mt-3.5 flex items-center justify-between text-sm font-semibold text-luxury-black">
-          <span>Total Price</span>
-          <span className="font-serif text-base">INR {finalTotal}</span>
+          <span>{useStoreCredit && appliedStoreCredit > 0 ? "Remaining Payable" : "Total Price"}</span>
+          <span className="font-serif text-base font-bold text-gold-900">
+            INR {useStoreCredit && appliedStoreCredit > 0 ? remainingAmount.toFixed(2) : finalTotal}
+          </span>
         </div>
         <p className="mt-5 rounded-xl bg-gold-50/20 border border-gold-100/50 px-3 py-2.5 text-[10px] text-text-secondary leading-normal font-light">
           By completing this checkout, you agree to our shipping, cancellation and returns policy guidelines.
@@ -739,6 +876,23 @@ const Checkout = () => {
               </button>
             </div>
 
+            {useStoreCredit && appliedStoreCredit > 0 && (
+              <div className="rounded-2xl bg-gold-50/30 border border-gold-200/80 p-4 text-xs space-y-1.5 shadow-xs">
+                <div className="flex justify-between text-text-secondary">
+                  <span>Order Total:</span>
+                  <span className="font-mono">₹{finalTotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-emerald-800 font-medium">
+                  <span>Store Credit Applied:</span>
+                  <span className="font-mono font-bold">- ₹{appliedStoreCredit.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-luxury-black pt-1.5 border-t border-champagne/30">
+                  <span className="uppercase text-[10px] tracking-wider">Remaining Payable:</span>
+                  <span className="text-gold-900 font-serif text-sm">₹{remainingAmount.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <label 
                 className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all duration-300 ${
@@ -757,12 +911,17 @@ const Checkout = () => {
                   className="mt-0.5 accent-gold-600 cursor-pointer"
                 />
                 <div className="text-left">
-                  <p className="text-xs font-semibold text-luxury-black">Online Payment</p>
+                  <p className="text-xs font-semibold text-luxury-black">
+                    {useStoreCredit && appliedStoreCredit > 0 ? "Online Split Payment" : "Online Payment"}
+                  </p>
                   <p className="text-[10px] text-text-secondary font-light leading-relaxed mt-1">
-                    Pay securely via UPI, Card, NetBanking or Wallets using Razorpay.
+                    {useStoreCredit && appliedStoreCredit > 0
+                      ? `Pay remaining ₹${remainingAmount.toFixed(2)} securely via UPI, Card, NetBanking, or Wallets.`
+                      : "Pay securely via UPI, Card, NetBanking or Wallets using Razorpay."}
                   </p>
                 </div>
               </label>
+
 
               <label 
                 className={`flex items-start gap-3 rounded-2xl border p-4 transition-all duration-300 ${

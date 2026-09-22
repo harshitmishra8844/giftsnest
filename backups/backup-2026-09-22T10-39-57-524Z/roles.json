@@ -1,0 +1,354 @@
+[
+  {
+    "_id": "6a396ba0a153c1bf690b5572",
+    "name": "Product Manager",
+    "description": "Manages catalog, inventory levels, categories and items details.",
+    "permissions": [
+      "PRODUCTS_VIEW",
+      "PRODUCTS_CREATE",
+      "PRODUCTS_EDIT",
+      "PRODUCTS_DELETE",
+      "CATEGORIES_MANAGE",
+      "INVENTORY_VIEW",
+      "INVENTORY_MANAGE"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-06-22T17:06:40.903Z",
+    "updatedAt": "2026-06-22T17:06:40.903Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a396ba1a153c1bf690b5573",
+    "name": "Order Manager",
+    "description": "Handles logistics, updates processing flags, downloads bills and handles refunds.",
+    "permissions": [
+      "ORDERS_VIEW",
+      "ORDERS_STATUS",
+      "ORDERS_SHIPPING",
+      "ORDERS_RETURNS"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-06-22T17:06:41.042Z",
+    "updatedAt": "2026-06-22T17:06:41.042Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a396ba1a153c1bf690b5574",
+    "name": "Customer Support",
+    "description": "Assists users, responds to complains, live chat triggers and email support tickets.",
+    "permissions": [
+      "CUSTOMERS_VIEW",
+      "CUSTOMERS_EDIT",
+      "CUSTOMERS_NOTIFY",
+      "TICKETS_MANAGE",
+      "SUPPORT_CHAT",
+      "SUPPORT_EMAIL"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-06-22T17:06:41.170Z",
+    "updatedAt": "2026-06-29T16:47:04.919Z",
+    "__v": 9
+  },
+  {
+    "_id": "6a396ba1a153c1bf690b5575",
+    "name": "Marketing Manager",
+    "description": "Administers discount systems, manages promotional popups and campaign builders.",
+    "permissions": [
+      "COUPONS_MANAGE",
+      "COUPONS_VIEW",
+      "COUPONS_CREATE",
+      "COUPONS_EDIT",
+      "COUPONS_DELETE",
+      "COUPONS_PUSH",
+      "COUPONS_RETENTION",
+      "COUPONS_STORE_SETTINGS",
+      "MARKETING_CAMPAIGNS",
+      "BANNER_MANAGE"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-06-22T17:06:41.314Z",
+    "updatedAt": "2026-06-30T06:45:30.715Z",
+    "__v": 4
+  },
+  {
+    "_id": "6a396ba1a153c1bf690b5576",
+    "name": "Finance Manager",
+    "description": "Audits income, inspects payment gateway reports and initiates payout requests.",
+    "permissions": [
+      "FINANCE_VIEW",
+      "FINANCE_MANAGE"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-06-22T17:06:41.451Z",
+    "updatedAt": "2026-06-22T17:06:41.451Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a396ba1a153c1bf690b5577",
+    "name": "Content Manager",
+    "description": "Designs landing setups, writes SEO descriptions and hosts content logs.",
+    "permissions": [
+      "CONTENT_HOMEPAGE",
+      "CONTENT_BLOGS",
+      "BANNER_MANAGE",
+      "CONTENT_SEO"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-06-22T17:06:41.569Z",
+    "updatedAt": "2026-06-22T17:06:41.569Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a427d696411281da76d2fc2",
+    "name": "Customers",
+    "description": "Manage the customer record",
+    "permissions": [
+      "CUSTOMERS_EXPORT",
+      "CUSTOMERS_VIEW",
+      "CUSTOMERS_EDIT",
+      "CUSTOMERS_DELETE",
+      "CUSTOMERS_NOTIFY"
+    ],
+    "isCustom": true,
+    "createdAt": "2026-06-29T14:12:57.156Z",
+    "updatedAt": "2026-09-12T19:15:01.684Z",
+    "__v": 2
+  },
+  {
+    "_id": "6aaba3c5b4d198a6e61b1263",
+    "name": "Operations Manager",
+    "description": "Oversees cross-department fulfillment, escalations, inventory, returns, and task routing.",
+    "permissions": [
+      "OPERATIONS_MANAGE",
+      "ORDERS_VIEW",
+      "ORDERS_STATUS",
+      "ORDERS_SHIPPING",
+      "ORDERS_RETURNS",
+      "INVENTORY_VIEW",
+      "INVENTORY_MANAGE",
+      "CUSTOMERS_VIEW",
+      "TICKETS_MANAGE",
+      "TASK_TRANSFER",
+      "SLA_MANAGE",
+      "BUSINESS_ANALYTICS_VIEW",
+      "REPORTS_EXPORT"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:37.758Z",
+    "updatedAt": "2026-09-21T07:42:20.328Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c5b4d198a6e61b1264",
+    "name": "Customer Support Manager",
+    "description": "Manages support desk, live chat, complaint resolutions, ticket transfers, and support SLAs.",
+    "permissions": [
+      "CUSTOMERS_VIEW",
+      "CUSTOMERS_EDIT",
+      "CUSTOMERS_NOTIFY",
+      "TICKETS_MANAGE",
+      "SUPPORT_CHAT",
+      "SUPPORT_EMAIL",
+      "CALLBACK_MANAGE",
+      "TASK_TRANSFER",
+      "SLA_MANAGE",
+      "BUSINESS_ANALYTICS_VIEW",
+      "REPORTS_EXPORT"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:37.987Z",
+    "updatedAt": "2026-09-21T07:42:20.912Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c6b4d198a6e61b1265",
+    "name": "Sales Manager",
+    "description": "Drives customer conversions, monitors callbacks, campaigns, and inquiry pipelines.",
+    "permissions": [
+      "CUSTOMERS_VIEW",
+      "CUSTOMERS_NOTIFY",
+      "ORDERS_VIEW",
+      "COUPONS_VIEW",
+      "COUPONS_MANAGE",
+      "CALLBACK_MANAGE",
+      "MARKETING_CAMPAIGNS",
+      "BUSINESS_ANALYTICS_VIEW",
+      "REPORTS_EXPORT"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:38.313Z",
+    "updatedAt": "2026-09-21T07:42:21.475Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c6b4d198a6e61b1266",
+    "name": "Callback Executive",
+    "description": "Dedicated callback center agent. Places customer calls, logs remarks, schedules follow-ups, and routes tasks.",
+    "permissions": [
+      "CALLBACK_MANAGE",
+      "CUSTOMERS_VIEW",
+      "TICKETS_MANAGE",
+      "TASK_TRANSFER"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:38.953Z",
+    "updatedAt": "2026-09-21T07:42:21.963Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c7b4d198a6e61b1267",
+    "name": "Support Executive",
+    "description": "Frontline customer query resolution, complaint handling, live chat assistance, and task escalation.",
+    "permissions": [
+      "TICKETS_MANAGE",
+      "SUPPORT_CHAT",
+      "SUPPORT_EMAIL",
+      "CUSTOMERS_VIEW",
+      "TASK_TRANSFER"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:39.213Z",
+    "updatedAt": "2026-09-21T07:42:22.603Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c7b4d198a6e61b1268",
+    "name": "Return Executive",
+    "description": "Verifies evidence photos/videos, approves/rejects return requests, and coordinates pickups.",
+    "permissions": [
+      "ORDERS_RETURNS",
+      "ORDERS_VIEW",
+      "TICKETS_MANAGE",
+      "CUSTOMERS_VIEW",
+      "TASK_TRANSFER"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:39.701Z",
+    "updatedAt": "2026-09-21T07:42:23.162Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c7b4d198a6e61b1269",
+    "name": "Refund Executive",
+    "description": "Validates payment records, initiates payment gateway refunds, and audits financial transactions.",
+    "permissions": [
+      "FINANCE_VIEW",
+      "FINANCE_MANAGE",
+      "ORDERS_RETURNS",
+      "ORDERS_VIEW",
+      "TICKETS_MANAGE",
+      "CUSTOMERS_VIEW",
+      "TASK_TRANSFER"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:39.955Z",
+    "updatedAt": "2026-09-21T07:42:23.644Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c8b4d198a6e61b126a",
+    "name": "Order Executive",
+    "description": "Monitors order lifecycle, updates statuses, prints invoices and bills.",
+    "permissions": [
+      "ORDERS_VIEW",
+      "ORDERS_STATUS",
+      "ORDERS_SHIPPING",
+      "TICKETS_MANAGE",
+      "CUSTOMERS_VIEW",
+      "TASK_TRANSFER"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:40.344Z",
+    "updatedAt": "2026-09-21T07:42:24.205Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c8b4d198a6e61b126b",
+    "name": "Logistics Executive",
+    "description": "Coordinates with Delhivery, BlueDart, XpressBees courier carriers for delivery and return pickups.",
+    "permissions": [
+      "ORDERS_VIEW",
+      "ORDERS_STATUS",
+      "ORDERS_SHIPPING",
+      "ORDERS_RETURNS",
+      "TASK_TRANSFER"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:40.769Z",
+    "updatedAt": "2026-09-21T07:42:24.842Z",
+    "__v": 1
+  },
+  {
+    "_id": "6aaba3c9b4d198a6e61b126c",
+    "name": "Inventory Executive",
+    "description": "Monitors warehouse stock thresholds, updates product inventory, and reserves replacement items.",
+    "permissions": [
+      "INVENTORY_VIEW",
+      "INVENTORY_MANAGE",
+      "PRODUCTS_VIEW",
+      "TASK_TRANSFER"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-17T08:24:41.111Z",
+    "updatedAt": "2026-09-21T07:42:25.403Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ab0dd660e67c28716583508",
+    "name": "Master Admin",
+    "__v": 0,
+    "createdAt": "2026-09-21T07:31:50.680Z",
+    "description": "Full unrestricted platform authority, departments, task overrides, audit logs, and system configuration.",
+    "isCustom": false,
+    "permissions": [
+      "ALL",
+      "PRODUCTS_VIEW",
+      "PRODUCTS_MANAGE",
+      "INVENTORY_VIEW",
+      "INVENTORY_MANAGE",
+      "ORDERS_VIEW",
+      "ORDERS_MANAGE",
+      "ORDERS_RETURNS",
+      "CUSTOMERS_VIEW",
+      "CUSTOMERS_EDIT",
+      "MARKETING_CAMPAIGNS",
+      "TICKETS_MANAGE",
+      "SUPPORT_CHAT",
+      "CALLBACK_MANAGE",
+      "TASK_TRANSFER",
+      "TASK_REASSIGN",
+      "SLA_MANAGE",
+      "REPORTS_EXPORT",
+      "BUSINESS_ANALYTICS_VIEW",
+      "EMPLOYEES_MANAGE",
+      "ROLES_MANAGE",
+      "DEPARTMENTS_MANAGE",
+      "ACTIVITY_LOGS_VIEW",
+      "CONTENT_HOMEPAGE",
+      "FINANCE_MANAGE"
+    ],
+    "updatedAt": "2026-09-21T07:31:50.680Z"
+  },
+  {
+    "_id": "6ab1809306071d2d02360f9f",
+    "name": "Master Finance Admin",
+    "description": "Master administrative authority over financial ledgers, store credit issuance, refunds, payment gateway auditing, tax, payouts, and revenue analytics.",
+    "permissions": [
+      "FINANCE_VIEW",
+      "FINANCE_MANAGE",
+      "ORDERS_RETURNS",
+      "ORDERS_VIEW",
+      "CUSTOMERS_VIEW",
+      "REPORTS_EXPORT",
+      "BUSINESS_ANALYTICS_VIEW",
+      "ACTIVITY_LOGS_VIEW",
+      "AGENT_REFUND_APPROVE",
+      "AGENT_REFUND_CREATE",
+      "TASK_TRANSFER"
+    ],
+    "isCustom": false,
+    "createdAt": "2026-09-21T19:08:03.778Z",
+    "updatedAt": "2026-09-21T19:08:03.778Z",
+    "__v": 0
+  }
+]

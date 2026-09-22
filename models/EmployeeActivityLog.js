@@ -26,7 +26,7 @@ const employeeActivityLogSchema = new mongoose.Schema(
     },
     targetType: {
       type: String,
-      enum: ["Ticket", "Callback", "Return", "Refund", "Order", "Customer", "Product", "Auth", "System"],
+      enum: ["Ticket", "Callback", "Return", "Refund", "Order", "Customer", "Product", "Auth", "System", "StoreCredit"],
       default: "System",
       index: true,
     },

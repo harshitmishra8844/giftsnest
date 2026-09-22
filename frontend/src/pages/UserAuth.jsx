@@ -16,6 +16,7 @@ import {
   Phone,
   User as UserIcon
 } from "lucide-react";
+import { validateName, validateEmail, validatePhone } from "../utils/validation";
 
 const UserAuth = () => {
   const navigate = useNavigate();
@@ -119,23 +120,43 @@ const UserAuth = () => {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !mobileNumber || !email) return;
-    if (!isValidEmailFormat(email)) {
-      setError("Please enter a valid email address.");
+    setError("");
+
+    const nameVal = validateName(name);
+    if (!nameVal.isValid) {
+      setError(nameVal.error);
+      setShakeForm(true);
+      setTimeout(() => setShakeForm(false), 500);
       return;
     }
+
+    const emailVal = validateEmail(email);
+    if (!emailVal.isValid) {
+      setError(emailVal.error);
+      setShakeForm(true);
+      setTimeout(() => setShakeForm(false), 500);
+      return;
+    }
+
+    const phoneVal = validatePhone(mobileNumber);
+    if (!phoneVal.isValid) {
+      setError(phoneVal.error);
+      setShakeForm(true);
+      setTimeout(() => setShakeForm(false), 500);
+      return;
+    }
+
     if (!agreeTerms) {
       setError("You must agree to the Terms & Conditions to create an account.");
       return;
     }
 
-    setError("");
     setLoading(true);
     try {
       const { data } = await api.post("/register-send-otp", {
-        name,
-        email,
-        mobileNumber,
+        name: nameVal.sanitizedValue,
+        email: emailVal.sanitizedValue,
+        mobileNumber: phoneVal.sanitizedValue,
       });
       setStep("verify");
       setResendTimer(60);

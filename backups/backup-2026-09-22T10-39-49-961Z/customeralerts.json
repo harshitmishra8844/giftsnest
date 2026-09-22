@@ -1,0 +1,61 @@
+[
+  {
+    "_id": "6aaaf895d1a61000017f2ad0",
+    "type": "vip_activity",
+    "title": "VIP Account Tier Reached",
+    "message": "Test Customer has spent a total of ₹21,000 across 9 orders.",
+    "userId": "6aaaf61a0e67c28716545b4c",
+    "status": "Active",
+    "severity": "Medium",
+    "assignedRoles": [
+      "Master Admin",
+      "Marketing",
+      "Sales"
+    ],
+    "notes": "",
+    "resolvedBy": null,
+    "resolvedAt": null,
+    "createdAt": "2026-09-16T20:14:13.613Z",
+    "updatedAt": "2026-09-16T20:14:13.613Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ab0ee77b38efc25b2eff9a4",
+    "type": "vip_activity",
+    "title": "VIP Account Tier Reached",
+    "message": "Security Test Buyer has spent a total of ₹15,000 across 6 orders.",
+    "userId": "6ab0ee33a656a7cd35ab8d6b",
+    "status": "Active",
+    "severity": "Medium",
+    "assignedRoles": [
+      "Master Admin",
+      "Marketing",
+      "Sales"
+    ],
+    "notes": "",
+    "resolvedBy": null,
+    "resolvedAt": null,
+    "createdAt": "2026-09-21T08:44:39.611Z",
+    "updatedAt": "2026-09-21T08:44:39.611Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ab0ee77b38efc25b2eff9a5",
+    "type": "failed_payments",
+    "title": "Multiple Failed Payments",
+    "message": "Security Test Buyer has experienced 3 failed payment gateways.",
+    "userId": "6ab0ee33a656a7cd35ab8d6b",
+    "status": "Active",
+    "severity": "Low",
+    "assignedRoles": [
+      "Master Admin",
+      "Support"
+    ],
+    "notes": "",
+    "resolvedBy": null,
+    "resolvedAt": null,
+    "createdAt": "2026-09-21T08:44:39.825Z",
+    "updatedAt": "2026-09-21T08:44:39.825Z",
+    "__v": 0
+  }
+]

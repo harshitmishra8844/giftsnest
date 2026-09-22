@@ -10,6 +10,7 @@ const CustomerInteraction = require("../models/CustomerInteraction");
 const SlaTracking = require("../models/SlaTracking");
 const { createCustomerServiceTicket, findAvailableExecutive } = require("../services/ticketHubService");
 const { createAndDispatchNotification } = require("../services/notificationService");
+const { validateName, validatePhone, validateEmail } = require("../utils/validation");
 
 const REMARK_EDIT_WINDOW_MINUTES = 15;
 
@@ -37,15 +38,30 @@ const requestCallbackPublic = async (req, res) => {
       priority = "Medium",
     } = req.body;
 
-    if (!customerName || !customerPhone) {
-      return res.status(400).json({ message: "Customer Name and Customer Phone are required." });
+    const nameRes = validateName(customerName);
+    if (!nameRes.isValid) {
+      return res.status(400).json({ message: nameRes.error });
+    }
+
+    const phoneRes = validatePhone(customerPhone);
+    if (!phoneRes.isValid) {
+      return res.status(400).json({ message: phoneRes.error });
+    }
+
+    let sanitizedEmail = "";
+    if (customerEmail) {
+      const emailRes = validateEmail(customerEmail);
+      if (!emailRes.isValid) {
+        return res.status(400).json({ message: emailRes.error });
+      }
+      sanitizedEmail = emailRes.sanitizedValue;
     }
 
     // Attempt matching customer if registered
     let matchedUser = null;
-    if (customerEmail) {
+    if (sanitizedEmail) {
       try {
-        matchedUser = await User.findOne({ email: customerEmail.trim().toLowerCase() });
+        matchedUser = await User.findOne({ email: sanitizedEmail });
       } catch {}
     }
     if (!matchedUser && req.user) {
@@ -1172,6 +1188,40 @@ const exportCallbackData = async (req, res) => {
   }
 };
 
+/**
+ * Customer Self-Service: Get logged-in customer's requested callbacks
+ */
+const getMyCallbacks = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const userPhone = req.user?.mobileNumber;
+    const userEmail = req.user?.email;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const orClauses = [{ customerId: userId }];
+    if (userPhone) orClauses.push({ customerPhone: userPhone });
+    if (userEmail) orClauses.push({ customerEmail: userEmail });
+
+    const callbacks = await CallbackRequest.find({ $or: orClauses })
+      .sort({ createdAt: -1 })
+      .populate("assignedTo", "name email designation")
+      .populate("remarks")
+      .lean();
+
+    return res.json({
+      success: true,
+      count: callbacks.length,
+      callbacks,
+    });
+  } catch (error) {
+    console.error("getMyCallbacks error:", error);
+    return res.status(500).json({ message: "Failed to fetch callback requests: " + error.message });
+  }
+};
+
 module.exports = {
   requestCallbackPublic,
   createCallbackRequest,
@@ -1182,4 +1232,6 @@ module.exports = {
   editLatestRemark,
   getCallbackReports,
   exportCallbackData,
+  getMyCallbacks,
 };
+

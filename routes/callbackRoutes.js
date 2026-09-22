@@ -9,6 +9,7 @@ const {
   editLatestRemark,
   getCallbackReports,
   exportCallbackData,
+  getMyCallbacks,
 } = require("../controllers/callbackController");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const { checkPermission } = require("../middleware/rbacMiddleware");
@@ -19,8 +20,14 @@ const router = express.Router();
 router.post("/request", requestCallbackPublic);
 router.post("/public", requestCallbackPublic);
 
+// Customer Self-Service: view their callbacks
+router.get("/my", protect, getMyCallbacks);
+router.get("/my-callbacks", protect, getMyCallbacks);
+router.get("/my/callbacks", protect, getMyCallbacks);
+
 // Require authenticated staff/admin across all callback operations
 router.use(protect);
+
 
 // Analytics and Exports (placed before :id route)
 router.get("/reports/analytics", checkPermission(["TICKETS_MANAGE", "BUSINESS_ANALYTICS_VIEW", "CUSTOMERS_VIEW"]), getCallbackReports);

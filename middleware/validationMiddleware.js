@@ -1,44 +1,75 @@
 const { z } = require("zod");
 const fs = require("fs");
 const path = require("path");
+const {
+  validateName,
+  validateEmail,
+  validatePhone,
+  validatePinCode,
+  validateAddress,
+  stripHtml,
+} = require("../utils/validation");
 
-// Regex to match any HTML tag
+// Helper to check for HTML tags
 const htmlRegex = /<[^>]*>/g;
 const hasHtml = (val) => htmlRegex.test(val);
 
-// Basic field schemas
+// Field schemas using validation utility
 const emailSchema = z.string()
   .trim()
-  .email("Invalid email format")
-  .refine(val => !hasHtml(val), { message: "Email cannot contain HTML/script tags" });
+  .superRefine((val, ctx) => {
+    const res = validateEmail(val);
+    if (!res.isValid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: res.error,
+      });
+    }
+  })
+  .transform((val) => validateEmail(val).sanitizedValue);
 
 const passwordSchema = z.string()
   .min(6, "Password must be at least 6 characters")
   .max(100, "Password is too long")
-  .refine(val => !hasHtml(val), { message: "Password cannot contain HTML/script tags" });
+  .refine((val) => !hasHtml(val), { message: "Password cannot contain HTML/script tags" });
 
 const nameSchema = z.string()
   .trim()
-  .min(2, "Name must be at least 2 characters")
-  .max(100, "Name is too long")
-  .refine(val => !hasHtml(val), { message: "Name cannot contain HTML/script tags" });
+  .superRefine((val, ctx) => {
+    const res = validateName(val);
+    if (!res.isValid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: res.error,
+      });
+    }
+  })
+  .transform((val) => validateName(val).sanitizedValue);
 
 const usernameSchema = z.string()
   .trim()
   .min(3, "Username must be at least 3 characters")
   .max(50, "Username is too long")
   .regex(/^[a-zA-Z0-9_-]+$/, "Username must contain only alphanumeric characters, underscores, and hyphens")
-  .refine(val => !hasHtml(val), { message: "Username cannot contain HTML/script tags" })
+  .refine((val) => !hasHtml(val), { message: "Username cannot contain HTML/script tags" })
   .optional();
 
 const mobileNumberSchema = z.string()
   .trim()
-  .regex(/^\+?[0-9]{10,15}$/, "Mobile number must be a valid phone number")
-  .refine(val => !hasHtml(val), { message: "Mobile number cannot contain HTML/script tags" });
+  .superRefine((val, ctx) => {
+    const res = validatePhone(val);
+    if (!res.isValid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: res.error,
+      });
+    }
+  })
+  .transform((val) => validatePhone(val).sanitizedValue);
 
 const otpSchema = z.string()
   .trim()
-  .regex(/^\d{6}$/, "OTP must be exactly 6 digits");
+  .regex(/^\d{6}$/, "Verification code must be exactly 6 digits");
 
 // Endpoint Schemas
 const checkEmailSchema = z.object({
@@ -56,24 +87,43 @@ const verifyOtpSchema = z.object({
   email: emailSchema,
   otp: otpSchema,
   register: z.boolean().optional().default(false),
-  name: nameSchema.optional(),
-  mobileNumber: mobileNumberSchema.optional(),
+  name: z.string().optional(),
+  mobileNumber: z.string().optional(),
   username: usernameSchema.optional(),
 }).superRefine((data, ctx) => {
   if (data.register) {
     if (!data.name) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Name is required for registration",
-        path: ["name"]
+        message: "Please enter your full name for registration",
+        path: ["name"],
       });
+    } else {
+      const nameRes = validateName(data.name);
+      if (!nameRes.isValid) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: nameRes.error,
+          path: ["name"],
+        });
+      }
     }
+
     if (!data.mobileNumber) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Mobile number is required for registration",
-        path: ["mobileNumber"]
+        message: "Please enter your mobile number for registration",
+        path: ["mobileNumber"],
       });
+    } else {
+      const phoneRes = validatePhone(data.mobileNumber);
+      if (!phoneRes.isValid) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: phoneRes.error,
+          path: ["mobileNumber"],
+        });
+      }
     }
   }
 });
@@ -88,6 +138,30 @@ const adminLoginSchema = z.object({
   password: passwordSchema,
 });
 
+const addressValidationSchema = z.object({
+  label: z.string().optional().default("Home"),
+  fullName: z.string(),
+  phone: z.string(),
+  line1: z.string(),
+  line2: z.string().optional().default(""),
+  city: z.string(),
+  state: z.string(),
+  postalCode: z.string(),
+  country: z.string().optional().default("India"),
+  isDefault: z.boolean().optional().default(false),
+}).superRefine((data, ctx) => {
+  const res = validateAddress(data);
+  if (!res.isValid) {
+    Object.entries(res.errors).forEach(([field, msg]) => {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [field],
+        message: msg,
+      });
+    });
+  }
+}).transform((data) => validateAddress(data).sanitizedAddress);
+
 /**
  * Logs details of validation failures (client IP, UA, target, error details, masked body)
  * securely to rejected_submissions.log.
@@ -95,15 +169,15 @@ const adminLoginSchema = z.object({
 const logRejectedSubmission = (req, errorDetails) => {
   try {
     const logFilePath = path.join(process.cwd(), "rejected_submissions.log");
-    
+
     const xForwarded = req.headers["x-forwarded-for"];
-    const ip = xForwarded 
-      ? xForwarded.split(",")[0].trim() 
+    const ip = xForwarded
+      ? xForwarded.split(",")[0].trim()
       : (req.ip || req.connection?.remoteAddress || "127.0.0.1");
 
     const userAgent = req.headers["user-agent"] || "Unknown";
     const timestamp = new Date().toISOString();
-    
+
     // Mask sensitive fields in the logged body
     const maskedBody = { ...req.body };
     if (typeof maskedBody.password === "string") {
@@ -120,7 +194,7 @@ const logRejectedSubmission = (req, errorDetails) => {
       url: req.originalUrl || req.url,
       method: req.method,
       errors: errorDetails,
-      body: maskedBody
+      body: maskedBody,
     };
 
     fs.appendFileSync(logFilePath, JSON.stringify(logEntry) + "\n", "utf8");
@@ -136,18 +210,23 @@ const validateBody = (schema) => {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      const errorDetails = result.error.issues.map(err => ({
+      const errorDetails = result.error.issues.map((err) => ({
         field: err.path.join("."),
         message: err.message,
-        code: err.code
+        code: err.code,
       }));
 
-      // Log the attack/validation failure details server-side
+      // Log the validation failure details server-side
       logRejectedSubmission(req, errorDetails);
 
-      // Return a completely generic error response to the client
+      const firstError = errorDetails[0]?.message || "Invalid submission data. Please verify your inputs.";
+
       return res.status(400).json({
-        message: "Invalid submission data. Please verify your inputs."
+        message: firstError,
+        errors: errorDetails.reduce((acc, curr) => {
+          if (curr.field) acc[curr.field] = curr.message;
+          return acc;
+        }, {}),
       });
     }
 
@@ -159,9 +238,13 @@ const validateBody = (schema) => {
 
 module.exports = {
   validateBody,
+  emailSchema,
+  nameSchema,
+  mobileNumberSchema,
   checkEmailSchema,
   registerSendOtpSchema,
   verifyOtpSchema,
   googleLoginSchema,
   adminLoginSchema,
+  addressValidationSchema,
 };

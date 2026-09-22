@@ -1,0 +1,878 @@
+[
+  {
+    "_id": "6a429a4dac8cfdc72c0292ff",
+    "section": "homepage",
+    "draftContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        ""
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "publishedContent": {
+      "heroTitle": "Celebrate every moment with premium gifts",
+      "heroSubtitle": "Curated Boutique",
+      "heroDescription": "Flowers, cakes, and personalized surprises crafted with elegance, delivered with care, and remembered forever.",
+      "heroButtonText": "Explore Catalog",
+      "heroButtonLink": "/products",
+      "heroImages": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop&q=80",
+        ""
+      ],
+      "featuredCategories": [
+        {
+          "name": "Birthday",
+          "image": "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Anniversary",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Flowers",
+          "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=300&h=300&fit=crop&crop=center"
+        },
+        {
+          "name": "Personalized Gifts",
+          "image": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&h=300&fit=crop&crop=center"
+        }
+      ],
+      "featuredProductsSection": {
+        "title": "Shop by Category",
+        "subtitle": "Elegant selections"
+      },
+      "testimonials": [
+        {
+          "name": "Riya S.",
+          "text": "Beautiful packaging and super fast same-day delivery. Loved it!",
+          "verified": true
+        },
+        {
+          "name": "Aman K.",
+          "text": "The bouquet + cake combo was exactly like the photo. Great experience.",
+          "verified": true
+        },
+        {
+          "name": "Neha P.",
+          "text": "Personalized gift quality was premium. Will order again.",
+          "verified": true
+        }
+      ],
+      "whyChooseUs": [
+        {
+          "title": "Handpicked Quality",
+          "text": "Every product is curated with a focus on freshness, premium presentation and gifting value."
+        },
+        {
+          "title": "Reliable Delivery",
+          "text": "Same-day and slot-based delivery options help your surprise reach on time, every time."
+        },
+        {
+          "title": "Personal Touch",
+          "text": "From custom messages to thoughtful packaging, we help you make each gift truly memorable."
+        }
+      ],
+      "newsletterSection": {
+        "title": "Stay Updated",
+        "description": "Get festive offers and latest collections in your inbox."
+      }
+    },
+    "seo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "description": "Shop flowers, cakes and personalized gifts at Niyora Gifts with same-day delivery and premium packaging.",
+      "keywords": "gift store, flowers delivery, cakes online, personalized gifts, same day delivery",
+      "canonical": "",
+      "ogImage": "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800",
+      "ogTitle": "Niyora Gifts | Flowers, Cakes & Personalized Gifts",
+      "ogDescription": "Discover curated gifts for birthdays, anniversaries and special moments with fast delivery.",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "Master Admin",
+    "createdAt": "2026-06-29T16:16:13.238Z",
+    "updatedAt": "2026-09-16T17:28:11.980Z",
+    "__v": 0,
+    "lastUpdatedBy": "6a3a87729087d5b2bcaf2f83"
+  },
+  {
+    "_id": "6a429a4dac8cfdc72c029300",
+    "section": "header",
+    "draftContent": {
+      "logoText": "Niyora Gifts",
+      "logoImage": "",
+      "navigationMenu": [
+        {
+          "label": "Home",
+          "link": "/"
+        },
+        {
+          "label": "Products",
+          "link": "/products"
+        },
+        {
+          "label": "About Us",
+          "link": "/about"
+        }
+      ],
+      "contactNumber": "+91 90000 00000",
+      "emailAddress": "niyoragifts@gmail.com",
+      "searchPlaceholder": "Search for premium flowers, cakes, customized gifts..."
+    },
+    "publishedContent": {
+      "logoText": "Niyora Gifts",
+      "logoImage": "",
+      "navigationMenu": [
+        {
+          "label": "Home",
+          "link": "/"
+        },
+        {
+          "label": "Products",
+          "link": "/products"
+        },
+        {
+          "label": "About Us",
+          "link": "/about"
+        }
+      ],
+      "contactNumber": "+91 90000 00000",
+      "emailAddress": "niyoragifts@gmail.com",
+      "searchPlaceholder": "Search for premium flowers, cakes, customized gifts..."
+    },
+    "seo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:13.377Z",
+    "updatedAt": "2026-06-29T16:16:13.377Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429a4dac8cfdc72c029301",
+    "section": "footer",
+    "draftContent": {
+      "logoText": "Niyora Gifts",
+      "logoImage": "",
+      "aboutText": "Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful, lasting memory.",
+      "quickLinks": [
+        {
+          "label": "Home",
+          "link": "/"
+        },
+        {
+          "label": "About",
+          "link": "/about"
+        },
+        {
+          "label": "Products",
+          "link": "/products"
+        },
+        {
+          "label": "Cart",
+          "link": "/cart"
+        }
+      ],
+      "customerServiceLinks": [
+        {
+          "label": "Track Order",
+          "link": "/track-order"
+        },
+        {
+          "label": "Shipping Policy",
+          "link": "/shipping-policy"
+        },
+        {
+          "label": "Returns, Refunds & Replacement",
+          "link": "/returns-refunds"
+        },
+        {
+          "label": "Terms & Conditions",
+          "link": "/terms-conditions"
+        }
+      ],
+      "contactDetails": {
+        "address": "Premium Gifting Hub, Delhi, India",
+        "phone": "+91 90000 00000",
+        "email": "niyoragifts@gmail.com"
+      },
+      "socialMediaLinks": [
+        {
+          "name": "instagram",
+          "link": "https://instagram.com"
+        },
+        {
+          "name": "facebook",
+          "link": "https://facebook.com"
+        },
+        {
+          "name": "x",
+          "link": "https://x.com"
+        }
+      ],
+      "copyrightText": "© 2026 Niyora Gifts. All rights reserved."
+    },
+    "publishedContent": {
+      "logoText": "Niyora Gifts",
+      "logoImage": "",
+      "aboutText": "Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful, lasting memory.",
+      "quickLinks": [
+        {
+          "label": "Home",
+          "link": "/"
+        },
+        {
+          "label": "About",
+          "link": "/about"
+        },
+        {
+          "label": "Products",
+          "link": "/products"
+        },
+        {
+          "label": "Cart",
+          "link": "/cart"
+        }
+      ],
+      "customerServiceLinks": [
+        {
+          "label": "Track Order",
+          "link": "/track-order"
+        },
+        {
+          "label": "Shipping Policy",
+          "link": "/shipping-policy"
+        },
+        {
+          "label": "Returns, Refunds & Replacement",
+          "link": "/returns-refunds"
+        },
+        {
+          "label": "Terms & Conditions",
+          "link": "/terms-conditions"
+        }
+      ],
+      "contactDetails": {
+        "address": "Premium Gifting Hub, Delhi, India",
+        "phone": "+91 90000 00000",
+        "email": "niyoragifts@gmail.com"
+      },
+      "socialMediaLinks": [
+        {
+          "name": "instagram",
+          "link": "https://instagram.com"
+        },
+        {
+          "name": "facebook",
+          "link": "https://facebook.com"
+        },
+        {
+          "name": "x",
+          "link": "https://x.com"
+        }
+      ],
+      "copyrightText": "© 2026 Niyora Gifts. All rights reserved."
+    },
+    "seo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:13.547Z",
+    "updatedAt": "2026-07-25T17:26:27.992Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429a4dac8cfdc72c029302",
+    "section": "about",
+    "draftContent": {
+      "heading": "We help people celebrate with meaningful gifts.",
+      "description": "Niyora Gifts is built for moments that matter. Whether it's a birthday, anniversary, thank-you gesture, or festive celebration, we combine premium products with dependable service to create gifting experiences people remember.",
+      "images": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800"
+      ],
+      "mission": "Our mission is to bring joy to every celebration through high quality, handpicked gifts delivered right on time.",
+      "vision": "To be the most trusted and premium online gifting brand known for exceptional customer satisfaction and elegant collections.",
+      "companyStory": "Founded in 2026, Niyora Gifts started with a simple belief: that every gift should carry a deep emotion. Over time, we've grown into a destination for luxury flowers, gourmet cakes, and bespoke customized keepsakes.",
+      "values": [
+        {
+          "title": "Thoughtful Curation",
+          "text": "Every flower, cake and gift in our catalog is handpicked for quality, design and gifting impact."
+        },
+        {
+          "title": "On-Time Delivery",
+          "text": "From same-day surprises to planned celebrations, we focus on timely and reliable doorstep delivery."
+        },
+        {
+          "title": "Personalized Experience",
+          "text": "Custom notes, elegant packaging and occasion-based recommendations make every gift feel unique."
+        }
+      ]
+    },
+    "publishedContent": {
+      "heading": "We help people celebrate with meaningful gifts.",
+      "description": "Niyora Gifts is built for moments that matter. Whether it's a birthday, anniversary, thank-you gesture, or festive celebration, we combine premium products with dependable service to create gifting experiences people remember.",
+      "images": [
+        "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=800"
+      ],
+      "mission": "Our mission is to bring joy to every celebration through high quality, handpicked gifts delivered right on time.",
+      "vision": "To be the most trusted and premium online gifting brand known for exceptional customer satisfaction and elegant collections.",
+      "companyStory": "Founded in 2026, Niyora Gifts started with a simple belief: that every gift should carry a deep emotion. Over time, we've grown into a destination for luxury flowers, gourmet cakes, and bespoke customized keepsakes.",
+      "values": [
+        {
+          "title": "Thoughtful Curation",
+          "text": "Every flower, cake and gift in our catalog is handpicked for quality, design and gifting impact."
+        },
+        {
+          "title": "On-Time Delivery",
+          "text": "From same-day surprises to planned celebrations, we focus on timely and reliable doorstep delivery."
+        },
+        {
+          "title": "Personalized Experience",
+          "text": "Custom notes, elegant packaging and occasion-based recommendations make every gift feel unique."
+        }
+      ]
+    },
+    "seo": {
+      "title": "About Niyora Gifts | Online Gift Store for Every Occasion",
+      "description": "Discover the story behind Niyora Gifts — your trusted online gift shop for personalized, unique, and thoughtful gifts. Shop with confidence, delivered with love.",
+      "keywords": "Niyora Gifts, online gift store, personalized gifts, gift shop, buy gifts online",
+      "ogTitle": "About Niyora Gifts | Online Gift Store for Every Occasion",
+      "ogDescription": "Discover the story behind Niyora Gifts — your trusted online gift shop for personalized, unique, and thoughtful gifts.",
+      "canonical": "",
+      "ogImage": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "About Niyora Gifts | Online Gift Store for Every Occasion",
+      "description": "Discover the story behind Niyora Gifts — your trusted online gift shop for personalized, unique, and thoughtful gifts. Shop with confidence, delivered with love.",
+      "keywords": "Niyora Gifts, online gift store, personalized gifts, gift shop, buy gifts online",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "About Niyora Gifts | Online Gift Store for Every Occasion",
+      "ogDescription": "Discover the story behind Niyora Gifts — your trusted online gift shop for personalized, unique, and thoughtful gifts.",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:13.693Z",
+    "updatedAt": "2026-07-22T10:31:15.943Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429a4dac8cfdc72c029303",
+    "section": "contact",
+    "draftContent": {
+      "address": "Premium Gifting Hub, Delhi, India",
+      "email": "niyoragifts@gmail.com",
+      "phone": "+91 90000 00000",
+      "googleMap": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.562064115163!2d77.22725227630232!3d28.61393907567406!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd5d31111111%3A0x1111111111111111!2sIndia%20Gate!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin",
+      "workingHours": "Mon - Sun: 9:00 AM - 10:00 PM"
+    },
+    "publishedContent": {
+      "address": "Premium Gifting Hub, Delhi, India",
+      "email": "niyoragifts@gmail.com",
+      "phone": "+91 90000 00000",
+      "googleMap": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.562064115163!2d77.22725227630232!3d28.61393907567406!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd5d31111111%3A0x1111111111111111!2sIndia%20Gate!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin",
+      "workingHours": "Mon - Sun: 9:00 AM - 10:00 PM"
+    },
+    "seo": {
+      "title": "Contact Us | Niyora Gifts",
+      "description": "Get in touch with Niyora Gifts customer support. We are available for query resolutions, customized orders, and feedback.",
+      "keywords": "contact niyora gifts, customer service, support email, phone number",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "Contact Us | Niyora Gifts",
+      "description": "Get in touch with Niyora Gifts customer support. We are available for query resolutions, customized orders, and feedback.",
+      "keywords": "contact niyora gifts, customer service, support email, phone number",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:13.853Z",
+    "updatedAt": "2026-06-29T16:16:13.853Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429a4eac8cfdc72c029304",
+    "section": "policies",
+    "draftContent": {
+      "privacyPolicy": "<p>Your privacy is important to us. We collect, store and protect your personal information in accordance with regulations.</p>",
+      "refundPolicy": "<p>For cancelled or returned items, refunds are processed back to the original payment source within 5-7 business days.</p>",
+      "shippingPolicy": "<p>We offer standard, same-day and midnight delivery options. Please ensure correct details to avoid delays.</p>",
+      "termsConditions": "<h2>Terms & Conditions</h2><p>Welcome to <strong>Niyora Gifts</strong>! These Terms & Conditions govern your website usage and the creation and use of your account. By registering or using our site, you agree to be bound by these Terms. Please read them carefully.</p><h3>1. Account Registration</h3><ul><li>To place an order, save details, or access priority features on Niyora Gifts, you are required to <strong>create an account</strong>.</li><li>When registering, you agree to provide <strong>accurate, current, and complete details</strong> (name, email, phone, and delivery address).</li><li>You must be <strong>at least 18 years old</strong> (or have parental/guardian consent) to make purchases.</li></ul><h3>2. Account Responsibility</h3><ul><li>You are solely responsible for <strong>all activities</strong> that occur under your account.</li><li>You must keep your login credentials secure. If you suspect any breach, notify support immediately at <strong>niyoragifts@gmail.com</strong>.</li></ul><h3>3. Accuracy of Information</h3><ul><li>You agree to keep shipping address and contact details up to date.</li><li>Niyora Gifts is not responsible for failed deliveries or delays resulting from <strong>incorrect or outdated information</strong>.</li></ul><h3>4. One Account Per User</h3><ul><li>Customers are permitted to maintain <strong>one active account</strong>. Registering multiple accounts to abuse offers or promotions is strictly prohibited.</li></ul><h3>5. Suspension & Termination</h3><ul><li>We reserve the right to suspend or terminate accounts without prior notice if fraudulent activity, duplicate accounts, or policy violations are suspected.</li></ul><h3>6. Privacy & Data Use</h3><ul><li>Your data is handled in accordance with privacy laws. By creating an account, you consent to Niyora Gifts collecting and using data for order fulfillment.</li></ul><h3>7. Website Usage</h3><ul><li>You agree to use the site for lawful shopping purposes only. Disruption or hacking attempts are strictly prohibited.</li></ul><h3>8. Order & Purchase Terms</h3><ul><li>All checkout purchases are additionally subject to our <strong>Shipping Policy</strong> and <strong>Returns Policy</strong>.</li></ul><h3>9. Changes to Terms</h3><ul><li>We may update or revise these Terms at any time. Continued use of your account after changes are posted constitutes acceptance of revised Terms.</li></ul><h3>10. Account Deletion</h3><ul><li>To delete your account, email <strong>niyoragifts@gmail.com</strong>, and we will wipe your personal data in accordance with applicable laws.</li></ul><h3>11. Liability Limits</h3><ul><li>Niyora Gifts is not liable for indirect or consequential damages arising from website usage, except as required by law.</li></ul><h3>12. Governing Law</h3><ul><li>These Terms are governed by and construed in accordance with the laws of Delhi, India.</li></ul><h3>Need Help?</h3><p>📧 Email: <strong>niyoragifts@gmail.com</strong><br>📞 Phone: <strong>+91 90000-00000</strong><br>🕒 Support Hours: <strong>Mon–Sat, 10 AM – 6 PM</strong></p>"
+    },
+    "publishedContent": {
+      "privacyPolicy": "<p>Your privacy is important to us. We collect, store and protect your personal information in accordance with regulations.</p>",
+      "refundPolicy": "<p>For cancelled or returned items, refunds are processed back to the original payment source within 5-7 business days.</p>",
+      "shippingPolicy": "<p>We offer standard, same-day and midnight delivery options. Please ensure correct details to avoid delays.</p>",
+      "termsConditions": "<h2>Terms & Conditions</h2><p>Welcome to <strong>Niyora Gifts</strong>! These Terms & Conditions govern your website usage and the creation and use of your account. By registering or using our site, you agree to be bound by these Terms. Please read them carefully.</p><h3>1. Account Registration</h3><ul><li>To place an order, save details, or access priority features on Niyora Gifts, you are required to <strong>create an account</strong>.</li><li>When registering, you agree to provide <strong>accurate, current, and complete details</strong> (name, email, phone, and delivery address).</li><li>You must be <strong>at least 18 years old</strong> (or have parental/guardian consent) to make purchases.</li></ul><h3>2. Account Responsibility</h3><ul><li>You are solely responsible for <strong>all activities</strong> that occur under your account.</li><li>You must keep your login credentials secure. If you suspect any breach, notify support immediately at <strong>niyoragifts@gmail.com</strong>.</li></ul><h3>3. Accuracy of Information</h3><ul><li>You agree to keep shipping address and contact details up to date.</li><li>Niyora Gifts is not responsible for failed deliveries or delays resulting from <strong>incorrect or outdated information</strong>.</li></ul><h3>4. One Account Per User</h3><ul><li>Customers are permitted to maintain <strong>one active account</strong>. Registering multiple accounts to abuse offers or promotions is strictly prohibited.</li></ul><h3>5. Suspension & Termination</h3><ul><li>We reserve the right to suspend or terminate accounts without prior notice if fraudulent activity, duplicate accounts, or policy violations are suspected.</li></ul><h3>6. Privacy & Data Use</h3><ul><li>Your data is handled in accordance with privacy laws. By creating an account, you consent to Niyora Gifts collecting and using data for order fulfillment.</li></ul><h3>7. Website Usage</h3><ul><li>You agree to use the site for lawful shopping purposes only. Disruption or hacking attempts are strictly prohibited.</li></ul><h3>8. Order & Purchase Terms</h3><ul><li>All checkout purchases are additionally subject to our <strong>Shipping Policy</strong> and <strong>Returns Policy</strong>.</li></ul><h3>9. Changes to Terms</h3><ul><li>We may update or revise these Terms at any time. Continued use of your account after changes are posted constitutes acceptance of revised Terms.</li></ul><h3>10. Account Deletion</h3><ul><li>To delete your account, email <strong>niyoragifts@gmail.com</strong>, and we will wipe your personal data in accordance with applicable laws.</li></ul><h3>11. Liability Limits</h3><ul><li>Niyora Gifts is not liable for indirect or consequential damages arising from website usage, except as required by law.</li></ul><h3>12. Governing Law</h3><ul><li>These Terms are governed by and construed in accordance with the laws of Delhi, India.</li></ul><h3>Need Help?</h3><p>📧 Email: <strong>niyoragifts@gmail.com</strong><br>📞 Phone: <strong>+91 90000-00000</strong><br>🕒 Support Hours: <strong>Mon–Sat, 10 AM – 6 PM</strong></p>"
+    },
+    "seo": {
+      "title": "Store Policies | Niyora Gifts",
+      "description": "Read about Niyora Gifts policies including Shipping, Returns, Refunds, Privacy, and Terms & Conditions.",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "Store Policies | Niyora Gifts",
+      "description": "Read about Niyora Gifts policies including Shipping, Returns, Refunds, Privacy, and Terms & Conditions.",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:14.010Z",
+    "updatedAt": "2026-07-25T17:26:27.917Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429a4eac8cfdc72c029305",
+    "section": "faq",
+    "draftContent": {
+      "items": [
+        {
+          "q": "How can I track my package?",
+          "a": "Once your order has Shipped, a Tracking ID and Carrier link will appear under your 'Order Tracking' tab. Click 'Track Package' to see real-time updates."
+        },
+        {
+          "q": "Can I change my delivery address after placing an order?",
+          "a": "You can request address updates before the order transitions to 'Shipped'. Please contact niyoragifts@gmail.com or WhatsApp us immediately with your Order ID."
+        },
+        {
+          "q": "How do I request a cancellation?",
+          "a": "Go to the 'My Orders' tab and click 'Request Cancellation' on any eligible order (orders that are Shipped or Delivered cannot be cancelled). Our admin team will review and approve eligible requests."
+        },
+        {
+          "q": "What is your refund policy?",
+          "a": "For cancelled or returned items, refunds are processed back to the original payment source within 5-7 business days."
+        }
+      ]
+    },
+    "publishedContent": {
+      "items": [
+        {
+          "q": "How can I track my package?",
+          "a": "Once your order has Shipped, a Tracking ID and Carrier link will appear under your 'Order Tracking' tab. Click 'Track Package' to see real-time updates."
+        },
+        {
+          "q": "Can I change my delivery address after placing an order?",
+          "a": "You can request address updates before the order transitions to 'Shipped'. Please contact niyoragifts@gmail.com or WhatsApp us immediately with your Order ID."
+        },
+        {
+          "q": "How do I request a cancellation?",
+          "a": "Go to the 'My Orders' tab and click 'Request Cancellation' on any eligible order (orders that are Shipped or Delivered cannot be cancelled). Our admin team will review and approve eligible requests."
+        },
+        {
+          "q": "What is your refund policy?",
+          "a": "For cancelled or returned items, refunds are processed back to the original payment source within 5-7 business days."
+        }
+      ]
+    },
+    "seo": {
+      "title": "Frequently Asked Questions | Niyora Gifts",
+      "description": "Find answers to commonly asked questions about order tracking, shipping, cancellation requests, refunds, and exchanges.",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "Frequently Asked Questions | Niyora Gifts",
+      "description": "Find answers to commonly asked questions about order tracking, shipping, cancellation requests, refunds, and exchanges.",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:14.155Z",
+    "updatedAt": "2026-06-29T16:16:14.155Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429a4eac8cfdc72c029306",
+    "section": "blog",
+    "draftContent": {
+      "posts": [
+        {
+          "title": "5 Thoughtful Anniversary Gift Ideas",
+          "slug": "anniversary-gift-ideas",
+          "summary": "Make your partner feel special with these custom handpicked anniversary gift options.",
+          "content": "<p>Anniversaries are special milestones. Here are 5 thoughtful gift ideas that can make the day unforgettable...</p>",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=500",
+          "author": "Niyora Team",
+          "publishedAt": "2026-06-29T16:16:13.162Z"
+        }
+      ]
+    },
+    "publishedContent": {
+      "posts": [
+        {
+          "title": "5 Thoughtful Anniversary Gift Ideas",
+          "slug": "anniversary-gift-ideas",
+          "summary": "Make your partner feel special with these custom handpicked anniversary gift options.",
+          "content": "<p>Anniversaries are special milestones. Here are 5 thoughtful gift ideas that can make the day unforgettable...</p>",
+          "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=500",
+          "author": "Niyora Team",
+          "publishedAt": "2026-06-29T16:16:13.162Z"
+        }
+      ]
+    },
+    "seo": {
+      "title": "Celebration Gifting Blog | Niyora Gifts",
+      "description": "Read helpful curation tips, gift shopping advice, and event preparation ideas from our experts.",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "Celebration Gifting Blog | Niyora Gifts",
+      "description": "Read helpful curation tips, gift shopping advice, and event preparation ideas from our experts.",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:14.330Z",
+    "updatedAt": "2026-06-29T16:16:14.330Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429a4eac8cfdc72c029307",
+    "section": "banners",
+    "draftContent": {
+      "items": [
+        {
+          "title": "Luxury Flower Boxes",
+          "subtitle": "Elegant blooms for premium gifting",
+          "tag": "Best Seller",
+          "link": "/products"
+        },
+        {
+          "title": "Cake + Bouquet Combos",
+          "subtitle": "Perfect celebration pairing",
+          "tag": "Most Loved",
+          "link": "/products"
+        },
+        {
+          "title": "Personalized Keepsakes",
+          "subtitle": "Custom gifts with lasting memories",
+          "tag": "Trending",
+          "link": "/products"
+        }
+      ]
+    },
+    "publishedContent": {
+      "items": [
+        {
+          "title": "Luxury Flower Boxes",
+          "subtitle": "Elegant blooms for premium gifting",
+          "tag": "Best Seller",
+          "link": "/products"
+        },
+        {
+          "title": "Cake + Bouquet Combos",
+          "subtitle": "Perfect celebration pairing",
+          "tag": "Most Loved",
+          "link": "/products"
+        },
+        {
+          "title": "Personalized Keepsakes",
+          "subtitle": "Custom gifts with lasting memories",
+          "tag": "Trending",
+          "link": "/products"
+        }
+      ]
+    },
+    "seo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:14.470Z",
+    "updatedAt": "2026-06-29T16:16:14.470Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429a4eac8cfdc72c029308",
+    "section": "popups",
+    "draftContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "",
+      "delay": 0
+    },
+    "publishedContent": {
+      "active": true,
+      "title": "Special Discount! ",
+      "text": "Get 15% off your first purchase. Use code NIYORA15.",
+      "buttonText": "Shop Now",
+      "buttonLink": "/products",
+      "imageUrl": "",
+      "delay": 0
+    },
+    "seo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "Master Admin",
+    "createdAt": "2026-06-29T16:16:14.591Z",
+    "updatedAt": "2026-09-16T18:54:51.143Z",
+    "__v": 0,
+    "lastUpdatedBy": "6a3a87729087d5b2bcaf2f83"
+  },
+  {
+    "_id": "6a429a4eac8cfdc72c029309",
+    "section": "announcements",
+    "draftContent": {
+      "active": true,
+      "text": "🎉 Free same-day delivery in metro cities on orders above ₹1499!",
+      "bgColor": "#B28A30",
+      "textColor": "#ffffff",
+      "link": "/products"
+    },
+    "publishedContent": {
+      "active": true,
+      "text": "🎉 Free same-day delivery in metro cities on orders above ₹1499!",
+      "bgColor": "#B28A30",
+      "textColor": "#ffffff",
+      "link": "/products"
+    },
+    "seo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:16:14.713Z",
+    "updatedAt": "2026-06-29T16:16:14.713Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a429c403ab5c270363c8e13",
+    "section": "seo",
+    "draftContent": {
+      "title": "Niyora Gifts | Luxury Curated Gifting",
+      "canonical": "",
+      "description": "Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful, lasting memory."
+    },
+    "publishedContent": {
+      "title": "Niyora Gifts | Luxury Curated Gifting",
+      "canonical": "",
+      "description": "Premium flowers, cakes and personalized gifts curated for celebrations that deserve a beautiful, lasting memory."
+    },
+    "seo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "draftSeo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "canonical": "",
+      "ogImage": "",
+      "ogTitle": "",
+      "ogDescription": "",
+      "schemaJson": ""
+    },
+    "hasDraftChanges": false,
+    "lastUpdatedByName": "",
+    "createdAt": "2026-06-29T16:24:32.777Z",
+    "updatedAt": "2026-06-29T16:24:32.777Z",
+    "__v": 0
+  }
+]

@@ -4,8 +4,12 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { TableSkeleton, AnalyticsSkeleton } from "./SkeletonLoaders";
+import AdminStoreCreditTab from "./AdminStoreCreditTab";
 
 const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
+  // Main view toggle
+  const [customerSectionView, setCustomerSectionView] = useState("directory"); // "directory" or "store_credit"
+
   // Lists and Pagination
   const [customers, setCustomers] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -378,11 +382,31 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
     }
   };
 
+  // Customer Store Credit Ledger in Drawer
+  const [customerCreditData, setCustomerCreditData] = useState(null);
+  const [loadingCustomerCredit, setLoadingCustomerCredit] = useState(false);
+
+  const fetchCustomerStoreCredit = async (customerId) => {
+    try {
+      setLoadingCustomerCredit(true);
+      const { data } = await api.get(`/store-credit/admin/accounts/${customerId}`, authHeader);
+      if (data?.success) {
+        setCustomerCreditData(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch customer store credit ledger:", err);
+      setCustomerCreditData(null);
+    } finally {
+      setLoadingCustomerCredit(false);
+    }
+  };
+
   // Single Actions
   const handleOpenProfile = (customer) => {
     setProfileId(customer._id);
     setProfileTab("info");
     fetchCustomerProfile(customer._id);
+    fetchCustomerStoreCredit(customer._id);
   };
 
   // Note Saver
@@ -713,8 +737,42 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
         </section>
       ) : null}
 
-      {/* Main Customers List Card */}
-      <div className="rounded-3xl border border-gold-200/20 bg-white p-6 shadow-sm relative">
+      {/* View Switcher: Customer Directory vs Store Credit Ledger */}
+      <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-gold-200/20 shadow-xs w-fit">
+        <button
+          onClick={() => setCustomerSectionView("directory")}
+          className={`flex items-center gap-2 rounded-xl px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            customerSectionView === "directory"
+              ? "bg-luxury-black text-white shadow-sm"
+              : "text-gray-500 hover:text-luxury-black hover:bg-gold-500/10"
+          }`}
+        >
+          <span>👥</span> Customer Directory
+        </button>
+        <button
+          onClick={() => setCustomerSectionView("store_credit")}
+          className={`flex items-center gap-2 rounded-xl px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            customerSectionView === "store_credit"
+              ? "bg-gold-500 text-white shadow-sm"
+              : "text-gray-500 hover:text-luxury-black hover:bg-gold-500/10"
+          }`}
+        >
+          <span>🪙</span> Store Credit Accounts & Ledger
+        </button>
+      </div>
+
+      {customerSectionView === "store_credit" ? (
+        <AdminStoreCreditTab
+          authHeader={authHeader}
+          adminAuth={adminAuth}
+          onOpenCustomerDrawer={(id) => {
+            const c = customers.find((item) => item._id === id);
+            if (c) handleOpenProfile(c);
+          }}
+        />
+      ) : (
+        /* Main Customers List Card */
+        <div className="rounded-3xl border border-gold-200/20 bg-white p-6 shadow-sm relative">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-gold-200/10 pb-4">
           <div>
             <h3 className="text-xl font-serif font-light text-luxury-black flex items-center gap-2">
@@ -1174,13 +1232,22 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
                     </td>
                     <td className="py-3 px-2 text-[11px] text-gray-500 uppercase">{c.loginMethod || "OTP"}</td>
                     <td className="py-3 px-2">
-                      <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider ${
-                        c.verificationStatus === "Verified"
-                          ? "bg-emerald-50 border-emerald-100 text-emerald-800"
-                          : "bg-amber-50 border-amber-100 text-amber-800"
-                      }`}>
-                        {c.verificationStatus || "Pending"}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider w-max ${
+                          c.isEmailVerified || c.verificationStatus === "Verified"
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                            : "bg-amber-50 border-amber-200 text-amber-800"
+                        }`}>
+                          {c.isEmailVerified || c.verificationStatus === "Verified" ? "✓ Email Verified" : "⏳ Email Pending"}
+                        </span>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider w-max ${
+                          c.isPhoneVerified
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                            : "bg-gray-100 border-gray-200 text-gray-600"
+                        }`} title={c.isPhoneVerified ? "Phone verified" : "SMS OTP verification not yet active"}>
+                          {c.isPhoneVerified ? "✓ Phone Verified" : "📱 Phone Unverified"}
+                        </span>
+                      </div>
                     </td>
                     <td className="py-3 px-2">
                       <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wider ${
@@ -1324,6 +1391,7 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
           </footer>
         )}
       </div>
+      )}
 
       {/* Customer Profile Drawer */}
       {profileId && (
@@ -1449,6 +1517,7 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
                     {[
                       { id: "info", label: "Overview & Addresses" },
                       { id: "orders", label: `Orders (${profileData.orderInfo.totalOrders})` },
+                      { id: "store_credit", label: "Store Credit" },
                       { id: "wishlist", label: `Wishlist (${profileData.wishlist.length})` },
                       { id: "cart", label: `Cart (${profileData.cart.length})` },
                       { id: "crm_comm", label: "Concierge Chat" },
@@ -1716,6 +1785,133 @@ const CustomersSection = ({ authHeader, adminAuth, globalSearchQuery }) => {
                     )}
 
 
+
+                    {/* Tab: Store Credit Ledger */}
+                    {profileTab === "store_credit" && (
+                      <div className="space-y-4">
+                        {loadingCustomerCredit ? (
+                          <div className="flex items-center justify-center p-8">
+                            <div className="w-8 h-8 border-4 border-gold-500/20 border-t-gold-500 rounded-full animate-spin"></div>
+                          </div>
+                        ) : customerCreditData ? (
+                          <div className="space-y-4">
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div className="rounded-2xl border border-gold-200/30 bg-gradient-to-br from-[#FAF8F5] to-white p-4 shadow-xs">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Available Balance</span>
+                                <p className="text-xl font-bold font-serif text-emerald-800 mt-1">
+                                  ₹{Number(customerCreditData.account?.balance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                </p>
+                                <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                                  customerCreditData.account?.status === "FROZEN" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+                                }`}>
+                                  {customerCreditData.account?.status || "ACTIVE"}
+                                </span>
+                              </div>
+
+                              <div className="rounded-2xl border border-gold-200/30 bg-white p-4 shadow-xs">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Reserved (Checkout Hold)</span>
+                                <p className="text-xl font-bold font-serif text-amber-700 mt-1">
+                                  ₹{Number(customerCreditData.account?.reservedBalance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                </p>
+                                <span className="text-[10px] text-gray-400 block mt-1">Active cart reservations</span>
+                              </div>
+
+                              <div className="rounded-2xl border border-gold-200/30 bg-white p-4 shadow-xs">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Lifetime Credited</span>
+                                <p className="text-xl font-bold font-serif text-luxury-black mt-1">
+                                  ₹{Number(customerCreditData.account?.totalCredited || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                </p>
+                                <span className="text-[10px] text-gray-400 block mt-1">Total refunds & bonuses</span>
+                              </div>
+
+                              <div className="rounded-2xl border border-gold-200/30 bg-white p-4 shadow-xs">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Expiring (30 Days)</span>
+                                <p className="text-xl font-bold font-serif text-rose-700 mt-1">
+                                  ₹{Number(customerCreditData.expiringSoon || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                </p>
+                                <span className="text-[10px] text-rose-500 block mt-1">FIFO expiry pending</span>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center justify-between bg-cream/50 p-3 rounded-2xl border border-gold-200/20">
+                              <span className="text-xs text-gray-600 font-medium">
+                                Account: <strong className="font-mono text-luxury-black">{customerCreditData.account?.accountNumber || "N/A"}</strong>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setCustomerSectionView("store_credit");
+                                    setProfileId(null);
+                                  }}
+                                  className="rounded-full bg-luxury-black hover:bg-gold-600 text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+                                >
+                                  Open in Store Credit Console ↗
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Transaction Ledger Table */}
+                            <div className="rounded-2xl border border-gold-200/20 bg-white p-4">
+                              <h5 className="text-xs font-bold uppercase tracking-wider text-luxury-black mb-3">
+                                Transaction Ledger ({customerCreditData.transactions?.length || 0})
+                              </h5>
+                              <div className="overflow-x-auto max-h-72">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="bg-[#FAF8F5] text-[10px] uppercase font-bold text-gray-500 sticky top-0">
+                                    <tr>
+                                      <th className="p-2.5">Date</th>
+                                      <th className="p-2.5">Type</th>
+                                      <th className="p-2.5">Amount</th>
+                                      <th className="p-2.5">Balance</th>
+                                      <th className="p-2.5">Reason / Reference</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100">
+                                    {customerCreditData.transactions?.length > 0 ? (
+                                      customerCreditData.transactions.map((tx) => (
+                                        <tr key={tx._id} className="hover:bg-cream/20">
+                                          <td className="p-2.5 text-gray-500 whitespace-nowrap">
+                                            {new Date(tx.createdAt).toLocaleDateString()} {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                          </td>
+                                          <td className="p-2.5">
+                                            <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                                              tx.type === "CREDIT" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                                            }`}>
+                                              {tx.type}
+                                            </span>
+                                          </td>
+                                          <td className={`p-2.5 font-bold font-mono ${tx.type === "CREDIT" ? "text-emerald-700" : "text-rose-700"}`}>
+                                            {tx.type === "CREDIT" ? "+" : "-"}₹{Number(tx.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                          </td>
+                                          <td className="p-2.5 font-mono text-gray-700">
+                                            ₹{Number(tx.closingBalance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                          </td>
+                                          <td className="p-2.5 text-gray-600 max-w-xs truncate" title={tx.description || tx.reason}>
+                                            {tx.description || tx.reason || tx.referenceType}
+                                          </td>
+                                        </tr>
+                                      ))
+                                    ) : (
+                                      <tr>
+                                        <td colSpan="5" className="p-4 text-center text-gray-400">
+                                          No transactions recorded for this account.
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-6 text-center text-gray-400 text-xs">
+                            No store credit account found for this customer.
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Tab: Private Notes */}
                     {profileTab === "notes" && (

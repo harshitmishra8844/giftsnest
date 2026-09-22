@@ -1,0 +1,136 @@
+{
+  "timestamp": "2026-09-22T11:06:55.795Z",
+  "databaseQueries": {
+    "productsFindMs": 782.66,
+    "productsFindLeanCardFieldsMs": 501.09,
+    "storeSettingFindMs": 202.78,
+    "cmsHomepageFindMs": 301.8,
+    "productBySlugMs": 212.98
+  },
+  "apiEndpoints": {
+    "productsCached": {
+      "status": 200,
+      "timeMs": 7.19,
+      "bytes": 8411,
+      "xCache": "HIT",
+      "contentEncoding": "gzip"
+    },
+    "productsCardLean": {
+      "status": 200,
+      "timeMs": 196.07,
+      "bytes": 2338,
+      "xCache": "MISS",
+      "contentEncoding": "gzip"
+    },
+    "storeInfoCached": {
+      "status": 200,
+      "timeMs": 2.84,
+      "bytes": 793,
+      "xCache": "HIT",
+      "contentEncoding": "none"
+    },
+    "cmsHomepageCached": {
+      "status": 200,
+      "timeMs": 2.74,
+      "bytes": 2469,
+      "xCache": "HIT",
+      "contentEncoding": "gzip"
+    },
+    "singleProductCached": {
+      "status": 200,
+      "timeMs": 3.33,
+      "bytes": 3520,
+      "xCache": "HIT",
+      "contentEncoding": "gzip"
+    }
+  },
+  "bundleSizes": {
+    "totalJsKb": 2973.42,
+    "totalCssKb": 234.47,
+    "largestChunks": [
+      {
+        "file": "AdminDashboard-BbPe3rZF.js",
+        "type": "JS",
+        "sizeKb": 769.91
+      },
+      {
+        "file": "vendor-jspdf-qdU1CP9G.js",
+        "type": "JS",
+        "sizeKb": 420.94
+      },
+      {
+        "file": "vendor-xlsx-5D6UKfhx.js",
+        "type": "JS",
+        "sizeKb": 414.87
+      },
+      {
+        "file": "vendor-other-5gnyikFl.js",
+        "type": "JS",
+        "sizeKb": 373.02
+      },
+      {
+        "file": "index-NQ00i408.css",
+        "type": "CSS",
+        "sizeKb": 234.47
+      },
+      {
+        "file": "vendor-react-CT7qYf9G.js",
+        "type": "JS",
+        "sizeKb": 231.04
+      },
+      {
+        "file": "MyProfile-BEk-PeuX.js",
+        "type": "JS",
+        "sizeKb": 200.56
+      },
+      {
+        "file": "vendor-motion-DOslT6SK.js",
+        "type": "JS",
+        "sizeKb": 129.73
+      },
+      {
+        "file": "index-BgsC9f89.js",
+        "type": "JS",
+        "sizeKb": 66.96
+      },
+      {
+        "file": "vendor-axios-C0bYvdnr.js",
+        "type": "JS",
+        "sizeKb": 43.67
+      }
+    ]
+  },
+  "securityChecks": {
+    "authSecurityActive": true,
+    "adminRouteProtected": true,
+    "orderValidationActive": true
+  },
+  "comparisons": {
+    "apiProductsLatency": {
+      "beforeMs": 275.77,
+      "afterMs": 7.19,
+      "improvementFactor": "38.4x faster"
+    },
+    "apiStoreInfoLatency": {
+      "beforeMs": 256.72,
+      "afterMs": 2.84,
+      "improvementFactor": "90.4x faster"
+    },
+    "apiCmsHomepageLatency": {
+      "beforeMs": 265.04,
+      "afterMs": 2.74,
+      "improvementFactor": "96.7x faster"
+    },
+    "singleProductLatency": {
+      "beforeMs": 402.41,
+      "afterMs": 3.33,
+      "improvementFactor": "120.8x faster"
+    },
+    "adminBundleChunkSize": {
+      "beforeKb": 1468.02,
+      "afterKb": 788.38,
+      "reductionKb": 679.64,
+      "reductionPercent": "46.3% smaller"
+    }
+  }
+}

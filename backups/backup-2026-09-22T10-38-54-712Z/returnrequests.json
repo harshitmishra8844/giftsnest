@@ -1,0 +1,907 @@
+[
+  {
+    "_id": "6a3d0cdc2887b9db824ab0b3",
+    "returnCode": "REQ-RET-BB1FEDDC",
+    "orderId": "6a3d0bb72887b9db824ab050",
+    "customerId": "6a3cacf15098f184e912fb00",
+    "items": [
+      {
+        "productId": "6a3cdf40350521729503d30b",
+        "name": "Romantic Love Cards Gift Set – 18 Heartfelt Love Message Cards",
+        "price": 149,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782373683/gift-store/products/xtmrryygdll2kfutnsib.png",
+        "_id": "6a3d0cdc2887b9db824ab0b4"
+      }
+    ],
+    "reason": "Wrong Product Received",
+    "description": "asdfghjkl;",
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782385866/gift-store/returns/fy80zuso8aenezvhbnpz.png",
+        "publicId": "gift-store/returns/fy80zuso8aenezvhbnpz",
+        "_id": "6a3d0cdc2887b9db824ab0b5"
+      }
+    ],
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "status": "Refund Completed",
+    "refundStatus": "Completed",
+    "statusHistory": [
+      {
+        "status": "Pending",
+        "note": "Return request submitted.",
+        "updatedBy": null,
+        "_id": "6a3d0cdc2887b9db824ab0b6",
+        "updatedAt": "2026-06-25T11:11:24.891Z"
+      },
+      {
+        "status": "Under Review",
+        "note": "Status updated to Under Review",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0d2f2887b9db824ab0de",
+        "updatedAt": "2026-06-25T11:12:47.977Z"
+      },
+      {
+        "status": "Under Review",
+        "note": "Status updated to Under Review",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0d2d2887b9db824ab0d9",
+        "updatedAt": "2026-06-25T11:12:45.323Z"
+      },
+      {
+        "status": "Approved",
+        "note": "Request approved.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0dc7b00a35ea47bad5bc",
+        "updatedAt": "2026-06-25T11:15:19.348Z"
+      },
+      {
+        "status": "Approved",
+        "note": "Request approved.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0dcdb00a35ea47bad5cb",
+        "updatedAt": "2026-06-25T11:15:25.306Z"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "Pickup scheduled.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0df5b00a35ea47bad5fd",
+        "updatedAt": "2026-06-25T11:16:05.108Z"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "Pickup scheduled.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0df5b00a35ea47bad5fe",
+        "updatedAt": "2026-06-25T11:16:05.141Z"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "Pickup scheduled.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0df3b00a35ea47bad5fc",
+        "updatedAt": "2026-06-25T11:16:03.675Z"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "Pickup scheduled.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0dffb00a35ea47bad60d",
+        "updatedAt": "2026-06-25T11:16:15.445Z"
+      },
+      {
+        "status": "Item Received",
+        "note": "Item received at warehouse.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0e2fb00a35ea47bad694",
+        "updatedAt": "2026-06-25T11:17:03.635Z"
+      },
+      {
+        "status": "Refund Processed",
+        "note": "Refund processed successfully.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a3d0e4fb00a35ea47bad6c9",
+        "updatedAt": "2026-06-25T11:17:35.526Z"
+      }
+    ],
+    "pickupDetails": {
+      "courier": "qwsedfghj",
+      "trackingId": "qwedrfghj",
+      "pickupDate": "2026-06-25T11:16:06.518Z",
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 0,
+      "refundMethod": "Original Source",
+      "refundDate": "2026-06-25T11:17:35.526Z",
+      "transactionReference": ""
+    },
+    "codRefundMethod": "UPI",
+    "codRefundDetails": {
+      "upiId": "qwertyuiop",
+      "bankName": "",
+      "accountHolderName": "",
+      "accountNumber": "",
+      "ifscCode": ""
+    },
+    "createdAt": "2026-06-25T11:11:24.897Z",
+    "updatedAt": "2026-09-16T19:46:17.743Z",
+    "__v": 11,
+    "adminRemarks": "",
+    "customerMessage": "asdfghjkl;",
+    "evidenceImages": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782385866/gift-store/returns/fy80zuso8aenezvhbnpz.png",
+        "publicId": "gift-store/returns/fy80zuso8aenezvhbnpz",
+        "_id": "6a3d0cdc2887b9db824ab0b5"
+      }
+    ],
+    "evidenceVideo": {
+      "url": ""
+    },
+    "itemVerified": false,
+    "orderItemId": "",
+    "productId": "6a3cdf40350521729503d30b",
+    "requestId": "REQ-RET-BB1FEDDC",
+    "requestType": "Return",
+    "restocked": false,
+    "returnReason": "Wrong Product Received"
+  },
+  {
+    "_id": "6a8599d62cea71531e95c6b9",
+    "returnCode": "REQ-RET-ACFEC92A",
+    "orderId": "6a8598612cea71531e95c4bd",
+    "customerId": "6a846d4a8b66198c457d89b0",
+    "items": [
+      {
+        "productId": "6a3e516607832d63d63f38a5",
+        "name": "3D Dolphin Crystal Ball",
+        "price": 1,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782467780/gift-store/products/z2bqiokqr6aspajcp9ue.jpg",
+        "_id": "6a8599d62cea71531e95c6ba"
+      }
+    ],
+    "reason": "Wrong Product Received",
+    "description": "jhgfdsa",
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1787140556/gift-store/returns/g56memkmcoluj0e6ye8v.png",
+        "publicId": "gift-store/returns/g56memkmcoluj0e6ye8v",
+        "_id": "6a8599d62cea71531e95c6bb"
+      }
+    ],
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "status": "Refund Completed",
+    "refundStatus": "Completed",
+    "statusHistory": [
+      {
+        "status": "Pending",
+        "note": "Return request submitted.",
+        "updatedBy": null,
+        "_id": "6a8599d62cea71531e95c6bc",
+        "updatedAt": "2026-08-19T11:56:06.532Z"
+      },
+      {
+        "status": "Under Review",
+        "note": "Status updated to Under Review",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a8599f62cea71531e95c6f0",
+        "updatedAt": "2026-08-19T11:56:38.301Z"
+      },
+      {
+        "status": "Approved",
+        "note": "Request approved.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a859a002cea71531e95c708",
+        "updatedAt": "2026-08-19T11:56:48.900Z"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "jhgfds",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a859a162cea71531e95c723",
+        "updatedAt": "2026-08-19T11:57:10.301Z"
+      },
+      {
+        "status": "Item Received",
+        "note": "Item received at warehouse.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a859a222cea71531e95c75b",
+        "updatedAt": "2026-08-19T11:57:22.303Z"
+      },
+      {
+        "status": "Refund Processed",
+        "note": "Refund processed successfully.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6a859a282cea71531e95c779",
+        "updatedAt": "2026-08-19T11:57:28.713Z"
+      }
+    ],
+    "pickupDetails": {
+      "courier": "sdfghhj",
+      "trackingId": "sdfghjk",
+      "pickupDate": "2026-08-19T11:57:09.452Z",
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 0,
+      "refundMethod": "Original Source",
+      "refundDate": "2026-08-19T11:57:28.713Z",
+      "transactionReference": ""
+    },
+    "codRefundMethod": "",
+    "codRefundDetails": {
+      "upiId": "",
+      "bankName": "",
+      "accountHolderName": "",
+      "accountNumber": "",
+      "ifscCode": ""
+    },
+    "createdAt": "2026-08-19T11:56:06.533Z",
+    "updatedAt": "2026-09-16T19:46:18.541Z",
+    "__v": 6,
+    "adminRemarks": "",
+    "customerMessage": "jhgfdsa",
+    "evidenceImages": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1787140556/gift-store/returns/g56memkmcoluj0e6ye8v.png",
+        "publicId": "gift-store/returns/g56memkmcoluj0e6ye8v",
+        "_id": "6a8599d62cea71531e95c6bb"
+      }
+    ],
+    "evidenceVideo": {
+      "url": ""
+    },
+    "itemVerified": false,
+    "orderItemId": "",
+    "productId": "6a3e516607832d63d63f38a5",
+    "requestId": "REQ-RET-ACFEC92A",
+    "requestType": "Return",
+    "restocked": false,
+    "returnReason": "Wrong Product Received"
+  },
+  {
+    "_id": "6aaad018bc8af724e0341a2c",
+    "returnCode": "REQ-RET-AC8CD5BA",
+    "orderId": "6aaace88ea21d476bdbdafd4",
+    "customerId": "6aaacdffea21d476bdbdae69",
+    "items": [
+      {
+        "productId": "6a3cdf40350521729503d30b",
+        "name": "Romantic Love Cards Gift Set – 18 Heartfelt Love Message Cards",
+        "price": 148.98,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782373683/gift-store/products/xtmrryygdll2kfutnsib.png",
+        "_id": "6aaad018bc8af724e0341a2d"
+      }
+    ],
+    "reason": "Wrong Product Received",
+    "description": "dsfghjkghfdsacvbn asdwertyu",
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1789579282/gift-store/returns/yk0qnkiema5lirhpgzk0.jpg",
+        "publicId": "gift-store/returns/yk0qnkiema5lirhpgzk0",
+        "_id": "6aaad018bc8af724e0341a2e"
+      }
+    ],
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "status": "Refund Completed",
+    "refundStatus": "Completed",
+    "statusHistory": [
+      {
+        "status": "Pending",
+        "note": "Return request submitted.",
+        "updatedBy": null,
+        "_id": "6aaad018bc8af724e0341a2f",
+        "updatedAt": "2026-09-16T17:21:28.363Z"
+      },
+      {
+        "status": "Approved",
+        "note": "Request approved.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6aaad0730b4a1c85e8cc81f1",
+        "updatedAt": "2026-09-16T17:22:59.948Z"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "zcxxvbn",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6aaad0890b4a1c85e8cc8212",
+        "updatedAt": "2026-09-16T17:23:21.065Z"
+      },
+      {
+        "status": "Item Received",
+        "note": "Item received at warehouse.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6aaad0980b4a1c85e8cc8235",
+        "updatedAt": "2026-09-16T17:23:36.261Z"
+      },
+      {
+        "status": "Refund Processed",
+        "note": "Refund processed successfully.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "_id": "6aaad09f0b4a1c85e8cc8259",
+        "updatedAt": "2026-09-16T17:23:43.380Z"
+      }
+    ],
+    "pickupDetails": {
+      "courier": "werghtjyk",
+      "trackingId": "234567",
+      "pickupDate": "2026-09-16T17:23:20.812Z",
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 0,
+      "refundMethod": "Original Source",
+      "refundDate": "2026-09-16T17:23:43.380Z",
+      "transactionReference": ""
+    },
+    "codRefundMethod": "UPI",
+    "codRefundDetails": {
+      "upiId": "dfghjkl",
+      "bankName": "",
+      "accountHolderName": "",
+      "accountNumber": "",
+      "ifscCode": ""
+    },
+    "createdAt": "2026-09-16T17:21:28.371Z",
+    "updatedAt": "2026-09-16T19:46:19.059Z",
+    "__v": 5,
+    "adminRemarks": "",
+    "customerMessage": "dsfghjkghfdsacvbn asdwertyu",
+    "evidenceImages": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1789579282/gift-store/returns/yk0qnkiema5lirhpgzk0.jpg",
+        "publicId": "gift-store/returns/yk0qnkiema5lirhpgzk0",
+        "_id": "6aaad018bc8af724e0341a2e"
+      }
+    ],
+    "evidenceVideo": {
+      "url": ""
+    },
+    "itemVerified": false,
+    "orderItemId": "",
+    "productId": "6a3cdf40350521729503d30b",
+    "requestId": "REQ-RET-AC8CD5BA",
+    "requestType": "Return",
+    "restocked": false,
+    "returnReason": "Wrong Product Received"
+  },
+  {
+    "_id": "6aaaf23c92b1eee0e2fa6c1f",
+    "requestId": "REQ-REP-D70C0582",
+    "returnCode": "REQ-REP-D70C0582",
+    "orderId": "6a3d0165b696dd36c6d9ac23",
+    "orderItemId": "",
+    "customerId": "6a3cacf15098f184e912fb00",
+    "productId": "6a3cdf40350521729503d30b",
+    "requestType": "Replacement",
+    "returnReason": "Wrong Product Received",
+    "reason": "Wrong Product Received",
+    "customerMessage": "asdfghjkl",
+    "description": "asdfghjkl",
+    "evidenceImages": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782386361/gift-store/returns/sxfekq7pauix3l76ek3u.png",
+        "publicId": "gift-store/returns/sxfekq7pauix3l76ek3u",
+        "_id": "6a3d0ebb7b3b847ecd747cb6"
+      }
+    ],
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782386361/gift-store/returns/sxfekq7pauix3l76ek3u.png",
+        "publicId": "gift-store/returns/sxfekq7pauix3l76ek3u",
+        "_id": "6a3d0ebb7b3b847ecd747cb6"
+      }
+    ],
+    "evidenceVideo": {
+      "url": "",
+      "publicId": null
+    },
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "items": [
+      {
+        "productId": "6a3cdf40350521729503d30b",
+        "name": "Romantic Love Cards Gift Set – 18 Heartfelt Love Message Cards",
+        "price": 149,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782373683/gift-store/products/xtmrryygdll2kfutnsib.png",
+        "_id": "6a3d0ebb7b3b847ecd747cb5"
+      }
+    ],
+    "status": "Delivered",
+    "adminRemarks": "",
+    "approvedBy": null,
+    "approvedAt": null,
+    "itemVerified": false,
+    "itemVerifiedAt": null,
+    "restocked": false,
+    "restockedAt": null,
+    "refundStatus": "Pending",
+    "pickupDetails": {
+      "courier": "",
+      "trackingId": "",
+      "pickupDate": null,
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 0,
+      "refundMethod": "Original Source",
+      "refundDate": null,
+      "transactionReference": ""
+    },
+    "codRefundMethod": "",
+    "codRefundDetails": {
+      "upiId": "",
+      "bankName": "",
+      "accountHolderName": "",
+      "accountNumber": "",
+      "ifscCode": ""
+    },
+    "createdAt": "2026-06-25T11:19:23.460Z",
+    "updatedAt": "2026-06-25T11:19:23.460Z",
+    "statusHistory": [],
+    "__v": 0
+  },
+  {
+    "_id": "6aab78854f23c1869290f10e",
+    "requestId": "RET-2026-2F8350",
+    "returnCode": "RET-2026-2F8350",
+    "orderId": "6aab777c4f23c1869290f018",
+    "orderItemId": "",
+    "customerId": "6aaacdffea21d476bdbdae69",
+    "productId": "6aaaf6ba576f608637b00006",
+    "requestType": "Return",
+    "returnReason": "Missing Item",
+    "reason": "Missing Item",
+    "customerMessage": "asdfghjk",
+    "description": "asdfghjk",
+    "evidenceImages": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1789622398/gift-store/returns/vapajrohzeuwepo81rwy.jpg",
+        "publicId": "gift-store/returns/vapajrohzeuwepo81rwy",
+        "_id": "6aab78854f23c1869290f10f"
+      }
+    ],
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1789622398/gift-store/returns/vapajrohzeuwepo81rwy.jpg",
+        "publicId": "gift-store/returns/vapajrohzeuwepo81rwy",
+        "_id": "6aab78854f23c1869290f110"
+      }
+    ],
+    "evidenceVideo": {
+      "url": "",
+      "publicId": null
+    },
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "items": [
+      {
+        "productId": "6aaaf6ba576f608637b00006",
+        "name": "Luxury Silk Box Test",
+        "price": 1500,
+        "quantity": 1,
+        "image": "https://example.com/box.jpg",
+        "_id": "6aab78854f23c1869290f111"
+      }
+    ],
+    "status": "Refund Completed",
+    "adminRemarks": "Claim inspected and approved by concierge.",
+    "approvedBy": "6a3a87729087d5b2bcaf2f83",
+    "approvedAt": "2026-09-17T06:11:24.636Z",
+    "itemVerified": true,
+    "itemVerifiedAt": "2026-09-17T06:12:00.790Z",
+    "restocked": true,
+    "restockedAt": "2026-09-17T06:12:01.379Z",
+    "refundStatus": "Completed",
+    "statusHistory": [
+      {
+        "status": "Submitted",
+        "note": "Return claim submitted by customer.",
+        "updatedBy": "6aaacdffea21d476bdbdae69",
+        "updatedAt": "2026-09-17T05:20:05.591Z",
+        "_id": "6aab78854f23c1869290f112"
+      },
+      {
+        "status": "Under Review",
+        "note": "Concierge investigation commenced.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-09-17T06:11:05.444Z",
+        "_id": "6aab8479e686591d7259a221"
+      },
+      {
+        "status": "Approved",
+        "note": "Claim inspected and approved by concierge.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-09-17T06:11:24.636Z",
+        "_id": "6aab848ce686591d7259a26e"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "Reverse pickup scheduled via Delhivery (AWB: 456+123456789).",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-09-17T06:11:44.743Z",
+        "_id": "6aab84a0e686591d7259a282"
+      },
+      {
+        "status": "Item Received",
+        "note": "Item physically received at warehouse and verified. Restocked 1 item(s) back into inventory. Physically received and verified.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-09-17T06:12:01.379Z",
+        "_id": "6aab84b1e686591d7259a298"
+      },
+      {
+        "status": "Refund Completed",
+        "note": "Refund of INR 1500 processed via UPI (Ref: 7889966544112).",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-09-17T06:12:26.703Z",
+        "_id": "6aab84cae686591d7259a2b1"
+      }
+    ],
+    "pickupDetails": {
+      "courier": "Delhivery",
+      "trackingId": "456+123456789",
+      "pickupDate": "2026-09-17T00:00:00.000Z",
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 1500,
+      "refundMethod": "UPI",
+      "refundDate": "2026-09-17T06:12:26.702Z",
+      "transactionReference": "7889966544112"
+    },
+    "codRefundMethod": "UPI",
+    "codRefundDetails": {
+      "upiId": "ertyuiop",
+      "bankName": "",
+      "accountHolderName": "",
+      "accountNumber": "",
+      "ifscCode": ""
+    },
+    "createdAt": "2026-09-17T05:20:05.618Z",
+    "updatedAt": "2026-09-17T06:12:26.720Z",
+    "__v": 5
+  },
+  {
+    "_id": "6aab7efce8d39c4503dda2da",
+    "requestId": "RET-D894345D",
+    "returnCode": "RET-D894345D",
+    "orderId": "6a3a8df69087d5b2bcaf3081",
+    "orderItemId": "",
+    "customerId": "6a3a87729087d5b2bcaf2f83",
+    "productId": "6a36b44980b7f20f0021f54a",
+    "requestType": "Return",
+    "returnReason": "Wrong Product Received",
+    "reason": "Wrong Product Received",
+    "customerMessage": "sorry",
+    "description": "sorry",
+    "evidenceImages": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782223220/gift-store/returns/yi25nkcm3rwrgz059poh.png",
+        "publicId": "gift-store/returns/yi25nkcm3rwrgz059poh",
+        "_id": "6aab7efce8d39c4503dda2db"
+      }
+    ],
+    "images": [
+      {
+        "url": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782223220/gift-store/returns/yi25nkcm3rwrgz059poh.png",
+        "publicId": "gift-store/returns/yi25nkcm3rwrgz059poh",
+        "_id": "6aab7efce8d39c4503dda2dc"
+      }
+    ],
+    "evidenceVideo": {
+      "url": "",
+      "publicId": null
+    },
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "items": [
+      {
+        "productId": "6a36b44980b7f20f0021f54a",
+        "name": "3D Dolphin Crystal Ball",
+        "price": 199,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1781969963/gift-store/products/zbz61az4vgvmdj6wcfnd.png",
+        "_id": "6a3a91799087d5b2bcaf3156"
+      }
+    ],
+    "status": "Refund Completed",
+    "adminRemarks": "",
+    "approvedBy": null,
+    "approvedAt": null,
+    "itemVerified": false,
+    "itemVerifiedAt": null,
+    "restocked": false,
+    "restockedAt": null,
+    "refundStatus": "Completed",
+    "statusHistory": [
+      {
+        "status": "Return Requested",
+        "note": "Return request submitted by customer.",
+        "updatedBy": null,
+        "updatedAt": "2026-06-23T14:00:25.761Z",
+        "_id": "6a3a91799087d5b2bcaf3158"
+      },
+      {
+        "status": "Approved",
+        "note": "Status transitioned manually.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-06-23T14:01:28.987Z",
+        "_id": "6a3a91b89087d5b2bcaf3192"
+      },
+      {
+        "status": "Refund Processing",
+        "note": "Return status updated to Refund Processing by Master Admin.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-06-23T14:01:45.026Z",
+        "_id": "6a3a91c99087d5b2bcaf31a7"
+      },
+      {
+        "status": "Refunded",
+        "note": "Status transitioned manually.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-06-23T14:02:30.983Z",
+        "_id": "6a3a91f69087d5b2bcaf31eb"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "Return status updated to Pickup Scheduled by Master Admin.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-06-23T14:02:47.404Z",
+        "_id": "6a3a92079087d5b2bcaf3204"
+      },
+      {
+        "status": "Completed",
+        "note": "Return status updated to Completed by Master Admin.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-06-23T14:03:28.120Z",
+        "_id": "6a3a92309087d5b2bcaf323b"
+      }
+    ],
+    "pickupDetails": {
+      "courier": "32356526",
+      "trackingId": "3333333",
+      "pickupDate": "2026-06-23T14:02:00.000Z",
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 200,
+      "refundMethod": "Refund",
+      "refundDate": "2026-06-23T14:03:28.118Z",
+      "transactionReference": "6562326565"
+    },
+    "codRefundMethod": "",
+    "codRefundDetails": {
+      "upiId": "",
+      "bankName": "",
+      "accountHolderName": "",
+      "accountNumber": "",
+      "ifscCode": ""
+    },
+    "createdAt": "2026-06-23T14:00:25.764Z",
+    "updatedAt": "2026-06-23T14:00:25.764Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ab0ea071e4843424a49b783",
+    "requestId": "RET-2026-DC8049",
+    "returnCode": "RET-2026-DC8049",
+    "orderId": "6ab0e9ff1e4843424a49b77e",
+    "orderItemId": "",
+    "customerId": "6ab0e9fe1e4843424a49b77c",
+    "productId": "6ab0e9ff1e4843424a49b77d",
+    "requestType": "Return",
+    "returnReason": "Defective Product",
+    "reason": "Defective Product",
+    "customerMessage": "Customer reported defective stitching on phone call.",
+    "description": "Customer reported defective stitching on phone call.",
+    "evidenceImages": [],
+    "images": [],
+    "evidenceVideo": {
+      "url": "",
+      "publicId": null
+    },
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "items": [
+      {
+        "productId": "6ab0e9ff1e4843424a49b77d",
+        "name": "Luxury Silk Scarf",
+        "price": 1500,
+        "quantity": 1,
+        "image": "",
+        "_id": "6ab0ea071e4843424a49b784"
+      }
+    ],
+    "status": "Refund Completed",
+    "adminRemarks": "Claim inspected and approved by concierge.",
+    "approvedBy": "6a3cacf15098f184e912fb00",
+    "approvedAt": "2026-09-21T09:34:26.600Z",
+    "itemVerified": true,
+    "itemVerifiedAt": "2026-09-21T09:34:43.397Z",
+    "restocked": true,
+    "restockedAt": "2026-09-21T09:34:43.463Z",
+    "refundStatus": "Completed",
+    "statusHistory": [
+      {
+        "status": "Submitted",
+        "note": "Agent-assisted return request initiated by Master Admin after live customer call. Reason: Defective Product.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-09-21T08:25:43.235Z",
+        "_id": "6ab0ea071e4843424a49b785"
+      },
+      {
+        "status": "Approved",
+        "note": "Claim inspected and approved by concierge.",
+        "updatedBy": "6a3cacf15098f184e912fb00",
+        "updatedAt": "2026-09-21T09:34:26.601Z",
+        "_id": "6ab0fa22ca1e6b7ad178d2b8"
+      },
+      {
+        "status": "Pickup Scheduled",
+        "note": "Reverse pickup scheduled via Delhivery (AWB: 45).",
+        "updatedBy": "6a3cacf15098f184e912fb00",
+        "updatedAt": "2026-09-21T09:34:36.619Z",
+        "_id": "6ab0fa2cca1e6b7ad178d2fd"
+      },
+      {
+        "status": "Item Received",
+        "note": "Item physically received at warehouse and verified. Restocked 1 item(s) back into inventory. Physically received and verified.",
+        "updatedBy": "6a3cacf15098f184e912fb00",
+        "updatedAt": "2026-09-21T09:34:43.463Z",
+        "_id": "6ab0fa33ca1e6b7ad178d345"
+      },
+      {
+        "status": "Refund Completed",
+        "note": "Refund of INR 1500 processed via UPI (Ref: N/A).",
+        "updatedBy": "6a3cacf15098f184e912fb00",
+        "updatedAt": "2026-09-21T09:35:06.671Z",
+        "_id": "6ab0fa4aca1e6b7ad178d391"
+      }
+    ],
+    "pickupDetails": {
+      "courier": "Delhivery",
+      "trackingId": "45",
+      "pickupDate": "2026-09-21T00:00:00.000Z",
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 1500,
+      "refundMethod": "UPI",
+      "refundDate": "2026-09-21T09:35:06.670Z",
+      "transactionReference": ""
+    },
+    "codRefundMethod": "",
+    "codRefundDetails": {
+      "upiId": "",
+      "bankName": "",
+      "accountHolderName": "",
+      "accountNumber": "",
+      "ifscCode": ""
+    },
+    "isAgentCreated": true,
+    "createdAgentId": "6a3a87729087d5b2bcaf2f83",
+    "createdAgentName": "Master Admin",
+    "createdAgentRole": "Head Niyoragifts",
+    "customerConsent": "Consent Received",
+    "callReferenceId": "CALL-REC-9912",
+    "internalCallId": "",
+    "verificationMethod": "Verified on Call",
+    "assignedTeam": "Return Team",
+    "createdAt": "2026-09-21T08:25:43.238Z",
+    "updatedAt": "2026-09-21T09:35:06.706Z",
+    "__v": 4
+  },
+  {
+    "_id": "6ab17ecc206106f307cc0213",
+    "requestId": "RET-2026-29D598",
+    "returnCode": "RET-2026-29D598",
+    "orderId": "6ab0f0222a2aca75b5866282",
+    "orderItemId": "",
+    "customerId": "6aaacdffea21d476bdbdae69",
+    "productId": "6a3cdf40350521729503d30b",
+    "requestType": "Return",
+    "returnReason": "Damaged Product",
+    "reason": "Damaged Product",
+    "customerMessage": "",
+    "description": "",
+    "evidenceImages": [],
+    "images": [],
+    "evidenceVideo": {
+      "url": "",
+      "publicId": null
+    },
+    "video": {
+      "url": "",
+      "publicId": null
+    },
+    "items": [
+      {
+        "productId": "6a3cdf40350521729503d30b",
+        "name": "Romantic Love Cards Gift Set – 18 Heartfelt Love Message Cards",
+        "price": 148.98,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dwzepzssa/image/upload/v1782373683/gift-store/products/xtmrryygdll2kfutnsib.png",
+        "_id": "6ab17ecc206106f307cc0214"
+      }
+    ],
+    "status": "Rejected",
+    "adminRemarks": "not well",
+    "approvedBy": null,
+    "approvedAt": null,
+    "itemVerified": false,
+    "itemVerifiedAt": null,
+    "restocked": false,
+    "restockedAt": null,
+    "refundStatus": "Pending",
+    "statusHistory": [
+      {
+        "status": "Submitted",
+        "note": "Agent-assisted return request initiated by Master Admin after live customer call. Reason: Damaged Product.",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-09-21T19:00:28.105Z",
+        "_id": "6ab17ecc206106f307cc0215"
+      },
+      {
+        "status": "Rejected",
+        "note": "not well",
+        "updatedBy": "6a3a87729087d5b2bcaf2f83",
+        "updatedAt": "2026-09-21T19:01:09.567Z",
+        "_id": "6ab17ef5206106f307cc02ad"
+      }
+    ],
+    "pickupDetails": {
+      "courier": "",
+      "trackingId": "",
+      "pickupDate": null,
+      "note": ""
+    },
+    "refundDetails": {
+      "refundAmount": 0,
+      "refundMethod": "Original Source",
+      "refundDate": null,
+      "transactionReference": ""
+    },
+    "codRefundMethod": "UPI",
+    "codRefundDetails": {
+      "upiId": "",
+      "bankName": "",
+      "accountHolderName": "",
+      "accountNumber": "",
+      "ifscCode": ""
+    },
+    "isAgentCreated": true,
+    "createdAgentId": "6a3a87729087d5b2bcaf2f83",
+    "createdAgentName": "Master Admin",
+    "createdAgentRole": "Head Niyoragifts",
+    "customerConsent": "Consent Received",
+    "callReferenceId": "",
+    "internalCallId": "",
+    "verificationMethod": "Verified on Call",
+    "assignedTeam": "Return Team",
+    "createdAt": "2026-09-21T19:00:28.108Z",
+    "updatedAt": "2026-09-21T19:01:09.830Z",
+    "__v": 1
+  }
+]
