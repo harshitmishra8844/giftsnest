@@ -561,9 +561,42 @@ const seedCmsContent = async () => {
         section: "announcements",
         publishedContent: {
           active: true,
-          text: "🎉 Free same-day delivery in metro cities on orders above ₹1499!",
-          bgColor: "#B28A30",
-          textColor: "#ffffff",
+          bgColor: "#141210",
+          textColor: "#f3f4f6",
+          highlightBg: "#eab308",
+          highlightTextColor: "#141210",
+          rotationSpeed: 4.5,
+          dismissible: true,
+          items: [
+            {
+              id: "1",
+              icon: "Truck",
+              highlight: "FREE SHIP",
+              text: "Free Express Shipping Across India on Orders Above ₹999",
+              link: "/products",
+              linkText: "Shop Catalog",
+              active: true
+            },
+            {
+              id: "2",
+              icon: "Sparkles",
+              highlight: "SAME DAY",
+              text: "Same Day & Slot-Based Midnight Delivery Available in Select Metros",
+              link: "/shipping-policy",
+              linkText: "Delivery Info",
+              active: true
+            },
+            {
+              id: "3",
+              icon: "Gift",
+              highlight: "CODE: LUXURY15",
+              text: "Special Festive Offer: Flat 15% OFF on Curated Gift Combos",
+              link: "/products?category=Personalized",
+              linkText: "Claim Offer",
+              active: true
+            }
+          ],
+          text: "Free Express Shipping Across India on Orders Above ₹999",
           link: "/products"
         },
         seo: {}

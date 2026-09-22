@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import api, { resolveMediaUrl } from "../../services/api";
 import RichTextEditor from "./RichTextEditor";
 import ImageCropper from "./ImageCropper";
+import { 
+  Megaphone, Eye, Palette, Plus, Trash2, ArrowUp, ArrowDown, ChevronRight 
+} from "lucide-react";
 
 export default function CmsManager({ authHeader, adminAuth }) {
   const [activeTab, setActiveTab] = useState("homepage"); // section name or 'media-library'
@@ -1131,59 +1134,448 @@ export default function CmsManager({ authHeader, adminAuth }) {
           </div>
         );
 
-      case "announcements":
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-serif text-luxury-black font-bold">Site Header Announcement Bar</h3>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <input
-                type="checkbox"
-                checked={content.active || false}
-                onChange={(e) => setNestedField("draftContent.active", e.target.checked)}
-              />
-              Show header banner alert at the very top of pages
-            </label>
-            {renderInput("Announcement Notice Text", "draftContent.text", content.text)}
-            {renderInput("Banner Click Action link URL", "draftContent.link", content.link)}
+      case "announcements": {
+        const items = Array.isArray(content.items) && content.items.length > 0
+          ? content.items
+          : [
+              {
+                id: "1",
+                icon: "Truck",
+                highlight: "FREE SHIP",
+                text: content.text || "Free Express Shipping Across India on Orders Above ₹999",
+                link: content.link || "/products",
+                linkText: "Shop Catalog",
+                active: true
+              },
+              {
+                id: "2",
+                icon: "Sparkles",
+                highlight: "SAME DAY",
+                text: "Same Day & Slot-Based Midnight Delivery Available in Select Metros",
+                link: "/shipping-policy",
+                linkText: "Delivery Info",
+                active: true
+              },
+              {
+                id: "3",
+                icon: "Gift",
+                highlight: "CODE: LUXURY15",
+                text: "Special Festive Offer: Flat 15% OFF on Curated Gift Combos",
+                link: "/products?category=Personalized",
+                linkText: "Claim Offer",
+                active: true
+              }
+            ];
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Background Hex Color</label>
-                <div className="flex gap-2 items-center">
+        const updateItem = (idx, field, val) => {
+          const nextItems = [...items];
+          nextItems[idx] = { ...nextItems[idx], [field]: val };
+          setNestedField("draftContent.items", nextItems);
+          if (idx === 0) {
+            setNestedField("draftContent.text", nextItems[0]?.text || "");
+            setNestedField("draftContent.link", nextItems[0]?.link || "");
+          }
+        };
+
+        const removeItem = (idx) => {
+          const nextItems = [...items];
+          nextItems.splice(idx, 1);
+          setNestedField("draftContent.items", nextItems);
+        };
+
+        const moveItem = (idx, dir) => {
+          const targetIdx = idx + dir;
+          if (targetIdx < 0 || targetIdx >= items.length) return;
+          const nextItems = [...items];
+          const [moved] = nextItems.splice(idx, 1);
+          nextItems.splice(targetIdx, 0, moved);
+          setNestedField("draftContent.items", nextItems);
+        };
+
+        const addItem = () => {
+          const newItem = {
+            id: Date.now().toString(),
+            icon: "Sparkles",
+            highlight: "SPECIAL",
+            text: "",
+            link: "/products",
+            linkText: "Explore Now",
+            active: true
+          };
+          setNestedField("draftContent.items", [...items, newItem]);
+        };
+
+        const colorPresets = [
+          { name: "Luxury Black", hex: "#141210" },
+          { name: "Regal Gold", hex: "#B28A30" },
+          { name: "Festive Crimson", hex: "#881337" },
+          { name: "Forest Green", hex: "#064e3b" },
+          { name: "Midnight Navy", hex: "#0f172a" },
+        ];
+
+        const activeItemForPreview = items.find((it) => it.active !== false) || items[0] || {};
+        const previewBg = content.bgColor || "#141210";
+        const previewText = content.textColor || "#ffffff";
+        const previewHighlightBg = content.highlightBg || "#eab308";
+        const previewHighlightText = content.highlightTextColor || "#141210";
+
+        return (
+          <div className="space-y-8">
+            {/* Header Title & Master Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100 pb-5">
+              <div>
+                <h3 className="text-xl font-serif text-luxury-black font-bold flex items-center gap-2">
+                  <Megaphone className="h-5 w-5 text-gold-600" />
+                  Site Header Announcement Bar
+                </h3>
+                <p className="text-xs text-gray-500 font-light mt-1">
+                  Manage rotating notices, discount codes, shipping promises, and alerts shown at the very top of every page.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                <input
+                  type="checkbox"
+                  checked={content.active !== false}
+                  onChange={(e) => setNestedField("draftContent.active", e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-600"></div>
+                <span className="ml-3 text-xs font-bold uppercase tracking-wider text-luxury-black">
+                  {content.active !== false ? "Bar Enabled" : "Bar Disabled"}
+                </span>
+              </label>
+            </div>
+
+            {/* Live Interactive Preview Box */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <Eye className="h-3.5 w-3.5 text-gold-600" />
+                  Live Announcement Bar Preview
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal">
+                  {items.filter(i => i.active !== false).length} of {items.length} active announcements rotating
+                </span>
+              </div>
+              <div 
+                className="relative rounded-xl overflow-hidden px-4 py-2 text-xs shadow-inner border border-black/10 transition-colors"
+                style={{
+                  backgroundColor: previewBg,
+                  color: previewText
+                }}
+              >
+                <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 sm:gap-3 text-center pr-8 sm:pr-0">
+                  <span 
+                    className="inline-block rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest"
+                    style={{
+                      backgroundColor: previewHighlightBg,
+                      color: previewHighlightText
+                    }}
+                  >
+                    {activeItemForPreview.highlight || "SPECIAL"}
+                  </span>
+                  <p className="text-[11px] sm:text-xs font-light truncate max-w-[320px] sm:max-w-none">
+                    {activeItemForPreview.text || "Preview announcement message text here..."}
+                  </p>
+                  {activeItemForPreview.link && (
+                    <span 
+                      className="hidden sm:inline-flex items-center gap-0.5 text-[11px] font-bold underline cursor-pointer"
+                      style={{ color: previewHighlightBg }}
+                    >
+                      {activeItemForPreview.linkText || "Shop Now"}
+                      <ChevronRight className="h-3 w-3" />
+                    </span>
+                  )}
+                </div>
+                {content.dismissible !== false && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 text-xs">✕</span>
+                )}
+              </div>
+            </div>
+
+            {/* Appearance, Timing & Dismissibility Settings */}
+            <div className="bg-gray-50/70 p-5 rounded-2xl border border-gray-100 space-y-5">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                <Palette className="h-3.5 w-3.5 text-gold-600" />
+                Color & Behavior Settings
+              </h4>
+
+              {/* Quick Color Presets */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Quick Bar Themes</label>
+                <div className="flex flex-wrap gap-2">
+                  {colorPresets.map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => setNestedField("draftContent.bgColor", preset.hex)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                        content.bgColor === preset.hex
+                          ? "border-gold-500 bg-white shadow-xs text-luxury-black ring-1 ring-gold-500/30"
+                          : "border-gray-200 bg-white hover:border-gray-300 text-gray-700"
+                      }`}
+                    >
+                      <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: preset.hex }} />
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {/* Background Hex */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Bar Background</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={content.bgColor || "#141210"}
+                      onChange={(e) => setNestedField("draftContent.bgColor", e.target.value)}
+                      className="h-9 w-12 border border-gray-200 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={content.bgColor || "#141210"}
+                      onChange={(e) => setNestedField("draftContent.bgColor", e.target.value)}
+                      className="w-full rounded-xl border border-gold-250/20 px-3 py-1.5 text-xs text-luxury-black font-mono outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Text Color */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Message Text Color</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={content.textColor || "#ffffff"}
+                      onChange={(e) => setNestedField("draftContent.textColor", e.target.value)}
+                      className="h-9 w-12 border border-gray-200 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={content.textColor || "#ffffff"}
+                      onChange={(e) => setNestedField("draftContent.textColor", e.target.value)}
+                      className="w-full rounded-xl border border-gold-250/20 px-3 py-1.5 text-xs text-luxury-black font-mono outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Badge Background Color */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Badge Accent Color</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={content.highlightBg || "#eab308"}
+                      onChange={(e) => setNestedField("draftContent.highlightBg", e.target.value)}
+                      className="h-9 w-12 border border-gray-200 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={content.highlightBg || "#eab308"}
+                      onChange={(e) => setNestedField("draftContent.highlightBg", e.target.value)}
+                      className="w-full rounded-xl border border-gold-250/20 px-3 py-1.5 text-xs text-luxury-black font-mono outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Rotation Speed & Dismiss */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Rotation Delay (Sec)</label>
                   <input
-                    type="color"
-                    value={content.bgColor || "#B28A30"}
-                    onChange={(e) => setNestedField("draftContent.bgColor", e.target.value)}
-                    className="h-9 w-12 border border-gray-200 rounded"
-                  />
-                  <input
-                    type="text"
-                    value={content.bgColor || "#B28A30"}
-                    onChange={(e) => setNestedField("draftContent.bgColor", e.target.value)}
+                    type="number"
+                    min="2"
+                    max="20"
+                    step="0.5"
+                    value={content.rotationSpeed || 4.5}
+                    onChange={(e) => setNestedField("draftContent.rotationSpeed", Number(e.target.value) || 4.5)}
                     className="rounded-xl border border-gold-250/20 px-3 py-1.5 text-xs text-luxury-black outline-none"
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Text Font Hex Color</label>
-                <div className="flex gap-2 items-center">
+
+              <div className="pt-2 border-t border-gray-200/60">
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
                   <input
-                    type="color"
-                    value={content.textColor || "#ffffff"}
-                    onChange={(e) => setNestedField("draftContent.textColor", e.target.value)}
-                    className="h-9 w-12 border border-gray-200 rounded"
+                    type="checkbox"
+                    checked={content.dismissible !== false}
+                    onChange={(e) => setNestedField("draftContent.dismissible", e.target.checked)}
+                    className="rounded text-gold-600 focus:ring-gold-500 cursor-pointer"
                   />
-                  <input
-                    type="text"
-                    value={content.textColor || "#ffffff"}
-                    onChange={(e) => setNestedField("draftContent.textColor", e.target.value)}
-                    className="rounded-xl border border-gold-250/20 px-3 py-1.5 text-xs text-luxury-black outline-none"
-                  />
-                </div>
+                  Allow visitors to dismiss the announcement bar for their current browsing session (shows &lsquo;✕&rsquo; close button)
+                </label>
               </div>
+            </div>
+
+            {/* Announcements List Manager */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-extrabold uppercase tracking-wider text-luxury-black">
+                    Announcements Rotating Carousel ({items.length})
+                  </h4>
+                  <p className="text-xs text-gray-500 font-light">
+                    Add, edit, reorder, or temporarily toggle individual announcements.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-luxury-black hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition shadow-sm cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Announcement
+                </button>
+              </div>
+
+              <div className="space-y-3.5">
+                {items.map((item, idx) => (
+                  <div 
+                    key={item.id || idx}
+                    className={`p-4 rounded-2xl border transition-all ${
+                      item.active !== false 
+                        ? "bg-white border-gray-200 shadow-xs" 
+                        : "bg-gray-50/80 border-gray-200 opacity-60"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold-100 text-gold-800 text-[10px] font-bold">
+                          {idx + 1}
+                        </span>
+                        <label className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={item.active !== false}
+                            onChange={(e) => updateItem(idx, "active", e.target.checked)}
+                            className="rounded text-gold-600 cursor-pointer"
+                          />
+                          {item.active !== false ? "Active on Site" : "Disabled (Hidden)"}
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => moveItem(idx, -1)}
+                          title="Move up"
+                          className="p-1 rounded text-gray-500 hover:text-black hover:bg-gray-100 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === items.length - 1}
+                          onClick={() => moveItem(idx, 1)}
+                          title="Move down"
+                          className="p-1 rounded text-gray-500 hover:text-black hover:bg-gray-100 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          title="Delete announcement"
+                          className="p-1 rounded text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer ml-1"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-12">
+                      {/* Badge / Highlight */}
+                      <div className="sm:col-span-3 flex flex-col gap-1">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+                          Highlight Badge
+                        </label>
+                        <input
+                          type="text"
+                          value={item.highlight || ""}
+                          placeholder="e.g. FREE SHIP, 15% OFF"
+                          onChange={(e) => updateItem(idx, "highlight", e.target.value)}
+                          className="rounded-xl border border-gray-200 px-3 py-2 text-xs text-luxury-black font-semibold uppercase outline-none focus:border-gold-500"
+                        />
+                      </div>
+
+                      {/* Icon */}
+                      <div className="sm:col-span-3 flex flex-col gap-1">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+                          Icon Symbol
+                        </label>
+                        <select
+                          value={item.icon || "Sparkles"}
+                          onChange={(e) => updateItem(idx, "icon", e.target.value)}
+                          className="rounded-xl border border-gray-200 px-3 py-2 text-xs text-luxury-black outline-none focus:border-gold-500 bg-white cursor-pointer"
+                        >
+                          <option value="Truck">🚚 Truck (Delivery/Shipping)</option>
+                          <option value="Sparkles">✨ Sparkles (Special/Offers)</option>
+                          <option value="Gift">🎁 Gift (Combos/Festive)</option>
+                          <option value="Clock">⏰ Clock (Midnight/Urgent)</option>
+                          <option value="Tag">🏷️ Tag (Discounts/Coupons)</option>
+                          <option value="Heart">❤️ Heart (Love/Romance)</option>
+                          <option value="ShieldCheck">🛡️ ShieldCheck (Quality/Trust)</option>
+                          <option value="Megaphone">📢 Megaphone (Alert)</option>
+                        </select>
+                      </div>
+
+                      {/* Announcement Text */}
+                      <div className="sm:col-span-6 flex flex-col gap-1">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+                          Announcement Message <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={item.text || ""}
+                          placeholder="e.g. Free Express Shipping Across India on Orders Above ₹999"
+                          onChange={(e) => updateItem(idx, "text", e.target.value)}
+                          className="rounded-xl border border-gray-200 px-3 py-2 text-xs text-luxury-black outline-none focus:border-gold-500"
+                        />
+                      </div>
+
+                      {/* Action Link URL */}
+                      <div className="sm:col-span-7 flex flex-col gap-1">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+                          Click Destination URL
+                        </label>
+                        <input
+                          type="text"
+                          value={item.link || ""}
+                          placeholder="/products, /shipping-policy, etc."
+                          onChange={(e) => updateItem(idx, "link", e.target.value)}
+                          className="rounded-xl border border-gray-200 px-3 py-2 text-xs text-luxury-black outline-none focus:border-gold-500 font-mono"
+                        />
+                      </div>
+
+                      {/* Action Link Button Text */}
+                      <div className="sm:col-span-5 flex flex-col gap-1">
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+                          Button Text
+                        </label>
+                        <input
+                          type="text"
+                          value={item.linkText || ""}
+                          placeholder="e.g. Shop Catalog, Claim Offer"
+                          onChange={(e) => updateItem(idx, "linkText", e.target.value)}
+                          className="rounded-xl border border-gray-200 px-3 py-2 text-xs text-luxury-black outline-none focus:border-gold-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {items.length === 0 && (
+                <div className="text-center py-8 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-gray-400 text-xs">
+                  No announcements configured. Click &ldquo;Add Announcement&rdquo; above to create one.
+                </div>
+              )}
             </div>
           </div>
         );
+      }
 
       case "seo":
         return (

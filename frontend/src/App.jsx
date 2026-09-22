@@ -115,7 +115,8 @@ function App() {
     const fetchShell = async () => {
       try {
         const { data } = await api.get("/cms/shell");
-        setCmsShell(data);
+        const unpacked = data?.shell ? { ...data.shell, ...data, shell: data.shell, seoMap: data.seoMap } : data;
+        setCmsShell(unpacked);
       } catch (err) {
         console.error("Failed to load CMS layout settings:", err);
       }

@@ -115,6 +115,7 @@ const getShellContent = async (req, res) => {
     });
 
     const payload = {
+      ...shell,
       shell,
       seoMap,
     };
