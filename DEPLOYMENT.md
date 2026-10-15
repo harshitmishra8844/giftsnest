@@ -30,6 +30,13 @@
    - `ADMIN_EMAIL`
    - `ADMIN_PASSWORD`
    - `FRONTEND_URL=https://<your-vercel-domain>`
+   - `SMTP_HOST=smtp.gmail.com`
+   - `SMTP_PORT=587`
+   - `SMTP_SECURE=false`
+   - `SMTP_USER=niyoragifts@gmail.com`
+   - `SMTP_PASS=<google-app-password>`
+   - `SMTP_FROM=niyoragifts@gmail.com`
+   - `STORE_NAME=Niyora Gifts`
 6. Deploy and verify:
    - `https://<your-render-domain>/`
    - `https://<your-render-domain>/api/products`

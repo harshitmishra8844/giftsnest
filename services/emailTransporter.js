@@ -1,5 +1,4 @@
 const nodemailer = require("nodemailer");
-let smtpFailedVerification = false;
 
 
 const getEnvValue = (...names) => {
@@ -79,7 +78,7 @@ const getSmtpConfig = () => {
     invalidPort,
     hasCredentials: Boolean(host && user && pass && !invalidPort),
     isGmail: smtpHostIsGmail,
-    provider: (Boolean(host && user && pass && !invalidPort) && !smtpFailedVerification) ? "smtp" : Boolean(resendApiKey && resendFrom) ? "resend" : Boolean(brevoApiKey) ? "brevo" : undefined,
+    provider: Boolean(host && user && pass && !invalidPort) ? "smtp" : Boolean(resendApiKey && resendFrom) ? "resend" : Boolean(brevoApiKey) ? "brevo" : undefined,
   };
 
 };
@@ -151,7 +150,7 @@ const createTestTransporter = async () => {
 const getTransporter = async () => {
   if (sharedTransporter) return sharedTransporter;
   const config = getSmtpConfig();
-  if (config.hasCredentials && !smtpFailedVerification) {
+  if (config.hasCredentials) {
     sharedTransporter = await createSmtpTransporter(config);
     return sharedTransporter;
   }
@@ -194,7 +193,6 @@ const verifyEmailTransporter = async () => {
 
     return result;
   } catch (error) {
-    smtpFailedVerification = true;
     sharedTransporter = null;
     throw error;
   }

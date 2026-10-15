@@ -1928,9 +1928,10 @@ const sendOtpEmail = async (email, otp) => {
     <p style="margin: 0 0 16px 0; font-size: 12px; color: #8F8C81;">If you did not request this code, you can safely ignore this email. Someone may have entered your email address by mistake.</p>
   `;
 
+  const htmlContent = buildBrandedEmail(title, headline, bodyHtml, "", "", storeInfo);
   const textContent = `Your verification code is ${otp}. This code is valid for 5 minutes.`;
 
-  return await queueEmail(email.toLowerCase().trim(), title, bodyHtml, textContent, "otp_verification");
+  return await queueEmail(email.toLowerCase().trim(), title, htmlContent, textContent, "otp_verification");
 };
 
 const sendAccountLockoutEmail = async (email, lockDurationMinutes) => {

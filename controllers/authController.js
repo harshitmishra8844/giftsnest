@@ -84,6 +84,7 @@ const generate6DigitOtp = () => {
  */
 const checkEmail = async (req, res) => {
   try {
+    const { email } = req.body || {};
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
       return res.status(400).json({ message: emailValidation.error });
@@ -152,6 +153,7 @@ const checkEmail = async (req, res) => {
  */
 const registerSendOtp = async (req, res) => {
   try {
+    const { name, email, mobileNumber } = req.body || {};
     const nameValidation = validateName(name);
     if (!nameValidation.isValid) {
       return res.status(400).json({ message: nameValidation.error });
@@ -226,7 +228,7 @@ const registerSendOtp = async (req, res) => {
  */
 const verifyOtp = async (req, res) => {
   try {
-    const { email, otp, name, mobileNumber, register } = req.body;
+    const { email, otp, name, mobileNumber, register } = req.body || {};
 
     if (!email || !otp) {
       return res.status(400).json({ message: "Email and verification code are required" });
